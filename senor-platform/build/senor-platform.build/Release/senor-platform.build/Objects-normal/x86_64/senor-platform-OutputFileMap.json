@@ -1,0 +1,181 @@
+{
+  "" : {
+    "const-values" : "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/build/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/senor-platform-primary.swiftconstvalues",
+    "dependencies" : "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/build/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/senor-platform-primary.d",
+    "diagnostics" : "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/build/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/senor-platform-primary.dia",
+    "emit-module-dependencies" : "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/build/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/senor-platform-primary-emit-module.d",
+    "emit-module-diagnostics" : "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/build/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/senor-platform-primary-emit-module.dia",
+    "pch" : "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/build/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/senor-platform-primary-Bridging-header.pch",
+    "swift-dependencies" : "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/build/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/senor-platform-primary.swiftdeps"
+  },
+  "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/build/senor-platform.build/Release/senor-platform.build/DerivedSources/GeneratedAssetSymbols.swift" : {
+    "index-unit-output-path" : "/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/GeneratedAssetSymbols.o",
+    "llvm-bc" : "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/build/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/GeneratedAssetSymbols.bc",
+    "object" : "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/build/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/GeneratedAssetSymbols.o"
+  },
+  "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/senor-platform/AgentNaming/AgentNamingService.swift" : {
+    "index-unit-output-path" : "/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/AgentNamingService.o",
+    "llvm-bc" : "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/build/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/AgentNamingService.bc",
+    "object" : "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/build/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/AgentNamingService.o"
+  },
+  "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/senor-platform/AgentTools/AgentRunner.swift" : {
+    "index-unit-output-path" : "/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/AgentRunner.o",
+    "llvm-bc" : "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/build/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/AgentRunner.bc",
+    "object" : "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/build/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/AgentRunner.o"
+  },
+  "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/senor-platform/AgentTools/ComfyUITool.swift" : {
+    "index-unit-output-path" : "/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/ComfyUITool.o",
+    "llvm-bc" : "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/build/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/ComfyUITool.bc",
+    "object" : "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/build/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/ComfyUITool.o"
+  },
+  "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/senor-platform/AgentTools/ImageComposerTool.swift" : {
+    "index-unit-output-path" : "/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/ImageComposerTool.o",
+    "llvm-bc" : "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/build/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/ImageComposerTool.bc",
+    "object" : "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/build/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/ImageComposerTool.o"
+  },
+  "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/senor-platform/AgentTools/PublishingTools.swift" : {
+    "index-unit-output-path" : "/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/PublishingTools.o",
+    "llvm-bc" : "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/build/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/PublishingTools.bc",
+    "object" : "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/build/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/PublishingTools.o"
+  },
+  "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/senor-platform/AgentTools/ToolProtocols.swift" : {
+    "index-unit-output-path" : "/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/ToolProtocols.o",
+    "llvm-bc" : "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/build/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/ToolProtocols.bc",
+    "object" : "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/build/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/ToolProtocols.o"
+  },
+  "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/senor-platform/AppCore/AppError.swift" : {
+    "index-unit-output-path" : "/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/AppError.o",
+    "llvm-bc" : "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/build/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/AppError.bc",
+    "object" : "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/build/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/AppError.o"
+  },
+  "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/senor-platform/AppCore/AppLogger.swift" : {
+    "index-unit-output-path" : "/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/AppLogger.o",
+    "llvm-bc" : "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/build/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/AppLogger.bc",
+    "object" : "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/build/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/AppLogger.o"
+  },
+  "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/senor-platform/AppCore/DependencyContainer.swift" : {
+    "index-unit-output-path" : "/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/DependencyContainer.o",
+    "llvm-bc" : "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/build/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/DependencyContainer.bc",
+    "object" : "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/build/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/DependencyContainer.o"
+  },
+  "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/senor-platform/AppCore/SettingsService.swift" : {
+    "index-unit-output-path" : "/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/SettingsService.o",
+    "llvm-bc" : "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/build/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/SettingsService.bc",
+    "object" : "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/build/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/SettingsService.o"
+  },
+  "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/senor-platform/CacheLayer/CacheService.swift" : {
+    "index-unit-output-path" : "/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/CacheService.o",
+    "llvm-bc" : "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/build/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/CacheService.bc",
+    "object" : "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/build/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/CacheService.o"
+  },
+  "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/senor-platform/ContentView.swift" : {
+    "index-unit-output-path" : "/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/ContentView.o",
+    "llvm-bc" : "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/build/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/ContentView.bc",
+    "object" : "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/build/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/ContentView.o"
+  },
+  "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/senor-platform/DataLayer/DatabaseManager.swift" : {
+    "index-unit-output-path" : "/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/DatabaseManager.o",
+    "llvm-bc" : "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/build/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/DatabaseManager.bc",
+    "object" : "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/build/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/DatabaseManager.o"
+  },
+  "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/senor-platform/DataLayer/Records.swift" : {
+    "index-unit-output-path" : "/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/Records.o",
+    "llvm-bc" : "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/build/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/Records.bc",
+    "object" : "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/build/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/Records.o"
+  },
+  "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/senor-platform/DataLayer/RepositoryImplementations.swift" : {
+    "index-unit-output-path" : "/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/RepositoryImplementations.o",
+    "llvm-bc" : "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/build/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/RepositoryImplementations.bc",
+    "object" : "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/build/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/RepositoryImplementations.o"
+  },
+  "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/senor-platform/DataLayer/RepositoryProtocols.swift" : {
+    "index-unit-output-path" : "/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/RepositoryProtocols.o",
+    "llvm-bc" : "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/build/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/RepositoryProtocols.bc",
+    "object" : "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/build/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/RepositoryProtocols.o"
+  },
+  "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/senor-platform/Integrations/DeviantArtClient.swift" : {
+    "index-unit-output-path" : "/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/DeviantArtClient.o",
+    "llvm-bc" : "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/build/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/DeviantArtClient.bc",
+    "object" : "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/build/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/DeviantArtClient.o"
+  },
+  "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/senor-platform/Integrations/HTTPClient.swift" : {
+    "index-unit-output-path" : "/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/HTTPClient.o",
+    "llvm-bc" : "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/build/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/HTTPClient.bc",
+    "object" : "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/build/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/HTTPClient.o"
+  },
+  "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/senor-platform/Integrations/PatreonClient.swift" : {
+    "index-unit-output-path" : "/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/PatreonClient.o",
+    "llvm-bc" : "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/build/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/PatreonClient.bc",
+    "object" : "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/build/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/PatreonClient.o"
+  },
+  "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/senor-platform/SchedulerCore/ScheduleSpec.swift" : {
+    "index-unit-output-path" : "/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/ScheduleSpec.o",
+    "llvm-bc" : "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/build/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/ScheduleSpec.bc",
+    "object" : "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/build/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/ScheduleSpec.o"
+  },
+  "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/senor-platform/SchedulerCore/SchedulerEngine.swift" : {
+    "index-unit-output-path" : "/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/SchedulerEngine.o",
+    "llvm-bc" : "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/build/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/SchedulerEngine.bc",
+    "object" : "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/build/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/SchedulerEngine.o"
+  },
+  "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/senor-platform/TaskEngine/ApprovalService.swift" : {
+    "index-unit-output-path" : "/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/ApprovalService.o",
+    "llvm-bc" : "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/build/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/ApprovalService.bc",
+    "object" : "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/build/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/ApprovalService.o"
+  },
+  "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/senor-platform/TaskEngine/ContentVersioningService.swift" : {
+    "index-unit-output-path" : "/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/ContentVersioningService.o",
+    "llvm-bc" : "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/build/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/ContentVersioningService.bc",
+    "object" : "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/build/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/ContentVersioningService.o"
+  },
+  "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/senor-platform/TaskEngine/PublicationService.swift" : {
+    "index-unit-output-path" : "/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/PublicationService.o",
+    "llvm-bc" : "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/build/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/PublicationService.bc",
+    "object" : "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/build/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/PublicationService.o"
+  },
+  "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/senor-platform/TaskEngine/TaskExecutionPipeline.swift" : {
+    "index-unit-output-path" : "/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/TaskExecutionPipeline.o",
+    "llvm-bc" : "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/build/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/TaskExecutionPipeline.bc",
+    "object" : "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/build/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/TaskExecutionPipeline.o"
+  },
+  "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/senor-platform/TaskEngine/TaskSchemaValidator.swift" : {
+    "index-unit-output-path" : "/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/TaskSchemaValidator.o",
+    "llvm-bc" : "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/build/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/TaskSchemaValidator.bc",
+    "object" : "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/build/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/TaskSchemaValidator.o"
+  },
+  "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/senor-platform/Views/InspectorView.swift" : {
+    "index-unit-output-path" : "/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/InspectorView.o",
+    "llvm-bc" : "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/build/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/InspectorView.bc",
+    "object" : "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/build/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/InspectorView.o"
+  },
+  "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/senor-platform/Views/JSONEditorView.swift" : {
+    "index-unit-output-path" : "/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/JSONEditorView.o",
+    "llvm-bc" : "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/build/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/JSONEditorView.bc",
+    "object" : "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/build/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/JSONEditorView.o"
+  },
+  "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/senor-platform/Views/MainContentView.swift" : {
+    "index-unit-output-path" : "/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/MainContentView.o",
+    "llvm-bc" : "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/build/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/MainContentView.bc",
+    "object" : "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/build/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/MainContentView.o"
+  },
+  "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/senor-platform/Views/SheetViews.swift" : {
+    "index-unit-output-path" : "/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/SheetViews.o",
+    "llvm-bc" : "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/build/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/SheetViews.bc",
+    "object" : "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/build/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/SheetViews.o"
+  },
+  "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/senor-platform/Views/SidebarView.swift" : {
+    "index-unit-output-path" : "/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/SidebarView.o",
+    "llvm-bc" : "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/build/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/SidebarView.bc",
+    "object" : "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/build/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/SidebarView.o"
+  },
+  "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/senor-platform/WorkerRuntime/WorkerProcessManager.swift" : {
+    "index-unit-output-path" : "/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/WorkerProcessManager.o",
+    "llvm-bc" : "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/build/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/WorkerProcessManager.bc",
+    "object" : "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/build/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/WorkerProcessManager.o"
+  },
+  "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/senor-platform/senor_platformApp.swift" : {
+    "index-unit-output-path" : "/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/senor_platformApp.o",
+    "llvm-bc" : "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/build/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/senor_platformApp.bc",
+    "object" : "/Users/farquaad/CascadeProjects/senor-platform/senor-platform/build/senor-platform.build/Release/senor-platform.build/Objects-normal/x86_64/senor_platformApp.o"
+  }
+}

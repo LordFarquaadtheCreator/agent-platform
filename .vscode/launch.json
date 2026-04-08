@@ -1,0 +1,24 @@
+{
+    "configurations": [
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:senor-platform}",
+            "name": "Debug SenorPlatform",
+            "target": "SenorPlatform",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug SenorPlatform"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:senor-platform}",
+            "name": "Release SenorPlatform",
+            "target": "SenorPlatform",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release SenorPlatform"
+        }
+    ]
+}

@@ -1,0 +1,597 @@
+import Foundation
+
+// MARK: - Response Types (defined outside class to avoid main actor isolation issues)
+
+public struct PatreonCampaign: Codable, Identifiable {
+    public let id: String
+    public let type: String
+    public let attributes: PatreonCampaignAttributes
+    
+    public struct PatreonCampaignAttributes: Codable, Sendable {
+        public let summary: String?
+        public let creationName: String?
+        public let payPerName: String?
+        public let isMonthly: Bool?
+        public let isChargedImmediately: Bool?
+        public let imageUrl: String?
+        public let url: String?
+        public let publishedAt: String?
+        public let patronCount: Int?
+        public let pledgeSum: Int?
+        public let pledgeSumCurrency: String?
+    }
+}
+
+public struct PatreonCampaignsResponse: Codable {
+    public let data: [PatreonCampaign]
+    public let included: [PatreonIncludedResource]?
+    public let meta: PatreonPaginationMeta?
+}
+
+public struct PatreonPost: Codable, Identifiable {
+    public let id: String
+    public let type: String
+    public let attributes: PatreonPostAttributes
+    public let relationships: PatreonPostRelationships?
+    
+    public struct PatreonPostAttributes: Codable, Sendable {
+        public let title: String?
+        public let content: String?
+        public let teaserText: String?
+        public let url: String?
+        public let isPaid: Bool?
+        public let isPublic: Bool?
+        public let publishedAt: String?
+        public let editedAt: String?
+    }
+    
+    public struct PatreonPostRelationships: Codable, Sendable {
+        public let campaign: PatreonRelationship?
+        
+        public struct PatreonRelationship: Codable, Sendable {
+            public let data: PatreonRelationshipData?
+        }
+        
+        public struct PatreonRelationshipData: Codable, Sendable {
+            public let id: String
+            public let type: String
+        }
+    }
+}
+
+public struct PatreonPostsResponse: Codable {
+    public let data: [PatreonPost]
+    public let included: [PatreonIncludedResource]?
+    public let meta: PatreonPaginationMeta?
+}
+
+public struct PatreonMember: Codable, Identifiable {
+    public let id: String
+    public let type: String
+    public let attributes: PatreonMemberAttributes?
+    public let relationships: PatreonMemberRelationships?
+    
+    public struct PatreonMemberAttributes: Codable, Sendable {
+        public let fullName: String?
+        public let email: String?
+        public let patronStatus: String?
+        public let lastChargeStatus: String?
+        public let lifetimeSupportCents: Int?
+        public let currentlyEntitledAmountCents: Int?
+    }
+    
+    public struct PatreonMemberRelationships: Codable, Sendable {
+        public let currentlyEntitledTiers: [PatreonTierData]?
+    }
+    
+    public struct PatreonTierData: Codable, Sendable {
+        public let id: String
+        public let type: String
+    }
+}
+
+public struct PatreonMembersResponse: Codable {
+    public let data: [PatreonMember]
+    public let included: [PatreonIncludedResource]?
+    public let meta: PatreonPaginationMeta?
+}
+
+public struct PatreonIncludedResource: Codable {
+    public let id: String
+    public let type: String
+    public let attributes: PatreonIncludedAttributes?
+}
+
+public struct PatreonIncludedAttributes: Codable {
+    public let title: String?
+    public let url: String?
+}
+
+public struct PatreonPaginationMeta: Codable {
+    public let pagination: PatreonPaginationCursors?
+}
+
+public struct PatreonPaginationCursors: Codable {
+    public let cursors: PatreonCursors?
+}
+
+public struct PatreonCursors: Codable {
+    public let next: String?
+}
+
+public struct PatreonIdentityResponse: Codable {
+    public let data: PatreonUser
+    
+    public struct PatreonUser: Codable, Sendable, Identifiable {
+        public let id: String
+        public let type: String
+        public let attributes: PatreonUserAttributes
+        
+        public struct PatreonUserAttributes: Codable, Sendable {
+            public let email: String?
+            public let firstName: String?
+            public let fullName: String?
+            public let imageUrl: String?
+            public let thumbUrl: String?
+            public let url: String?
+            public let vanity: String?
+        }
+    }
+}
+
+// MARK: - Patreon Client
+
+/// Comprehensive Patreon API client
+/// API Docs: https://docs.patreon.com/
+public final class PatreonClient {
+    private let httpClient: HTTPClient
+    private let logger = AppLogger.api
+    
+    // MARK: - Configuration
+    
+    public struct Configuration: Sendable {
+        public let clientId: String
+        public let clientSecret: String
+        public let redirectURI: String
+        
+        public init(clientId: String, clientSecret: String, redirectURI: String) {
+            self.clientId = clientId
+            self.clientSecret = clientSecret
+            self.redirectURI = redirectURI
+        }
+    }
+    
+    // MARK: - API Endpoints
+    
+    private enum Endpoints {
+        static let base = "https://www.patreon.com/api/oauth2/v2"
+        static let auth = "https://www.patreon.com/oauth2/authorize"
+        static let token = "https://www.patreon.com/api/oauth2/token"
+        
+        static let identity = "\(base)/identity"
+        static let campaigns = "\(base)/campaigns"
+        static func campaign(campaignId: String) -> String { "\(base)/campaigns/\(campaignId)" }
+        static func campaignMembers(campaignId: String) -> String { "\(base)/campaigns/\(campaignId)/members" }
+        static func campaignPosts(campaignId: String) -> String { "\(base)/campaigns/\(campaignId)/posts" }
+        static func post(postId: String) -> String { "\(base)/posts/\(postId)" }
+        static let posts = "\(base)/posts"
+    }
+    
+    // MARK: - Type Aliases for Response Types
+    public typealias IdentityResponse = PatreonIdentityResponse
+    public typealias Campaign = PatreonCampaign
+    public typealias CampaignsResponse = PatreonCampaignsResponse
+    public typealias Post = PatreonPost
+    public typealias PostsResponse = PatreonPostsResponse
+    public typealias Member = PatreonMember
+    public typealias MembersResponse = PatreonMembersResponse
+    
+    // MARK: - Initialization
+    
+    private let oauthHelper: OAuthHelper
+    private var authToken: HTTPClient.AuthToken?
+    
+    public init(configuration: Configuration, httpClient: HTTPClient) async {
+        self.httpClient = httpClient
+        let helper = OAuthHelper(
+            clientId: configuration.clientId,
+            clientSecret: configuration.clientSecret,
+            redirectURI: configuration.redirectURI,
+            authURL: URL(string: Endpoints.auth) ?? URL(string: "https://www.patreon.com/oauth2/authorize")!,
+            tokenURL: URL(string: Endpoints.token) ?? URL(string: "https://www.patreon.com/api/oauth2/token")!,
+            httpClient: httpClient
+        )
+        self.oauthHelper = helper
+    }
+    
+    // MARK: - OAuth
+    
+    /// Generate authorization URL for OAuth flow
+    public func authorizationURL(scopes: [String] = ["identity", "identity.memberships", "campaigns", "w:campaigns.post"], state: String = UUID().uuidString) throws -> URL {
+        try oauthHelper.authorizationURL(scopes: scopes, state: state)
+    }
+    
+    /// Exchange authorization code for access token
+    public func exchangeCodeForToken(code: String) async throws {
+        authToken = try await oauthHelper.exchangeCodeForToken(code: code)
+        logger.info("Successfully authenticated with Patreon")
+    }
+    
+    /// Refresh the access token
+    public func refreshToken() async throws {
+        guard let currentToken = authToken, let refreshToken = currentToken.refreshToken else {
+            throw AppError.apiAuthenticationFailed("Patreon: No refresh token available")
+        }
+        authToken = try await oauthHelper.refreshToken(refreshToken: refreshToken)
+        logger.debug("Patreon token refreshed")
+    }
+    
+    /// Check if we have a valid auth token
+    public var isAuthenticated: Bool {
+        guard let token = authToken else { return false }
+        return !token.isExpired
+    }
+    
+    // MARK: - Identity/User Operations
+    
+    /// Get current user's identity
+    public func getIdentity(fields: [String] = ["email", "first_name", "full_name", "image_url", "url", "vanity"]) async throws -> IdentityResponse {
+        try ensureAuthenticated()
+        
+        let fieldsParam = fields.joined(separator: ",")
+        var queryItems: [URLQueryItem] = [
+            URLQueryItem(name: "fields[user]", value: fieldsParam)
+        ]
+        
+        if let url = URL(string: Endpoints.identity) {
+            let response = try await httpClient.request(
+                method: .get,
+                path: Endpoints.identity,
+                queryItems: queryItems,
+                authToken: authToken,
+                decodeAs: IdentityResponse.self
+            )
+            return response.data
+        } else {
+            throw AppError.invalidConfiguration("Invalid Patreon identity endpoint")
+        }
+    }
+    
+    // MARK: - Campaign Operations
+    
+    /// Get all campaigns for the current user
+    public func getCampaigns(
+        includeFields: [String] = ["summary", "creation_name", "image_url", "url", "published_at"]
+    ) async throws -> CampaignsResponse {
+        try ensureAuthenticated()
+        
+        let fieldsParam = includeFields.joined(separator: ",")
+        let queryItems: [URLQueryItem] = [
+            URLQueryItem(name: "fields[campaign]", value: fieldsParam)
+        ]
+        
+        let response = try await httpClient.request(
+            method: .get,
+            path: Endpoints.campaigns,
+            queryItems: queryItems,
+            authToken: authToken,
+            decodeAs: CampaignsResponse.self
+        )
+        
+        return response.data
+    }
+    
+    /// Get a specific campaign by ID
+    public func getCampaign(
+        campaignId: String,
+        includeFields: [String] = ["summary", "creation_name", "image_url", "url", "published_at"]
+    ) async throws -> Campaign {
+        try ensureAuthenticated()
+        
+        let fieldsParam = includeFields.joined(separator: ",")
+        let queryItems: [URLQueryItem] = [
+            URLQueryItem(name: "fields[campaign]", value: fieldsParam)
+        ]
+        
+        let response = try await httpClient.request(
+            method: .get,
+            path: Endpoints.campaign(campaignId: campaignId),
+            queryItems: queryItems,
+            authToken: authToken,
+            decodeAs: Campaign.self
+        )
+        
+        return response.data
+    }
+    
+    // MARK: - Post Operations
+    
+    /// Get all posts for a campaign
+    public func getCampaignPosts(
+        campaignId: String,
+        includeFields: [String] = ["title", "content", "is_paid", "is_public", "published_at", "url", "edited_at"],
+        cursor: String? = nil
+    ) async throws -> PostsResponse {
+        try ensureAuthenticated()
+        
+        let fieldsParam = includeFields.joined(separator: ",")
+        var queryItems: [URLQueryItem] = [
+            URLQueryItem(name: "fields[post]", value: fieldsParam),
+            URLQueryItem(name: "fields[campaign]", value: "url")
+        ]
+        
+        if let cursor = cursor {
+            queryItems.append(URLQueryItem(name: "page[cursor]", value: cursor))
+        }
+        
+        let response = try await httpClient.request(
+            method: .get,
+            path: Endpoints.campaignPosts(campaignId: campaignId),
+            queryItems: queryItems,
+            authToken: authToken,
+            decodeAs: PostsResponse.self
+        )
+        
+        return response.data
+    }
+    
+    /// Get a specific post by ID
+    public func getPost(
+        postId: String,
+        includeFields: [String] = ["title", "content", "is_paid", "is_public", "published_at", "url", "edited_at"]
+    ) async throws -> Post {
+        try ensureAuthenticated()
+        
+        let fieldsParam = includeFields.joined(separator: ",")
+        let queryItems: [URLQueryItem] = [
+            URLQueryItem(name: "fields[post]", value: fieldsParam)
+        ]
+        
+        let response = try await httpClient.request(
+            method: .get,
+            path: Endpoints.post(postId: postId),
+            queryItems: queryItems,
+            authToken: authToken,
+            decodeAs: Post.self
+        )
+        
+        return response.data
+    }
+    
+    /// Create a new post
+    public func createPost(
+        campaignId: String,
+        title: String,
+        content: String,
+        isPaid: Bool? = nil,
+        isPublic: Bool? = nil,
+        tiers: [String]? = nil,
+        publishAt: Date? = nil
+    ) async throws -> Post {
+        try ensureAuthenticated()
+        
+        guard let token = authToken else {
+            throw AppError.apiAuthenticationFailed("Patreon: No auth token available")
+        }
+        
+        var attributes: [String: Any] = [
+            "title": title,
+            "content": content
+        ]
+        
+        if let isPaid = isPaid {
+            attributes["is_paid"] = isPaid
+        }
+        if let isPublic = isPublic {
+            attributes["is_public"] = isPublic
+        }
+        
+        var relationships: [String: Any] = [
+            "campaign": [
+                "data": [
+                    "id": campaignId,
+                    "type": "campaign"
+                ]
+            ]
+        ]
+        
+        if let tiers = tiers, !tiers.isEmpty {
+            relationships["tiers"] = [
+                "data": tiers.map { ["id": $0, "type": "tier"] }
+            ]
+        }
+        
+        let body: [String: Any] = [
+            "data": [
+                "type": "post",
+                "attributes": attributes,
+                "relationships": relationships
+            ]
+        ]
+        
+        // Convert to JSON data
+        let jsonData = try JSONSerialization.data(withJSONObject: body)
+        
+        guard let postsURL = URL(string: Endpoints.posts) else {
+            throw AppError.invalidConfiguration("Invalid Patreon posts endpoint")
+        }
+        var request = URLRequest(url: postsURL)
+        request.httpMethod = "POST"
+        request.setValue("application/vnd.api+json", forHTTPHeaderField: "Content-Type")
+        request.setValue("Bearer \(token.accessToken)", forHTTPHeaderField: "Authorization")
+        request.httpBody = jsonData
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw AppError.apiRequestFailed("posts", NSError(domain: "PatreonClient", code: -1))
+        }
+        
+        if (400...599).contains(httpResponse.statusCode) {
+            let errorBody = String(data: data, encoding: .utf8) ?? "Unknown error"
+            throw AppError.apiRequestFailed("posts", NSError(domain: "PatreonClient", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: errorBody]))
+        }
+        
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        return try decoder.decode(Post.self, from: data)
+    }
+    
+    /// Update an existing post
+    public func updatePost(
+        postId: String,
+        title: String? = nil,
+        content: String? = nil,
+        isPaid: Bool? = nil,
+        isPublic: Bool? = nil
+    ) async throws -> Post {
+        try ensureAuthenticated()
+        
+        guard let token = authToken else {
+            throw AppError.apiAuthenticationFailed("Patreon: No auth token available")
+        }
+        
+        var attributes: [String: Any] = [:]
+        
+        if let title = title {
+            attributes["title"] = title
+        }
+        if let content = content {
+            attributes["content"] = content
+        }
+        if let isPaid = isPaid {
+            attributes["is_paid"] = isPaid
+        }
+        if let isPublic = isPublic {
+            attributes["is_public"] = isPublic
+        }
+        
+        let body: [String: Any] = [
+            "data": [
+                "type": "post",
+                "id": postId,
+                "attributes": attributes
+            ]
+        ]
+        
+        let jsonData = try JSONSerialization.data(withJSONObject: body)
+        
+        let postEndpoint = Endpoints.post(postId: postId)
+        guard let postURL = URL(string: postEndpoint) else {
+            throw AppError.invalidConfiguration("Invalid Patreon post endpoint")
+        }
+        var request = URLRequest(url: postURL)
+        request.httpMethod = "PATCH"
+        request.setValue("application/vnd.api+json", forHTTPHeaderField: "Content-Type")
+        request.setValue("Bearer \(token.accessToken)", forHTTPHeaderField: "Authorization")
+        request.httpBody = jsonData
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw AppError.apiRequestFailed("post", NSError(domain: "PatreonClient", code: -1))
+        }
+        
+        if (400...599).contains(httpResponse.statusCode) {
+            let errorBody = String(data: data, encoding: .utf8) ?? "Unknown error"
+            throw AppError.apiRequestFailed("post", NSError(domain: "PatreonClient", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: errorBody]))
+        }
+        
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        return try decoder.decode(Post.self, from: data)
+    }
+    
+    // MARK: - Member Operations
+    
+    /// Get members for a campaign
+    public func getCampaignMembers(
+        campaignId: String,
+        includeFields: [String] = ["full_name", "email", "patron_status", "last_charge_status", "lifetime_support_cents"],
+        cursor: String? = nil
+    ) async throws -> MembersResponse {
+        try ensureAuthenticated()
+        
+        let fieldsParam = includeFields.joined(separator: ",")
+        var queryItems: [URLQueryItem] = [
+            URLQueryItem(name: "fields[member]", value: fieldsParam),
+            URLQueryItem(name: "include", value: "currently_entitled_tiers")
+        ]
+        
+        if let cursor = cursor {
+            queryItems.append(URLQueryItem(name: "page[cursor]", value: cursor))
+        }
+        
+        let response = try await httpClient.request(
+            method: .get,
+            path: Endpoints.campaignMembers(campaignId: campaignId),
+            queryItems: queryItems,
+            authToken: authToken,
+            decodeAs: MembersResponse.self
+        )
+        
+        return response.data
+    }
+    
+    /// Get paginated iterator for campaign posts
+    public func postsIterator(campaignId: String) -> PaginatedIterator<Post> {
+        PaginatedIterator { [weak self] cursor in
+            guard let self = self else {
+                throw AppError.apiRequestFailed("posts", NSError(domain: "PatreonClient", code: -1))
+            }
+            
+            let response = try await self.getCampaignPosts(campaignId: campaignId, cursor: cursor)
+            
+            return HTTPClient.APIResponse<PaginatedIterator<Post>.PaginatedPage<Post>>(
+                data: PaginatedIterator.PaginatedPage(
+                    items: response.data,
+                    nextCursor: response.meta?.pagination?.cursors?.next,
+                    hasMore: response.meta?.pagination?.cursors?.next != nil
+                ),
+                statusCode: 200,
+                headers: [:]
+            )
+        }
+    }
+    
+    // MARK: - Utility Methods
+    
+    /// Get public URL for a post
+    public func getPublicURL(for postId: String) async throws -> String {
+        let post = try await getPost(postId: postId)
+        return post.attributes.url ?? "https://www.patreon.com/posts/\(postId)"
+    }
+    
+    /// Check if token needs refresh and refresh if necessary
+    public func ensureValidToken() async throws {
+        guard let token = authToken else {
+            throw AppError.apiAuthenticationFailed("Patreon: Not authenticated")
+        }
+        
+        if token.isExpired {
+            try await refreshToken()
+        }
+    }
+    
+    // MARK: - Private Methods
+    
+    private func ensureAuthenticated() throws {
+        guard isAuthenticated else {
+            throw AppError.apiAuthenticationFailed("Patreon: Not authenticated. Call exchangeCodeForToken() first.")
+        }
+    }
+}
+
+// MARK: - Error Handling Extension
+
+extension PatreonClient {
+    /// Custom error types for Patreon API
+    public enum PatreonError: Error, Sendable {
+        case notAuthenticated
+        case invalidResponse
+        case campaignNotFound(String)
+        case postNotFound(String)
+        case memberNotFound(String)
+        case rateLimited(Int)
+    }
+}
