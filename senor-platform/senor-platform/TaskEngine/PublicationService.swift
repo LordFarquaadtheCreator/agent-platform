@@ -1,26 +1,34 @@
 import Foundation
+import DataLayer
+import CacheLayer
 
 /// Service for orchestrating publication to platforms
-public final class PublicationService {
+public final actor PublicationService: Sendable {
     private let publicationRepository: PublicationTargetRepository
     private let contentRepository: GeneratedContentRepository
     private let cacheService: CacheService
+    private let approvalQueueRepository: ApprovalQueueRepository
+    private let settingsService: SettingsService
     private let logger = AppLogger.general
 
-    /// DeviantArt client (injected)
-    public var deviantArtClient: DeviantArtClient?
+    /// DeviantArt client (injected) - nonisolated(unsafe) because clients are thread-safe actors
+    nonisolated(unsafe) public var deviantArtClient: DeviantArtClient?
 
-    /// Patreon client (injected)
-    public var patreonClient: PatreonClient?
+    /// Patreon client (injected) - nonisolated(unsafe) because clients are thread-safe actors
+    nonisolated(unsafe) public var patreonClient: PatreonClient?
 
     public init(
+        approvalQueueRepository: ApprovalQueueRepository,
         publicationRepository: PublicationTargetRepository,
         contentRepository: GeneratedContentRepository,
-        cacheService: CacheService
+        remotePostCacheRepository: RemotePostCacheRepository,
+        settingsService: SettingsService
     ) {
+        self.approvalQueueRepository = approvalQueueRepository
         self.publicationRepository = publicationRepository
         self.contentRepository = contentRepository
-        self.cacheService = cacheService
+        self.cacheService = CacheService(cacheRepository: remotePostCacheRepository)
+        self.settingsService = settingsService
     }
 
     // MARK: - Publication Execution

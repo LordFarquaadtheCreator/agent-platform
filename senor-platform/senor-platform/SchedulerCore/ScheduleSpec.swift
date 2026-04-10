@@ -44,9 +44,9 @@ public enum ScheduleSpec: Codable, Sendable {
 }
 
 /// Compiler that converts ScheduleSpec to cron expression and computes next run times
-public final class ScheduleCompiler: Sendable {
+public final actor ScheduleCompiler: Sendable {
     private let calendar: Calendar
-    nonisolated private let logger = AppLogger.scheduler
+    private let logger = AppLogger.scheduler
 
     public init() {
         var calendar = Calendar.current

@@ -160,7 +160,7 @@ public struct DeviantArtPublishTool: AgentTool {
     
     private func getDeviantArtClient(context: ToolExecutionContext) async throws -> DeviantArtClient? {
         // Resolve from shared container
-        return sharedContainer.resolveOptional(DeviantArtClient.self)
+        return await sharedContainer.resolveOptional(DeviantArtClient.self)
     }
 }
 
@@ -311,7 +311,7 @@ public struct PatreonPublishTool: AgentTool {
     
     private func getPatreonClient(context: ToolExecutionContext) async throws -> PatreonClient? {
         // Resolve from shared container
-        return sharedContainer.resolveOptional(PatreonClient.self)
+        return await sharedContainer.resolveOptional(PatreonClient.self)
     }
 }
 

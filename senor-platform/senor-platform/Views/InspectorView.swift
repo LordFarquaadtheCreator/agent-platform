@@ -273,13 +273,42 @@ struct ContentInspector: View {
     }
 
     private func publishToDeviantArt() {
-        // TODO: Implement publication to DeviantArt
-        // This would use the PublicationService
+        isProcessing = true
+        Task {
+            do {
+                // Resolve PublicationService and publish content
+                if let publicationService = await sharedContainer.resolveOptional(PublicationService.self) {
+                    _ = try await publicationService.publishToDeviantArt(
+                        contentId: content.id,
+                        title: content.title,
+                        tags: nil,
+                        category: nil
+                    )
+                }
+                isProcessing = false
+            } catch {
+                isProcessing = false
+            }
+        }
     }
 
     private func publishToPatreon() {
-        // TODO: Implement publication to Patreon
-        // This would use the PublicationService
+        isProcessing = true
+        Task {
+            do {
+                // Resolve PublicationService and publish content
+                if let publicationService = await sharedContainer.resolveOptional(PublicationService.self) {
+                    _ = try await publicationService.publishToPatreon(
+                        contentId: content.id,
+                        campaignId: nil,
+                        tierIds: nil
+                    )
+                }
+                isProcessing = false
+            } catch {
+                isProcessing = false
+            }
+        }
     }
 }
 

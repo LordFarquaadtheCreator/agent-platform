@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import GRDB
 import Combine
 
 @main
@@ -58,11 +59,18 @@ class AppState: ObservableObject {
     
     private let container = sharedContainer
     private let logger = AppLogger.ui
+    private var initializationTask: Task<Void, Never>?
     
     init() {
-        Task {
+        // Start initialization but don't await - UI will show loading state
+        initializationTask = Task {
             await initializeApp()
         }
+    }
+    
+    /// Wait for initialization to complete (for testing or synchronous requirements)
+    func awaitInitialization() async {
+        await initializationTask?.value
     }
     
     private func initializeApp() async {
@@ -92,55 +100,69 @@ class AppState: ObservableObject {
             
             // 3. Register services
             logger.info("Step 3: Registering services...")
-            let namingService = AgentNamingService(repository: container.resolveOrCrash(AgentRepository.self))
-            container.register(AgentNamingService.self, instance: namingService)
+            let agentRepo: AgentRepository = try await container.resolve(AgentRepository.self)
+            let namingService = AgentNamingService(repository: agentRepo)
+            await container.register(AgentNamingService.self, instance: namingService)
             
-            let versioningService = ContentVersioningService(
-                contentRepository: container.resolveOrCrash(GeneratedContentRepository.self)
-            )
-            container.register(ContentVersioningService.self, instance: versioningService)
+            let contentRepo: GeneratedContentRepository = try await container.resolve(GeneratedContentRepository.self)
+            let versioningService = ContentVersioningService(contentRepository: contentRepo)
+            await container.register(ContentVersioningService.self, instance: versioningService)
             
+            let approvalQueueRepo: ApprovalQueueRepository = try await container.resolve(ApprovalQueueRepository.self)
+            let pubTargetRepo: PublicationTargetRepository = try await container.resolve(PublicationTargetRepository.self)
             let approvalService = ApprovalService(
-                approvalRepository: container.resolveOrCrash(ApprovalQueueRepository.self),
-                contentRepository: container.resolveOrCrash(GeneratedContentRepository.self),
-                publicationTargetRepository: container.resolveOrCrash(PublicationTargetRepository.self)
+                approvalRepository: approvalQueueRepo,
+                contentRepository: contentRepo,
+                publicationTargetRepository: pubTargetRepo
             )
-            container.register(ApprovalService.self, instance: approvalService)
+            await container.register(ApprovalService.self, instance: approvalService)
             
             let settingsService = SettingsService()
-            container.register(SettingsService.self, instance: settingsService)
+            await container.register(SettingsService.self, instance: settingsService)
             
-            let cacheService = CacheService()
-            container.register(CacheService.self, instance: cacheService)
-            
-            let publicationService = PublicationService(
-                approvalQueueRepository: container.resolveOrCrash(ApprovalQueueRepository.self),
-                contentRepository: container.resolveOrCrash(GeneratedContentRepository.self),
-                publicationTargetRepository: container.resolveOrCrash(PublicationTargetRepository.self),
-                remotePostCacheRepository: container.resolveOrCrash(RemotePostCacheRepository.self),
-                settingsService: settingsService
-            )
-            container.register(PublicationService.self, instance: publicationService)
-            
-            // Register API clients if tokens available
-            if settingsService.deviantArtAccessToken != nil {
-                let deviantArtClient = DeviantArtClient(
-                    clientId: "",
-                    clientSecret: "",
-                    redirectURI: "",
-                    settingsService: settingsService
-                )
-                container.register(DeviantArtClient.self, instance: deviantArtClient)
+            await container.register(CacheService.self) {
+                let cacheRepo = try await container.resolve(RemotePostCacheRepository.self)
+                return CacheService(cacheRepository: cacheRepo)
             }
             
-            if settingsService.patreonAccessToken != nil {
-                let patreonClient = PatreonClient(
-                    clientId: "",
-                    clientSecret: "",
-                    redirectURI: "",
-                    settingsService: settingsService
+            let cacheRepo: RemotePostCacheRepository = try await container.resolve(RemotePostCacheRepository.self)
+            let publicationService = PublicationService(
+                approvalQueueRepository: approvalQueueRepo,
+                contentRepository: contentRepo,
+                publicationTargetRepository: pubTargetRepo,
+                remotePostCacheRepository: cacheRepo,
+                settingsService: settingsService
+            )
+            await container.register(PublicationService.self, instance: publicationService)
+            
+            // Register API clients lazily - they'll be configured when credentials are available
+            await container.register(DeviantArtClient.self) {
+                let daSettings = settingsService.loadDeviantArtSettings()
+                guard !daSettings.clientId.isEmpty, !daSettings.clientSecret.isEmpty else {
+                    throw DependencyContainerError.serviceNotRegistered("DeviantArtClient - missing credentials")
+                }
+                let config = DeviantArtClient.Configuration(
+                    clientId: daSettings.clientId,
+                    clientSecret: daSettings.clientSecret,
+                    redirectURI: "senorplatform://oauth/deviantart"
                 )
-                container.register(PatreonClient.self, instance: patreonClient)
+                let httpClient = HTTPClient(configuration: HTTPClient.Configuration(baseURL: URL(string: "https://www.deviantart.com")!))
+                return try await DeviantArtClient(configuration: config, httpClient: httpClient)
+            }
+            
+            await container.register(PatreonClient.self) {
+                let patSettings = settingsService.loadPatreonSettings()
+                guard !patSettings.accessToken.isEmpty else {
+                    throw DependencyContainerError.serviceNotRegistered("PatreonClient - missing credentials")
+                }
+                // For Patreon, we use the campaign ID as a pseudo clientId for now
+                let config = PatreonClient.Configuration(
+                    clientId: patSettings.campaignId ?? "patreon-app",
+                    clientSecret: "", // Patreon uses creator access token instead
+                    redirectURI: "senorplatform://oauth/patreon"
+                )
+                let httpClient = HTTPClient(configuration: HTTPClient.Configuration(baseURL: URL(string: "https://www.patreon.com")!))
+                return await PatreonClient(configuration: config, httpClient: httpClient)
             }
             
             logger.info("Step 3 complete: Services registered")
@@ -148,39 +170,44 @@ class AppState: ObservableObject {
             // 4. Register worker manager
             logger.info("Step 4: Starting worker manager...")
             let workerManager = try WorkerProcessManager()
-            container.register(WorkerProcessManager.self, instance: workerManager)
+            await container.register(WorkerProcessManager.self, instance: workerManager)
             try await workerManager.startup()
             logger.info("Step 4 complete: Worker manager started")
             
             // 5. Create task execution pipeline
             logger.info("Step 5: Creating task execution pipeline...")
+            let taskRepo: TaskRepository = try await container.resolve(TaskRepository.self)
+            let taskRunRepo: TaskRunRepository = try await container.resolve(TaskRunRepository.self)
+            let taskTypeRepo: TaskTypeRepository = try await container.resolve(TaskTypeRepository.self)
+            let scheduleRepo: TaskScheduleRepository = try await container.resolve(TaskScheduleRepository.self)
             let taskPipeline = TaskExecutionPipeline(
-                taskRepository: container.resolveOrCrash(TaskRepository.self),
-                taskRunRepository: container.resolveOrCrash(TaskRunRepository.self),
-                contentRepository: container.resolveOrCrash(GeneratedContentRepository.self),
-                approvalQueueRepository: container.resolveOrCrash(ApprovalQueueRepository.self),
-                taskTypeRepository: container.resolveOrCrash(TaskTypeRepository.self),
+                taskRepository: taskRepo,
+                taskScheduleRepository: scheduleRepo,
+                taskRunRepository: taskRunRepo,
+                contentRepository: contentRepo,
+                approvalQueueRepository: approvalQueueRepo,
+                taskTypeRepository: taskTypeRepo,
                 workerManager: workerManager,
                 schemaValidator: TaskSchemaValidator()
             )
-            container.register(TaskExecutionPipeline.self, instance: taskPipeline)
+            await container.register(TaskExecutionPipeline.self, instance: taskPipeline)
             logger.info("Step 5a: TaskExecutionPipeline created")
-
-            // 6. Start scheduler engine
+            
+            // 6. Register scheduler engine
             logger.info("Step 6: Starting scheduler engine...")
             let schedulerEngine = SchedulerEngine(
-                scheduleRepository: container.resolveOrCrash(TaskScheduleRepository.self),
-                taskRepository: container.resolveOrCrash(TaskRepository.self),
-                taskRunRepository: container.resolveOrCrash(TaskRunRepository.self),
-                onTaskDue: { @Sendable (task: TaskRecord, schedule: TaskScheduleRecord) async -> Void in
-                    await taskPipeline.execute(task: task, schedule: schedule)
+                scheduleRepository: scheduleRepo,
+                taskRepository: taskRepo,
+                taskRunRepository: taskRunRepo
+            ) { task, schedule in
+                // Task due callback - execute via pipeline
+                Task {
+                    await pipeline.execute(task: task, schedule: schedule)
                 }
-            )
-            container.register(SchedulerEngine.self, instance: schedulerEngine)
+            }
+            await container.register(SchedulerEngine.self, instance: schedulerEngine)
             try await schedulerEngine.startup()
-            logger.info("Step 6: SchedulerEngine startup complete")
             
-            logger.info("Step 6: Setting isInitialized = true")
             await MainActor.run {
                 self.isInitialized = true
             }

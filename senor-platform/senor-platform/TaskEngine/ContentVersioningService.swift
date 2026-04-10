@@ -1,7 +1,7 @@
 import Foundation
 
 /// Service for managing content versioning and history
-public final class ContentVersioningService {
+public final class ContentVersioningService: Sendable {
     private let contentRepository: GeneratedContentRepository
     private let logger = AppLogger.general
 

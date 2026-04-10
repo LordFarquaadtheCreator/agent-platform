@@ -7,22 +7,47 @@ public final class SettingsService: Sendable {
     private let logger = AppLogger.general
 
     private enum Keys {
-        static let deviantArtClientId = "deviantArt.clientId"
-        static let deviantArtClientSecret = "deviantArt.clientSecret"
-        static let deviantArtAccessToken = "deviantArt.accessToken"
-        static let deviantArtRefreshToken = "deviantArt.refreshToken"
+        // UserDefaults keys for non-sensitive data
         static let deviantArtTokenExpiry = "deviantArt.tokenExpiry"
-
-        static let patreonAccessToken = "patreon.accessToken"
         static let patreonCampaignId = "patreon.campaignId"
         static let patreonTokenExpiry = "patreon.tokenExpiry"
-
         static let comfyUIServerURL = "comfyUI.serverURL"
         static let comfyUITimeout = "comfyUI.timeout"
-
+        static let taskScriptPath = "task.scriptPath"
         static let launchAtLogin = "general.launchAtLogin"
         static let showNotifications = "general.showNotifications"
         static let logLevel = "general.logLevel"
+    }
+
+    // MARK: - Task Settings
+
+    /// Get the configured task script path, or return the default
+    public func taskScriptPath() -> String {
+        // First check UserDefaults for custom path
+        if let customPath = defaults.string(forKey: Keys.taskScriptPath), !customPath.isEmpty {
+            return customPath
+        }
+        // Fall back to bundle resource or system path
+        return Bundle.main.path(forResource: "senor-task", ofType: nil)
+            ?? "/usr/local/bin/senor-task"
+    }
+
+    /// Set a custom task script path (nil to reset to default)
+    public func setTaskScriptPath(_ path: String?) {
+        if let path = path, !path.isEmpty {
+            defaults.set(path, forKey: Keys.taskScriptPath)
+            logger.info("Set custom task script path: \(path)")
+        } else {
+            defaults.removeObject(forKey: Keys.taskScriptPath)
+            logger.info("Reset task script path to default")
+        }
+    }
+
+    // Keychain keys for sensitive credentials
+    private enum KeychainKeys: String {
+        case deviantArtClientId = "deviantart_client_id"
+        case deviantArtClientSecret = "deviantart_client_secret"
+        case patreonAccessToken = "patreon_access_token"
     }
 
     public init() {}
@@ -41,21 +66,28 @@ public final class SettingsService: Sendable {
         }
     }
 
-    public func saveDeviantArtSettings(_ settings: DeviantArtSettings) {
-        defaults.set(settings.clientId, forKey: Keys.deviantArtClientId)
-        defaults.set(settings.clientSecret, forKey: Keys.deviantArtClientSecret)
-        defaults.set(settings.accessToken, forKey: Keys.deviantArtAccessToken)
-        defaults.set(settings.refreshToken, forKey: Keys.deviantArtRefreshToken)
+    public func saveDeviantArtSettings(_ settings: DeviantArtSettings) throws {
+        // Store ALL credentials in Keychain for security, not UserDefaults
+        let keychain = Keychain()
+        try keychain.save(string: settings.clientId, account: KeychainKeys.deviantArtClientId.rawValue)
+        try keychain.save(string: settings.clientSecret, account: KeychainKeys.deviantArtClientSecret.rawValue)
+        if let accessToken = settings.accessToken {
+            try keychain.save(string: accessToken, key: .deviantArtAccessToken)
+        }
+        if let refreshToken = settings.refreshToken {
+            try keychain.save(string: refreshToken, key: .deviantArtRefreshToken)
+        }
         defaults.set(settings.tokenExpiry, forKey: Keys.deviantArtTokenExpiry)
-        logger.info("Saved DeviantArt settings")
+        logger.info("Saved DeviantArt settings to Keychain")
     }
 
     public func loadDeviantArtSettings() -> DeviantArtSettings {
-        DeviantArtSettings(
-            clientId: defaults.string(forKey: Keys.deviantArtClientId) ?? "",
-            clientSecret: defaults.string(forKey: Keys.deviantArtClientSecret) ?? "",
-            accessToken: defaults.string(forKey: Keys.deviantArtAccessToken),
-            refreshToken: defaults.string(forKey: Keys.deviantArtRefreshToken),
+        let keychain = Keychain()
+        return DeviantArtSettings(
+            clientId: keychain.retrieveString(account: KeychainKeys.deviantArtClientId.rawValue) ?? "",
+            clientSecret: keychain.retrieveString(account: KeychainKeys.deviantArtClientSecret.rawValue) ?? "",
+            accessToken: keychain.retrieveString(key: .deviantArtAccessToken),
+            refreshToken: keychain.retrieveString(key: .deviantArtRefreshToken),
             tokenExpiry: defaults.object(forKey: Keys.deviantArtTokenExpiry) as? Date
         )
     }
@@ -72,16 +104,22 @@ public final class SettingsService: Sendable {
         }
     }
 
-    public func savePatreonSettings(_ settings: PatreonSettings) {
-        defaults.set(settings.accessToken, forKey: Keys.patreonAccessToken)
+    public func savePatreonSettings(_ settings: PatreonSettings) throws {
+        // Store sensitive token in Keychain, not UserDefaults
+        let keychain = Keychain()
+        if !settings.accessToken.isEmpty {
+            try keychain.save(string: settings.accessToken, account: KeychainKeys.patreonAccessToken.rawValue)
+        }
         defaults.set(settings.campaignId, forKey: Keys.patreonCampaignId)
         defaults.set(settings.tokenExpiry, forKey: Keys.patreonTokenExpiry)
-        logger.info("Saved Patreon settings")
+        logger.info("Saved Patreon settings to Keychain")
     }
 
     public func loadPatreonSettings() -> PatreonSettings {
-        PatreonSettings(
-            accessToken: defaults.string(forKey: Keys.patreonAccessToken) ?? "",
+        let keychain = Keychain()
+        let accessToken = keychain.retrieveString(account: KeychainKeys.patreonAccessToken.rawValue) ?? ""
+        return PatreonSettings(
+            accessToken: accessToken,
             campaignId: defaults.string(forKey: Keys.patreonCampaignId),
             tokenExpiry: defaults.object(forKey: Keys.patreonTokenExpiry) as? Date
         )
@@ -144,11 +182,10 @@ public final class SettingsService: Sendable {
 
     // MARK: - Clear Settings
 
-    public func clearAllSettings() {
+    public func clearAllSettings() async throws {
         let keys = [
-            Keys.deviantArtClientId, Keys.deviantArtClientSecret, Keys.deviantArtAccessToken,
-            Keys.deviantArtRefreshToken, Keys.deviantArtTokenExpiry,
-            Keys.patreonAccessToken, Keys.patreonCampaignId, Keys.patreonTokenExpiry,
+            Keys.deviantArtTokenExpiry,
+            Keys.patreonCampaignId, Keys.patreonTokenExpiry,
             Keys.comfyUIServerURL, Keys.comfyUITimeout,
             Keys.launchAtLogin, Keys.showNotifications, Keys.logLevel
         ]
@@ -157,6 +194,15 @@ public final class SettingsService: Sendable {
             defaults.removeObject(forKey: key)
         }
 
-        logger.warning("All settings cleared")
+        // Also clear sensitive credentials from Keychain
+        let keychain = Keychain()
+        try keychain.delete(account: KeychainKeys.deviantArtClientId.rawValue)
+        try keychain.delete(account: KeychainKeys.deviantArtClientSecret.rawValue)
+        try keychain.delete(key: Keychain.Key.deviantArtAccessToken)
+        try keychain.delete(key: Keychain.Key.deviantArtRefreshToken)
+        try keychain.delete(account: KeychainKeys.patreonAccessToken.rawValue)
+        try keychain.delete(key: Keychain.Key.patreonCreatorToken)
+
+        logger.warning("All settings cleared (including Keychain credentials)")
     }
 }

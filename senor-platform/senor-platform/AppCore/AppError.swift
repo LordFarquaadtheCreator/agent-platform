@@ -25,6 +25,7 @@ public enum AppError: Error, Sendable {
     case apiAuthenticationFailed(String)
     case apiRateLimited(Int)
     case apiResourceNotFound(String)
+    case decodingFailed(String)
 
     // Cache errors
     case cacheReadFailed(String)
@@ -86,6 +87,8 @@ public enum AppError: Error, Sendable {
             return "API rate limited. Retry after \(retryAfter) seconds."
         case .apiResourceNotFound(let resource):
             return "API resource not found: \(resource)"
+        case .decodingFailed(let message):
+            return "Failed to decode response: \(message)"
         case .cacheReadFailed(let message):
             return "Cache read failed: \(message)"
         case .cacheWriteFailed(let message):

@@ -4,6 +4,7 @@
 //
 
 import SwiftUI
+import Foundation
 
 struct NewTaskView: View {
     @Environment(\.dismiss) private var dismiss
@@ -19,16 +20,17 @@ struct NewTaskView: View {
                     TextField("Description", text: $viewModel.description, axis: .vertical)
                         .lineLimit(2...4)
                     
-                    Picker("Task Type", selection: $viewModel.taskType) {
-                        ForEach(viewModel.availableTaskTypes, id: \.self) { type in
-                            Text(type).tag(type)
+                    Picker("Task Type", selection: $viewModel.taskTypeId) {
+                        Text("Select Type...").tag("")
+                        ForEach(viewModel.availableTaskTypes, id: \.id) { type in
+                            Text(type.name).tag(type.id)
                         }
                     }
                     
                     Picker("Agent", selection: $viewModel.agentId) {
-                        Text("Select Agent...").tag(nil as String?)
+                        Text("Select Agent...").tag("")
                         ForEach(viewModel.availableAgents, id: \.id) { agent in
-                            Text(agent.agentName).tag(agent.id as String?)
+                            Text(agent.displayName).tag(agent.id)
                         }
                     }
                 }
@@ -56,7 +58,14 @@ struct NewTaskView: View {
                     Toggle("Enable Scheduling", isOn: $viewModel.hasSchedule)
                     
                     if viewModel.hasSchedule {
-                        ScheduleSpecView(schedule: $viewModel.schedule)
+                        ScheduleSpecView(
+                            scheduleSelection: $viewModel.scheduleKind,
+                            oneTimeDate: $viewModel.oneTimeDate,
+                            dailyTime: $viewModel.dailyTime,
+                            selectedWeekdays: $viewModel.selectedWeekdays,
+                            selectedMonthDays: $viewModel.selectedMonthDays,
+                            timezone: $viewModel.timezone
+                        )
                     }
                 }
             }
@@ -69,9 +78,11 @@ struct NewTaskView: View {
                 }
                 
                 ToolbarItem(placement: .confirmationAction) {
-                    AsyncActionButton("Create") {
-                        await viewModel.createTask()
-                        dismiss()
+                    Button("Create") {
+                        Task {
+                            await viewModel.createTask()
+                            dismiss()
+                        }
                     }
                     .disabled(!viewModel.isValid)
                 }
@@ -93,32 +104,39 @@ struct NewTaskView: View {
 class NewTaskViewModel: ObservableObject {
     @Published var taskName = ""
     @Published var description = ""
-    @Published var taskType = ""
-    @Published var agentId: String?
+    @Published var taskTypeId = ""
+    @Published var agentId = ""
     @Published var metadataJson = "{\n  \"prompt\": \"\",\n  \"workflow\": \"\"\n}"
     @Published var hasSchedule = false
-    @Published var schedule = ScheduleSpec(kind: .oneTime, oneTime: OneTimeSchedule(date: Date()))
+    
+    // Schedule state - using raw values that match ScheduleSpec enum
+    @Published var scheduleKind: ScheduleUISelection = .oneTime
+    @Published var oneTimeDate = Date().addingTimeInterval(3600)
+    @Published var dailyTime = Date()
+    @Published var selectedWeekdays: Set<ScheduleSpec.Weekday> = [.monday]
+    @Published var selectedMonthDays: Set<Int> = [1]
+    @Published var timezone = TimeZone.current.identifier
+    
     @Published var showError = false
     @Published var errorMessage = ""
     @Published var availableAgents: [AgentRecord] = []
-    @Published var availableTaskTypes: [String] = []
+    @Published var availableTaskTypes: [TaskTypeRecord] = []
     @Published var validationError: String?
     
     var isValid: Bool {
-        !taskName.isEmpty && agentId != nil && validationError == nil
+        !taskName.isEmpty && !agentId.isEmpty && !taskTypeId.isEmpty && validationError == nil
     }
     
     func loadData() async {
         do {
-            let agentRepo = sharedContainer.resolveOrCrash(AgentRepository.self)
+            let agentRepo: AgentRepository = await sharedContainer.resolveOrCrash(AgentRepository.self)
             availableAgents = try await agentRepo.listAll()
             
-            let taskTypeRepo = sharedContainer.resolveOrCrash(TaskTypeRepository.self)
-            let types = try await taskTypeRepo.listAll()
-            availableTaskTypes = types.map { $0.name }
+            let taskTypeRepo: TaskTypeRepository = await sharedContainer.resolveOrCrash(TaskTypeRepository.self)
+            availableTaskTypes = try await taskTypeRepo.listAll()
             
             if let firstType = availableTaskTypes.first {
-                taskType = firstType
+                taskTypeId = firstType.id
             }
         } catch {
             errorMessage = "Failed to load data: \(error.localizedDescription)"
@@ -128,167 +146,166 @@ class NewTaskViewModel: ObservableObject {
     
     func createTask() async {
         do {
-            guard let agentId = agentId else { return }
+            guard !agentId.isEmpty, !taskTypeId.isEmpty else { return }
             
             // Validate JSON
-            guard JSONUtils.isValidJSON(metadataJson) else {
+            guard JSONUtils.validate(metadataJson) else {
                 validationError = "Invalid JSON metadata"
                 return
             }
             validationError = nil
             
+            // Create task record with correct initializer
+            // Get script path from SettingsService (configurable via settings)
+            let settingsService = await sharedContainer.resolveOptional(SettingsService.self)
+            let scriptPath = settingsService?.taskScriptPath()
+                ?? Bundle.main.path(forResource: "senor-task", ofType: nil)
+                ?? "/usr/local/bin/senor-task"
             let task = TaskRecord(
                 agentId: agentId,
+                taskTypeId: taskTypeId,
                 taskName: taskName,
-                description: description,
-                taskType: taskType,
-                metadataJson: metadataJson,
-                maxRetries: 3
+                taskMetadataJson: metadataJson,
+                goScriptPath: scriptPath,
+                isEnabled: true
             )
             
-            let repository = sharedContainer.resolveOrCrash(TaskRepository.self)
-            let taskId = try await repository.create(task: task)
+            let repository: TaskRepository = await sharedContainer.resolveOrCrash(TaskRepository.self)
+            let savedTask = try await repository.create(task: task)
             
             // Create schedule if enabled
             if hasSchedule {
-                let scheduleRepo = sharedContainer.resolveOrCrash(TaskScheduleRepository.self)
+                let scheduleSpec = buildScheduleSpec()
                 let compiler = ScheduleCompiler()
-                let (cron, _) = compiler.compile(spec: schedule)
+                let cronExpression = compiler.compileToCron(scheduleSpec)
+                let nextRunAt = compiler.nextRunTime(from: scheduleSpec)
+                
+                let coder = ScheduleSpecCoder()
+                let schedulePayload = coder.encode(scheduleSpec)
                 
                 let scheduleRecord = TaskScheduleRecord(
-                    taskId: taskId,
-                    scheduleKind: schedule.kind.rawValue,
-                    schedulePayloadJson: schedule.toJSON() ?? "{}",
-                    cronExpression: cron ?? "",
-                    timezone: TimeZone.current.identifier,
-                    nextRunAt: compiler.nextRunTime(spec: schedule),
+                    taskId: savedTask.id,
+                    scheduleKind: scheduleKind == .oneTime ? "one_time" : "recurring",
+                    schedulePayloadJson: schedulePayload,
+                    cronExpression: cronExpression,
+                    timezone: timezone,
+                    nextRunAt: nextRunAt,
                     isActive: true
                 )
+                
+                let scheduleRepo: TaskScheduleRepository = await sharedContainer.resolveOrCrash(TaskScheduleRepository.self)
                 _ = try await scheduleRepo.create(schedule: scheduleRecord)
             }
             
-            EventBus.shared.refreshAllData()
+            await EventBus.shared.refreshAllData()
         } catch {
             errorMessage = error.localizedDescription
             showError = true
         }
     }
+    
+    private func buildScheduleSpec() -> ScheduleSpec {
+        let calendar = Calendar.current
+        let timeComponents = calendar.dateComponents([.hour, .minute], from: dailyTime)
+        let scheduleTime = ScheduleSpec.ScheduleTime(
+            hour: timeComponents.hour ?? 9,
+            minute: timeComponents.minute ?? 0
+        )
+        
+        switch scheduleKind {
+        case .oneTime:
+            return .oneTime(date: oneTimeDate)
+        case .daily:
+            return .daily(time: scheduleTime, timezone: timezone)
+        case .weekly:
+            let days = Array(selectedWeekdays).sorted { $0.rawValue < $1.rawValue }
+            return .weekly(time: scheduleTime, days: days, timezone: timezone)
+        case .monthly:
+            let days = Array(selectedMonthDays).sorted()
+            return .monthly(time: scheduleTime, days: days, timezone: timezone)
+        }
+    }
 }
 
+// MARK: - Schedule UI Selection Enum
+
+/// UI selection enum for schedule type picker - maps to ScheduleSpec cases
+enum ScheduleUISelection: String, CaseIterable {
+    case oneTime = "One Time"
+    case daily = "Daily"
+    case weekly = "Weekly"
+    case monthly = "Monthly"
+    
+    var displayName: String { rawValue }
+}
+
+// MARK: - Schedule Spec View
+
 struct ScheduleSpecView: View {
-    @Binding var schedule: ScheduleSpec
+    @Binding var scheduleSelection: ScheduleUISelection
+    @Binding var oneTimeDate: Date
+    @Binding var dailyTime: Date
+    @Binding var selectedWeekdays: Set<ScheduleSpec.Weekday>
+    @Binding var selectedMonthDays: Set<Int>
+    @Binding var timezone: String
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Picker("Schedule Type", selection: $schedule.kind) {
-                ForEach(ScheduleKind.allCases, id: \.self) { kind in
+            Picker("Schedule Type", selection: $scheduleSelection) {
+                ForEach(ScheduleUISelection.allCases, id: \.self) { kind in
                     Text(kind.displayName).tag(kind)
                 }
             }
             
-            switch schedule.kind {
+            switch scheduleSelection {
             case .oneTime:
-                if var oneTime = schedule.oneTime {
-                    DatePicker("Date", selection: Binding(
-                        get: { oneTime.date },
-                        set: { oneTime.date = $0; schedule.oneTime = oneTime }
-                    ))
-                }
+                DatePicker("Run At", selection: $oneTimeDate, in: Date()...)
                 
             case .daily:
-                if var daily = schedule.daily {
-                    DatePicker("Time", selection: Binding(
-                        get: { daily.time },
-                        set: { daily.time = $0; schedule.daily = daily }
-                    ), displayedComponents: .hourAndMinute)
-                    
-                    Stepper("Every \(daily.interval) day(s)", value: Binding(
-                        get: { daily.interval },
-                        set: { daily.interval = $0; schedule.daily = daily }
-                    ), in: 1...30)
-                }
+                DatePicker("Time", selection: $dailyTime, displayedComponents: .hourAndMinute)
                 
             case .weekly:
-                if var weekly = schedule.weekly {
-                    DatePicker("Time", selection: Binding(
-                        get: { weekly.time },
-                        set: { weekly.time = $0; schedule.weekly = weekly }
-                    ), displayedComponents: .hourAndMinute)
-                    
-                    WeekdayPicker(selectedDays: Binding(
-                        get: { weekly.days },
-                        set: { weekly.days = $0; schedule.weekly = weekly }
-                    ))
+                DatePicker("Time", selection: $dailyTime, displayedComponents: .hourAndMinute)
+                
+                VStack(alignment: .leading) {
+                    Text("Days:")
+                        .font(.caption)
+                    HStack {
+                        ForEach(ScheduleSpec.Weekday.allCases, id: \.self) { day in
+                            Toggle(day.shortName, isOn: Binding(
+                                get: { selectedWeekdays.contains(day) },
+                                set: { isOn in
+                                    if isOn {
+                                        selectedWeekdays.insert(day)
+                                    } else {
+                                        selectedWeekdays.remove(day)
+                                    }
+                                }
+                            ))
+                            .toggleStyle(.button)
+                            .font(.caption)
+                        }
+                    }
                 }
                 
             case .monthly:
-                if var monthly = schedule.monthly {
-                    DatePicker("Time", selection: Binding(
-                        get: { monthly.time },
-                        set: { monthly.time = $0; schedule.monthly = monthly }
-                    ), displayedComponents: .hourAndMinute)
+                DatePicker("Time", selection: $dailyTime, displayedComponents: .hourAndMinute)
+                
+                VStack(alignment: .leading) {
+                    Text("Days of month:")
+                        .font(.caption)
                     
+                    // Simplified - just use first selected day for now
                     Picker("Day", selection: Binding(
-                        get: { monthly.day },
-                        set: { monthly.day = $0; schedule.monthly = monthly }
+                        get: { selectedMonthDays.first ?? 1 },
+                        set: { selectedMonthDays = [$0] }
                     )) {
                         ForEach(1...31, id: \.self) { day in
                             Text("\(day)").tag(day)
                         }
                     }
+                    .pickerStyle(.menu)
                 }
-                
-            case .recurring:
-                if var recurring = schedule.recurring {
-                    HStack {
-                        TextField("Minutes", value: Binding(
-                            get: { recurring.minutes },
-                            set: { recurring.minutes = $0; schedule.recurring = recurring }
-                        ), format: .number)
-                        .frame(width: 60)
-                        
-                        Text("min")
-                        
-                        TextField("Hours", value: Binding(
-                            get: { recurring.hours },
-                            set: { recurring.hours = $0; schedule.recurring = recurring }
-                        ), format: .number)
-                        .frame(width: 60)
-                        
-                        Text("hr")
-                        
-                        TextField("Days", value: Binding(
-                            get: { recurring.days },
-                            set: { recurring.days = $0; schedule.recurring = recurring }
-                        ), format: .number)
-                        .frame(width: 60)
-                        
-                        Text("day(s)")
-                    }
-                }
-            }
-        }
-    }
-}
-
-struct WeekdayPicker: View {
-    @Binding var selectedDays: [Int]
-    private let weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
-    
-    var body: some View {
-        HStack(spacing: 8) {
-            ForEach(0..<7) { index in
-                let day = index + 1
-                Button(weekdays[index]) {
-                    if selectedDays.contains(day) {
-                        selectedDays.removeAll { $0 == day }
-                    } else {
-                        selectedDays.append(day)
-                    }
-                    selectedDays.sort()
-                }
-                .buttonStyle(.bordered)
-                .tint(selectedDays.contains(day) ? .blue : .gray)
             }
         }
     }

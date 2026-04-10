@@ -4,7 +4,8 @@ import Foundation
 #endif
 
 // MARK: - Agent Record
-public struct AgentRecord: Codable, FetchableRecord, PersistableRecord, @unchecked Sendable {
+/// Agent database record - conforms to Sendable because all properties are value types
+public struct AgentRecord: Codable, FetchableRecord, PersistableRecord, Sendable {
     #if canImport(GRDB)
     public static let databaseTableName = "agents"
     #endif
@@ -50,7 +51,8 @@ public enum AgentRuntimeStatus: String, Codable, CaseIterable, Sendable {
 
 
 // MARK: - Task Type Record
-public struct TaskTypeRecord: Codable, FetchableRecord, PersistableRecord, @unchecked Sendable {
+/// Task type database record - conforms to Sendable because all properties are value types
+public struct TaskTypeRecord: Codable, FetchableRecord, PersistableRecord, Sendable {
     #if canImport(GRDB)
     public static let databaseTableName = "task_types"
     #endif
@@ -81,7 +83,8 @@ public struct TaskTypeRecord: Codable, FetchableRecord, PersistableRecord, @unch
 
 
 // MARK: - Task Record
-public struct TaskRecord: Codable, FetchableRecord, PersistableRecord, @unchecked Sendable {
+/// Task database record - conforms to Sendable because all properties are value types
+public struct TaskRecord: Codable, FetchableRecord, PersistableRecord, Sendable {
     #if canImport(GRDB)
     public static let databaseTableName = "tasks"
     #endif
@@ -121,7 +124,8 @@ public struct TaskRecord: Codable, FetchableRecord, PersistableRecord, @unchecke
 
 
 // MARK: - Task Schedule Record
-public struct TaskScheduleRecord: Codable, FetchableRecord, PersistableRecord, @unchecked Sendable {
+/// Task schedule database record - conforms to Sendable because all properties are value types
+public struct TaskScheduleRecord: Codable, FetchableRecord, PersistableRecord, Sendable {
     #if canImport(GRDB)
     public static let databaseTableName = "task_schedules"
     #endif
@@ -164,7 +168,8 @@ public struct TaskScheduleRecord: Codable, FetchableRecord, PersistableRecord, @
 
 
 // MARK: - Task Run Record
-public struct TaskRunRecord: Codable, FetchableRecord, PersistableRecord, @unchecked Sendable {
+/// Task run database record - conforms to Sendable because all properties are value types
+public struct TaskRunRecord: Codable, FetchableRecord, PersistableRecord, Sendable {
     #if canImport(GRDB)
     public static let databaseTableName = "task_runs"
     #endif
@@ -216,7 +221,8 @@ public struct TaskRunRecord: Codable, FetchableRecord, PersistableRecord, @unche
 
 
 // MARK: - Generated Content Record
-public struct GeneratedContentRecord: Codable, FetchableRecord, PersistableRecord, @unchecked Sendable {
+/// Generated content database record - conforms to Sendable because all properties are value types
+public struct GeneratedContentRecord: Codable, FetchableRecord, PersistableRecord, Sendable {
     #if canImport(GRDB)
     public static let databaseTableName = "generated_content"
     #endif
@@ -253,7 +259,8 @@ public struct GeneratedContentRecord: Codable, FetchableRecord, PersistableRecor
 
 
 // MARK: - Generated Content Version Record
-public struct GeneratedContentVersionRecord: Codable, FetchableRecord, PersistableRecord, @unchecked Sendable {
+/// Content version database record - conforms to Sendable because all properties are value types
+public struct GeneratedContentVersionRecord: Codable, FetchableRecord, PersistableRecord, Sendable {
     #if canImport(GRDB)
     public static let databaseTableName = "generated_content_versions"
     #endif
@@ -287,7 +294,8 @@ public struct GeneratedContentVersionRecord: Codable, FetchableRecord, Persistab
 
 
 // MARK: - Approval Queue Record
-public struct ApprovalQueueRecord: Codable, FetchableRecord, PersistableRecord, @unchecked Sendable {
+/// Approval queue database record - conforms to Sendable because all properties are value types
+public struct ApprovalQueueRecord: Codable, FetchableRecord, PersistableRecord, Sendable {
     #if canImport(GRDB)
     public static let databaseTableName = "approval_queue"
     #endif
@@ -329,7 +337,8 @@ public struct ApprovalQueueRecord: Codable, FetchableRecord, PersistableRecord, 
 }
 
 // MARK: - Publication Target Record
-public struct PublicationTargetRecord: Codable, FetchableRecord, PersistableRecord, @unchecked Sendable {
+/// Publication target database record - conforms to Sendable because all properties are value types
+public struct PublicationTargetRecord: Codable, FetchableRecord, PersistableRecord, Sendable {
     #if canImport(GRDB)
     public static let databaseTableName = "publication_targets"
     #endif
@@ -388,7 +397,8 @@ public struct PublicationTargetRecord: Codable, FetchableRecord, PersistableReco
 }
 
 // MARK: - Remote Post Cache Record
-public struct RemotePostCacheRecord: Codable, FetchableRecord, PersistableRecord, @unchecked Sendable {
+/// Remote post cache database record - conforms to Sendable because all properties are value types
+public struct RemotePostCacheRecord: Codable, FetchableRecord, PersistableRecord, Sendable {
     #if canImport(GRDB)
     public static let databaseTableName = "remote_post_cache"
     #endif

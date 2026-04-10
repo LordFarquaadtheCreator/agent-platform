@@ -181,7 +181,7 @@ public final class AgentNamingService: Sendable {
 extension AgentNamingService {
     /// Generate a deterministic name based on a seed (for reproducibility)
     public func generateDeterministicName(seed: Int, category: NameCategory? = nil) -> GeneratedName {
-        let rng = SeededRandom(seed: seed)
+        var rng = SeededRandom(seed: seed)
         
         let selectedCategory = category ?? {
             let allCategories = Array(NameCategory.allCases)
@@ -208,6 +208,29 @@ extension AgentNamingService {
 }
 
 // MARK: - Seeded Random Generator
+
+/// Deterministic random number generator for reproducible name generation
+public struct SeededRandom {
+    private var generator: SeededRandomNumberGenerator
+    
+    public init(seed: Int) {
+        self.generator = SeededRandomNumberGenerator(seed: seed)
+    }
+    
+    public mutating func nextInt(in range: Range<Int>) -> Int {
+        let value = generator.next()
+        let rangeSize = UInt64(range.upperBound - range.lowerBound)
+        let boundedValue = Int(value % rangeSize) + range.lowerBound
+        return boundedValue
+    }
+    
+    public mutating func nextInt(in range: ClosedRange<Int>) -> Int {
+        let value = generator.next()
+        let rangeSize = UInt64(range.upperBound - range.lowerBound + 1)
+        let boundedValue = Int(value % rangeSize) + range.lowerBound
+        return boundedValue
+    }
+}
 
 private struct SeededRandomNumberGenerator: RandomNumberGenerator {
     private var state: UInt64

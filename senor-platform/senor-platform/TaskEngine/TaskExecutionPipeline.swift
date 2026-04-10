@@ -1,8 +1,10 @@
 import Foundation
+import DataLayer
 
 /// Orchestrates the complete task execution pipeline
-public final class TaskExecutionPipeline {
+public actor TaskExecutionPipeline: Sendable {
     private let taskRepository: TaskRepository
+    private let taskScheduleRepository: TaskScheduleRepository
     private let taskRunRepository: TaskRunRepository
     private let contentRepository: GeneratedContentRepository
     private let approvalQueueRepository: ApprovalQueueRepository
@@ -13,6 +15,7 @@ public final class TaskExecutionPipeline {
 
     public init(
         taskRepository: TaskRepository,
+        taskScheduleRepository: TaskScheduleRepository,
         taskRunRepository: TaskRunRepository,
         contentRepository: GeneratedContentRepository,
         approvalQueueRepository: ApprovalQueueRepository,
@@ -21,6 +24,7 @@ public final class TaskExecutionPipeline {
         schemaValidator: TaskSchemaValidator
     ) {
         self.taskRepository = taskRepository
+        self.taskScheduleRepository = taskScheduleRepository
         self.taskRunRepository = taskRunRepository
         self.contentRepository = contentRepository
         self.approvalQueueRepository = approvalQueueRepository
@@ -39,12 +43,13 @@ public final class TaskExecutionPipeline {
             try await validateTaskMetadata(task: task)
 
             // 2. Create task run record
+            // Determine trigger source based on schedule kind
+            let triggerSource = schedule.scheduleKind == "one_time" ? "manual" : "scheduled"
             var run = TaskRunRecord(
                 id: runId,
                 taskId: task.id,
                 agentId: task.agentId,
-                triggerSource: schedule.scheduleKind == "one_time" && schedule.cronExpression.isEmpty
-                    ? "manual" : "scheduled",
+                triggerSource: triggerSource,
                 scheduledFor: schedule.nextRunAt ?? Date()
             )
             run.status = "running"
@@ -52,7 +57,7 @@ public final class TaskExecutionPipeline {
             run = try await taskRunRepository.create(run: run)
 
             // 3. Spawn worker process
-            let taskMetadata = parseTaskMetadata(task.taskMetadataJson)
+            let taskMetadata = try parseTaskMetadata(task.taskMetadataJson)
             let arguments = buildArguments(metadata: taskMetadata, runId: runId)
 
             let spawnResult = try await workerManager.spawn(
@@ -85,11 +90,12 @@ public final class TaskExecutionPipeline {
             logger.error("Task execution failed: \(error)")
 
             // Record failure
+            let triggerSource = schedule.scheduleKind == "one_time" ? "manual" : "scheduled"
             let failedRun = TaskRunRecord(
                 id: runId,
                 taskId: task.id,
                 agentId: task.agentId,
-                triggerSource: "scheduled",
+                triggerSource: triggerSource,
                 scheduledFor: schedule.nextRunAt ?? Date(),
                 startedAt: startTime,
                 completedAt: Date(),
@@ -124,9 +130,11 @@ public final class TaskExecutionPipeline {
             nextRunAt: Date(),
             isActive: true
         )
+        // Save the schedule to repository
+        let savedSchedule = try await taskScheduleRepository.create(schedule: schedule)
 
         logger.info("Retrying task: \(task.taskName) (original run: \(runId))")
-        await execute(task: task, schedule: schedule)
+        await execute(task: task, schedule: savedSchedule)
     }
 
     // MARK: - Private Methods
@@ -149,10 +157,10 @@ public final class TaskExecutionPipeline {
         }
     }
 
-    private func parseTaskMetadata(_ json: String) -> [String: Any] {
+    private func parseTaskMetadata(_ json: String) throws -> [String: Any] {
         guard let data = json.data(using: .utf8),
-              let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-            return [:]
+              let dict = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            throw AppError.invalidJSON("Failed to parse task metadata JSON")
         }
         return dict
     }
@@ -217,18 +225,30 @@ public final class TaskExecutionPipeline {
         }
 
         // Parse JSON output
-        guard let jsonData = output.data(using: .utf8),
-              let json = try? JSONSerialization.jsonObject(with: jsonData) as? [String: Any] else {
-            throw AppError.invalidJSON("Worker output is not valid JSON")
+        guard let jsonData = output.data(using: .utf8) else {
+            throw AppError.invalidJSON("Worker output could not be converted to data")
+        }
+        
+        let json: [String: Any]
+        do {
+            json = try JSONSerialization.jsonObject(with: jsonData) as? [String: Any] ?? [:]
+        } catch {
+            throw AppError.invalidJSON("Worker output is not valid JSON: \(error.localizedDescription)")
         }
 
         // Extract content
         let title = json["title"] as? String ?? "Untitled"
         let contentJson = (json["content"] as? [String: Any]) ?? json
 
-        guard let contentData = try? JSONSerialization.data(withJSONObject: contentJson),
-              let contentString = String(data: contentData, encoding: .utf8) else {
-            throw AppError.invalidJSON("Failed to serialize content")
+        let contentData: Data
+        do {
+            contentData = try JSONSerialization.data(withJSONObject: contentJson)
+        } catch {
+            throw AppError.invalidJSON("Failed to serialize content: \(error.localizedDescription)")
+        }
+        
+        guard let contentString = String(data: contentData, encoding: .utf8) else {
+            throw AppError.invalidJSON("Failed to convert content data to string")
         }
 
         // Create generated content record

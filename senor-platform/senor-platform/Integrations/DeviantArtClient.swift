@@ -164,14 +164,20 @@ public final class DeviantArtClient {
     private let oauthHelper: OAuthHelper
     private var authToken: HTTPClient.AuthToken?
     
-    public init(configuration: Configuration, httpClient: HTTPClient) async {
+    public init(configuration: Configuration, httpClient: HTTPClient) async throws {
         self.httpClient = httpClient
+        
+        guard let authURL = URL(string: Endpoints.auth),
+              let tokenURL = URL(string: Endpoints.token) else {
+            throw AppError.invalidConfiguration("Invalid DeviantArt OAuth URLs")
+        }
+        
         let helper = OAuthHelper(
             clientId: configuration.clientId,
             clientSecret: configuration.clientSecret,
             redirectURI: configuration.redirectURI,
-            authURL: URL(string: Endpoints.auth) ?? URL(string: "https://www.deviantart.com/oauth2/authorize")!,
-            tokenURL: URL(string: Endpoints.token) ?? URL(string: "https://www.deviantart.com/oauth2/token")!,
+            authURL: authURL,
+            tokenURL: tokenURL,
             httpClient: httpClient
         )
         self.oauthHelper = helper

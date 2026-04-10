@@ -15,7 +15,7 @@ public final class AgentRunner {
     }
     
     /// Main execution method
-    public func run() async {
+    public func run() async throws {
         do {
             // Report starting
             try await statusReporter.report(status: AgentStatus(
@@ -76,9 +76,10 @@ public final class AgentRunner {
                 timestamp: Date(),
                 error: error.localizedDescription
             ))
-            
+
             logger.error("Agent execution failed: \(error)")
-            Foundation.exit(1)
+            // Throw error instead of exiting to allow proper cleanup by caller
+            throw error
         }
     }
     
@@ -103,29 +104,31 @@ public final class AgentRunner {
     
     private func registerTools() async throws {
         // Register all available tools
+        let availableTools = ["comfyui", "deviantart_publish", "patreon_publish", "image_composer"]
+
         if !arguments.requestedTools.isEmpty {
-            let allTools = await toolRegistry.listTools()
-            for toolName in allTools {
-                if !arguments.requestedTools.contains(toolName) {
-                    // Skip registering this tool - only requested tools will be available
-                    logger.debug("Skipping unrequested tool: \(toolName)")
-                } else {
-                    switch toolName {
-                    case "comfyui":
-                        await toolRegistry.register(ComfyUITool.self)
-                    case "deviantart_publish":
-                        await toolRegistry.register(DeviantArtPublishTool.self)
-                    case "patreon_publish":
-                        await toolRegistry.register(PatreonPublishTool.self)
-                    case "image_composer":
-                        await toolRegistry.register(ImageComposerTool.self)
-                    default:
-                        logger.warning("Unknown tool: \(toolName)")
-                    }
+            // Only register requested tools that are available
+            for toolName in arguments.requestedTools {
+                guard availableTools.contains(toolName) else {
+                    logger.warning("Unknown tool requested: \(toolName)")
+                    continue
+                }
+                switch toolName {
+                case "comfyui":
+                    await toolRegistry.register(ComfyUITool.self)
+                case "deviantart_publish":
+                    await toolRegistry.register(DeviantArtPublishTool.self)
+                case "patreon_publish":
+                    await toolRegistry.register(PatreonPublishTool.self)
+                case "image_composer":
+                    await toolRegistry.register(ImageComposerTool.self)
+                default:
+                    logger.warning("Unknown tool: \(toolName)")
                 }
             }
-            logger.info("Filtered to \(arguments.requestedTools.count) requested tools")
+            logger.info("Registered \(arguments.requestedTools.count) requested tools")
         } else {
+            // Register all tools if none specifically requested
             await toolRegistry.register(ComfyUITool.self)
             await toolRegistry.register(DeviantArtPublishTool.self)
             await toolRegistry.register(PatreonPublishTool.self)
@@ -531,9 +534,10 @@ struct DelegatingStatusReporter: ToolStatusReporter {
         case .starting: return .starting
         case .running: return .running
         case .waiting: return .waiting
-        case .completed: return .running
+        case .completed: return .completed
         case .failed: return .failed
         case .cancelled: return .cancelled
+        @unknown default: return .failed
         }
     }
 }

@@ -10,6 +10,7 @@ public struct AsyncActionButton: View {
 
     @State private var isLoading = false
     @State private var error: Error?
+    @State private var currentTask: Task<Void, Never>?
 
     public init(
         title: String,
@@ -42,24 +43,37 @@ public struct AsyncActionButton: View {
             }
         }
         .disabled(isLoading)
+        .onDisappear {
+            cancelTask()
+        }
     }
 
     private func performAction() {
+        // Cancel any existing task
+        cancelTask()
+
         isLoading = true
-        Task {
+        currentTask = Task {
             do {
                 try await action()
                 await MainActor.run {
                     isLoading = false
+                    currentTask = nil
                 }
             } catch {
                 await MainActor.run {
                     isLoading = false
                     self.error = error
+                    currentTask = nil
                     onError?(error)
                 }
             }
         }
+    }
+
+    private func cancelTask() {
+        currentTask?.cancel()
+        currentTask = nil
     }
 }
 

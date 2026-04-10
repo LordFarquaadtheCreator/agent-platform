@@ -4,6 +4,7 @@
 //
 
 import SwiftUI
+import Foundation
 
 struct NewAgentView: View {
     @Environment(\.dismiss) private var dismiss
@@ -80,17 +81,16 @@ class NewAgentViewModel: ObservableObject {
     func createAgent() async {
         do {
             let agent = AgentRecord(
-                agentName: name,
-                description: description,
-                workerScriptPath: workerScriptPath,
-                configJson: configJson,
-                isActive: isActive
+                displayName: name,
+                status: isActive ? .idle : .paused,
+                nameSource: "manual",
+                nameSeed: 0
             )
             
-            let repository = sharedContainer.resolveOrCrash(AgentRepository.self)
+            let repository = await sharedContainer.resolveOrCrash(AgentRepository.self)
             _ = try await repository.create(agent: agent)
             
-            EventBus.shared.refreshAllData()
+            await EventBus.shared.refreshAllData()
         } catch {
             errorMessage = error.localizedDescription
             showError = true

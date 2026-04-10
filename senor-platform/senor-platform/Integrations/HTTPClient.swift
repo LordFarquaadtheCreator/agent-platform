@@ -4,7 +4,13 @@ import CryptoKit
 /// Shared HTTP client infrastructure for API integrations
 public final class HTTPClient {
     private let urlSession: URLSession
+    private let configuration: Configuration
     private let logger = AppLogger.api
+    
+    public init(configuration: Configuration) {
+        self.configuration = configuration
+        self.urlSession = URLSession(configuration: URLSessionConfiguration.default)
+    }
     
     /// Configuration for HTTP client
     public struct Configuration: Sendable {
@@ -75,10 +81,6 @@ public final class HTTPClient {
         public var isNotFound: Bool { statusCode == 404 }
     }
     
-    public init(configuration: Configuration) {
-        self.urlSession = URLSession(configuration: .default)
-    }
-    
     /// Perform authenticated request with automatic retry
     public func request<T: Decodable>(
         method: HTTPMethod,
@@ -93,7 +95,7 @@ public final class HTTPClient {
         var attempts = 0
         var lastError: Error?
         
-        while attempts < 3 {
+        for attempt in 0..<configuration.maxRetries {
             do {
                 let request = try buildRequest(
                     url: url,
@@ -132,18 +134,24 @@ public final class HTTPClient {
                 // Parse success response
                 let decoder = JSONDecoder()
                 decoder.dateDecodingStrategy = .iso8601
-                let decodedData = try decoder.decode(T.self, from: data)
                 
-                var headers: [String: String] = [:]
-                httpResponse.allHeaderFields.forEach { key, value in
-                    if let key = key as? String, let value = value as? String {
-                        headers[key] = value
+                do {
+                    let decodedData = try decoder.decode(T.self, from: data)
+                    
+                    var headers: [String: String] = [:]
+                    httpResponse.allHeaderFields.forEach { key, value in
+                        if let key = key as? String, let value = value as? String {
+                            headers[key] = value
+                        }
                     }
+                    
+                    logger.debug("Response: \(httpResponse.statusCode) for \(path)")
+                    
+                    return APIResponse(data: decodedData, statusCode: httpResponse.statusCode, headers: headers)
+                } catch {
+                    logger.error("Failed to decode response: \(error)")
+                    throw AppError.decodingFailed("Failed to decode response: \(error.localizedDescription)")
                 }
-                
-                logger.debug("Response: \(httpResponse.statusCode) for \(path)")
-                
-                return APIResponse(data: decodedData, statusCode: httpResponse.statusCode, headers: headers)
                 
             } catch {
                 lastError = error
@@ -215,6 +223,78 @@ public final class HTTPClient {
         }
         
         return request
+    }
+    
+    /// Build URLRequest with raw Data body (for JSON:API requests)
+    private func buildRequest(
+        url: URL,
+        method: HTTPMethod,
+        bodyData: Data?,
+        contentType: String,
+        authToken: AuthToken?
+    ) -> URLRequest {
+        var request = URLRequest(url: url)
+        request.httpMethod = method.rawValue
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.setValue("SenorPlatform/1.0", forHTTPHeaderField: "User-Agent")
+        
+        if let authToken = authToken {
+            request.setValue(authToken.authorizationHeader, forHTTPHeaderField: "Authorization")
+        }
+        
+        if let bodyData = bodyData {
+            request.setValue(contentType, forHTTPHeaderField: "Content-Type")
+            request.httpBody = bodyData
+        }
+        
+        return request
+    }
+    
+    /// Perform request with raw Data body (for JSON:API requests)
+    public func request<T: Decodable>(
+        method: HTTPMethod,
+        path: String,
+        queryItems: [URLQueryItem]? = nil,
+        bodyData: Data?,
+        contentType: String = "application/vnd.api+json",
+        authToken: AuthToken?,
+        decodeAs type: T.Type
+    ) async throws -> APIResponse<T> {
+        let url = try buildURL(path: path, queryItems: queryItems)
+        
+        let request = buildRequest(
+            url: url,
+            method: method,
+            bodyData: bodyData,
+            contentType: contentType,
+            authToken: authToken
+        )
+        
+        let (data, response) = try await urlSession.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw AppError.apiRequestFailed(path, NSError(domain: "HTTPClient", code: -1))
+        }
+        
+        // Check for error status codes
+        if (400...599).contains(httpResponse.statusCode) {
+            throw AppError.apiRequestFailed(path, parseError(data: data, statusCode: httpResponse.statusCode))
+        }
+        
+        // Parse success response
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        
+        let decodedData = try decoder.decode(T.self, from: data)
+        
+        var headers: [String: String] = [:]
+        httpResponse.allHeaderFields.forEach { key, value in
+            if let key = key as? String, let value = value as? String {
+                headers[key] = value
+            }
+        }
+        
+        return APIResponse(data: decodedData, statusCode: httpResponse.statusCode, headers: headers)
     }
     
     /// Parse error response
@@ -316,15 +396,15 @@ public final class PaginatedIterator<T: Decodable> {
 // MARK: - OAuth Support
 
 /// OAuth flow helper with PKCE support
-public final class OAuthHelper {
+public actor OAuthHelper {
     private let clientId: String
     private let clientSecret: String
     private let redirectURI: String
     private let authURL: URL
     private let tokenURL: URL
     private let httpClient: HTTPClient
-    
-    /// Stored PKCE verifier for token exchange (should be stored securely in production)
+
+    /// Stored PKCE verifier for token exchange (protected by actor isolation)
     private var currentCodeVerifier: String?
     
     public struct TokenResponse: Decodable, Sendable {

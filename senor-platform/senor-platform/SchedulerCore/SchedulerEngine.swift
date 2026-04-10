@@ -114,9 +114,11 @@ public actor SchedulerEngine {
             nextRunAt: Date(),
             isActive: true
         )
+        // Save the schedule to repository
+        let savedSchedule = try await scheduleRepository.create(schedule: schedule)
 
         logger.info("Manually triggering task: \(task.taskName)")
-        await onTaskDue?(task, schedule)
+        await onTaskDue?(task, savedSchedule)
     }
 
     /// Calculate and update next run time for a schedule
@@ -158,7 +160,8 @@ public actor SchedulerEngine {
     private func reconcileSchedules() async throws {
         logger.info("Reconcile schedules starting...")
         let now = Date()
-        let staleThreshold = now.addingTimeInterval(-3600) // 1 hour ago
+        // Consider schedules stale if they haven't been updated in 1 hour
+        let staleThreshold = now.addingTimeInterval(-3600) // 1 hour ago - handle recently due tasks
 
         // Find schedules that are past due but still active
         logger.info("Fetching stale schedules...")

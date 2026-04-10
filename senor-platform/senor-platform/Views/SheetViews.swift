@@ -6,401 +6,9 @@
 import SwiftUI
 import AppKit
 
-// MARK: - New Agent View
-
-struct NewAgentView: View {
-    @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject var appState: AppState
-    @State private var selectedCategory: NameCategory = .games
-    @State private var useAutoName = true
-    @State private var isCreating = false
-    @State private var errorMessage: String?
-
-    var body: some View {
-        VStack(spacing: 20) {
-            Text("Create New Agent")
-                .font(.title)
-                .bold()
-
-            if let error = errorMessage {
-                Text(error)
-                    .foregroundStyle(.red)
-                    .font(.caption)
-            }
-
-            Form {
-                Toggle("Auto-generate name", isOn: $useAutoName)
-
-                if useAutoName {
-                    Picker("Name Category", selection: $selectedCategory) {
-                        ForEach(NameCategory.allCases, id: \.self) { category in
-                            Text(category.displayName)
-                                .tag(category)
-                        }
-                    }
-                }
-
-                Section {
-                    Text("The agent will be created with a unique pop-culture inspired name. You can modify settings after creation.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
-            .formStyle(.grouped)
-            .frame(width: 400)
-
-            HStack {
-                Button("Cancel") {
-                    dismiss()
-                }
-                .keyboardShortcut(.cancelAction)
-
-                Spacer()
-
-                Button("Create") {
-                    createAgent()
-                }
-                .keyboardShortcut(.defaultAction)
-                .buttonStyle(.borderedProminent)
-                .disabled(isCreating)
-            }
-            .padding()
-        }
-        .frame(width: 500, height: 300)
-        .disabled(isCreating)
-        .overlay {
-            if isCreating {
-                ProgressView("Creating...")
-                    .padding()
-                    .background(.background.secondary)
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
-            }
-        }
-    }
-
-    private func createAgent() {
-        isCreating = true
-        errorMessage = nil
-
-        Task {
-            do {
-                // Emit event to create agent through EventBus
-                EventBus.shared.createAgent(name: nil)
-
-                await MainActor.run {
-                    isCreating = false
-                    dismiss()
-                }
-            } catch {
-                await MainActor.run {
-                    isCreating = false
-                    errorMessage = error.localizedDescription
-                }
-            }
-        }
-    }
-}
-
-// MARK: - New Task View
-
-struct NewTaskView: View {
-    @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject var appState: AppState
-    @State private var taskName = ""
-    @State private var taskTypeId = ""
-    @State private var selectedAgentId = ""
-    @State private var goScriptPath = ""
-    @State private var taskMetadata = "{}"
-
-    // Schedule state
-    @State private var scheduleKind: ScheduleKind = .oneTime
-    @State private var oneTimeDate = Date().addingTimeInterval(3600) // 1 hour from now
-    @State private var dailyTime = Date()
-    @State private var selectedWeekdays: Set<ScheduleSpec.Weekday> = [.monday]
-    @State private var selectedMonthDays: Set<Int> = [1]
-    @State private var timezone = TimeZone.current.identifier
-
-    @State private var availableAgents: [AgentRecord] = []
-    @State private var availableTaskTypes: [TaskTypeRecord] = []
-    @State private var isCreating = false
-    @State private var errorMessage: String?
-    @State private var showValidationError = false
-
-    enum ScheduleKind: String, CaseIterable {
-        case oneTime = "One Time"
-        case daily = "Daily"
-        case weekly = "Weekly"
-        case monthly = "Monthly"
-    }
-
-    var body: some View {
-        VStack(spacing: 0) {
-            Text("Create New Task")
-                .font(.title)
-                .bold()
-                .padding()
-
-            if let error = errorMessage {
-                Text(error)
-                    .foregroundStyle(.red)
-                    .font(.caption)
-                    .padding(.horizontal)
-            }
-
-            Form {
-                Section("Basic Info") {
-                    TextField("Task Name", text: $taskName)
-
-                    Picker("Agent", selection: $selectedAgentId) {
-                        Text("Select Agent...").tag("")
-                        ForEach(availableAgents, id: \.id) { agent in
-                            Text(agent.displayName).tag(agent.id)
-                        }
-                    }
-
-                    Picker("Task Type", selection: $taskTypeId) {
-                        Text("Select Type...").tag("")
-                        ForEach(availableTaskTypes, id: \.id) { type in
-                            Text(type.name).tag(type.id)
-                        }
-                    }
-                }
-
-                Section("Schedule") {
-                    Picker("Schedule Type", selection: $scheduleKind) {
-                        ForEach(ScheduleKind.allCases, id: \.self) { kind in
-                            Text(kind.rawValue).tag(kind)
-                        }
-                    }
-
-                    switch scheduleKind {
-                    case .oneTime:
-                        DatePicker("Run At", selection: $oneTimeDate, in: Date()...)
-                    case .daily:
-                        DatePicker("Time", selection: $dailyTime, displayedComponents: .hourAndMinute)
-                    case .weekly:
-                        DatePicker("Time", selection: $dailyTime, displayedComponents: .hourAndMinute)
-                        VStack(alignment: .leading) {
-                            Text("Days:")
-                                .font(.caption)
-                            HStack {
-                                ForEach(ScheduleSpec.Weekday.allCases, id: \.self) { day in
-                                    Toggle(day.shortName, isOn: Binding(
-                                        get: { selectedWeekdays.contains(day) },
-                                        set: { isOn in
-                                            if isOn {
-                                                selectedWeekdays.insert(day)
-                                            } else {
-                                                selectedWeekdays.remove(day)
-                                            }
-                                        }
-                                    ))
-                                    .toggleStyle(.button)
-                                    .font(.caption)
-                                }
-                            }
-                        }
-                    case .monthly:
-                        DatePicker("Time", selection: $dailyTime, displayedComponents: .hourAndMinute)
-                        Stepper("Day of month: \(selectedMonthDays.sorted().map(String.init).joined(separator: ", "))", value: .constant(selectedMonthDays.count), in: 1...31)
-                    }
-                }
-
-                Section("Script") {
-                    TextField("Go Script Path", text: $goScriptPath)
-                        .textFieldStyle(.roundedBorder)
-                }
-
-                Section("Configuration (JSON)") {
-                    TextEditor(text: $taskMetadata)
-                        .font(.system(.body, design: .monospaced))
-                        .frame(height: 100)
-
-                    HStack {
-                        Button("Format JSON") {
-                            formatJSON()
-                        }
-                        .buttonStyle(.bordered)
-
-                        Button("Validate") {
-                            validateJSON()
-                        }
-                        .buttonStyle(.bordered)
-                    }
-                }
-            }
-            .formStyle(.grouped)
-            .padding(.horizontal)
-
-            Spacer()
-
-            HStack {
-                Button("Cancel") {
-                    dismiss()
-                }
-                .keyboardShortcut(.cancelAction)
-
-                Spacer()
-
-                Button("Create") {
-                    createTask()
-                }
-                .keyboardShortcut(.defaultAction)
-                .buttonStyle(.borderedProminent)
-                .disabled(!isValid || isCreating)
-            }
-            .padding()
-        }
-        .frame(width: 600, height: 600)
-        .disabled(isCreating)
-        .overlay {
-            if isCreating {
-                ProgressView("Creating...")
-                    .padding()
-                    .background(.background.secondary)
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
-            }
-        }
-        .task {
-            await loadData()
-        }
-        .alert("Validation Error", isPresented: $showValidationError) {
-            Button("OK") {}
-        } message: {
-            Text(errorMessage ?? "Invalid input")
-        }
-    }
-
-    private var isValid: Bool {
-        !taskName.isEmpty &&
-        !selectedAgentId.isEmpty &&
-        !taskTypeId.isEmpty &&
-        !goScriptPath.isEmpty &&
-        isValidJSON(taskMetadata)
-    }
-
-    private func loadData() async {
-        let container = sharedContainer
-        let agentRepo = container.resolveOrCrash(AgentRepository.self)
-        let taskTypeRepo = container.resolveOrCrash(TaskTypeRepository.self)
-
-        do {
-            let agents = try await agentRepo.listAll()
-            let types = try await taskTypeRepo.listAll()
-
-            await MainActor.run {
-                self.availableAgents = agents
-                self.availableTaskTypes = types
-            }
-        } catch {
-            errorMessage = "Failed to load data: \(error.localizedDescription)"
-        }
-    }
-
-    private func formatJSON() {
-        guard let data = taskMetadata.data(using: .utf8),
-              let json = try? JSONSerialization.jsonObject(with: data),
-              let formattedData = try? JSONSerialization.data(withJSONObject: json, options: [.prettyPrinted, .sortedKeys]),
-              let formatted = String(data: formattedData, encoding: .utf8) else {
-            return
-        }
-        taskMetadata = formatted
-    }
-
-    private func validateJSON() {
-        if isValidJSON(taskMetadata) {
-            errorMessage = "JSON is valid!"
-        } else {
-            errorMessage = "Invalid JSON syntax"
-            showValidationError = true
-        }
-    }
-
-    private func isValidJSON(_ string: String) -> Bool {
-        guard let data = string.data(using: .utf8),
-              (try? JSONSerialization.jsonObject(with: data)) != nil else {
-            return false
-        }
-        return true
-    }
-
-    private func createTask() {
-        isCreating = true
-        errorMessage = nil
-
-        Task {
-            do {
-                // Build schedule spec
-                let scheduleSpec: ScheduleSpec
-                let calendar = Calendar.current
-                let timeComponents = calendar.dateComponents([.hour, .minute], from: dailyTime)
-                let scheduleTime = ScheduleSpec.ScheduleTime(
-                    hour: timeComponents.hour ?? 9,
-                    minute: timeComponents.minute ?? 0
-                )
-
-                switch scheduleKind {
-                case .oneTime:
-                    scheduleSpec = .oneTime(date: oneTimeDate)
-                case .daily:
-                    scheduleSpec = .daily(time: scheduleTime, timezone: timezone)
-                case .weekly:
-                    let days = Array(selectedWeekdays).sorted { $0.rawValue < $1.rawValue }
-                    scheduleSpec = .weekly(time: scheduleTime, days: days, timezone: timezone)
-                case .monthly:
-                    let days = Array(selectedMonthDays).sorted()
-                    scheduleSpec = .monthly(time: scheduleTime, days: days, timezone: timezone)
-                }
-
-                // Get next run time
-                let compiler = ScheduleCompiler()
-                let nextRunAt = compiler.nextRunTime(from: scheduleSpec, after: Date())
-
-                // Create task
-                let task = TaskRecord(
-                    agentId: selectedAgentId,
-                    taskTypeId: taskTypeId,
-                    taskName: taskName,
-                    taskMetadataJson: taskMetadata,
-                    goScriptPath: goScriptPath
-                )
-
-                let container = sharedContainer
-                let taskRepo = container.resolveOrCrash(TaskRepository.self)
-                let savedTask = try await taskRepo.create(task: task)
-
-                // Create schedule
-                let coder = ScheduleSpecCoder()
-                let schedulePayload = coder.encode(scheduleSpec)
-                let cronExpression = compiler.compileToCron(scheduleSpec)
-
-                let schedule = TaskScheduleRecord(
-                    taskId: savedTask.id,
-                    scheduleKind: scheduleKind == .oneTime ? "one_time" : "recurring",
-                    schedulePayloadJson: schedulePayload,
-                    cronExpression: cronExpression,
-                    timezone: timezone,
-                    nextRunAt: nextRunAt
-                )
-
-                let scheduleRepo = container.resolveOrCrash(TaskScheduleRepository.self)
-                _ = try await scheduleRepo.create(schedule: schedule)
-
-                await MainActor.run {
-                    isCreating = false
-                    // Emit event to refresh
-                    EventBus.shared.refreshAllData()
-                }
-
-            } catch {
-                await MainActor.run {
-                    isCreating = false
-                    errorMessage = error.localizedDescription
-                }
-            }
-        }
-    }
-}
+// Note: NewAgentView and NewTaskView are now in their own dedicated files:
+// - Views/NewAgentView.swift
+// - Views/NewTaskView.swift
 
 // MARK: - Settings View
 
@@ -457,7 +65,7 @@ struct GeneralSettingsTab: View {
     @State private var theme = "system"
     @State private var logLevel = "info"
 
-    private let settingsService = sharedContainer.resolveOrCrash(SettingsService.self)
+    @State private var settingsService: SettingsService?
 
     var body: some View {
         Form {
@@ -483,24 +91,29 @@ struct GeneralSettingsTab: View {
         }
         .formStyle(.grouped)
         .onAppear {
-            loadSettings()
+            Task {
+                settingsService = await sharedContainer.resolve(SettingsService.self)
+                loadSettings()
+            }
         }
     }
 
     private func loadSettings() {
-        let settings = settingsService.loadGeneralSettings()
+        guard let service = settingsService else { return }
+        let settings = service.loadGeneralSettings()
         launchAtLogin = settings.launchAtLogin
         showNotifications = settings.showNotifications
         logLevel = settings.logLevel
     }
 
     private func saveSettings() {
+        guard let service = settingsService else { return }
         let settings = SettingsService.GeneralSettings(
             launchAtLogin: launchAtLogin,
             showNotifications: showNotifications,
             logLevel: logLevel
         )
-        settingsService.saveGeneralSettings(settings)
+        service.saveGeneralSettings(settings)
     }
 }
 
@@ -584,7 +197,7 @@ struct AdvancedSettingsTab: View {
     @State private var showError = false
     @State private var errorMessage = ""
 
-    private let settingsService = sharedContainer.resolveOrCrash(SettingsService.self)
+    @State private var settingsService: SettingsService?
     private let logger = AppLogger.ui
 
     var body: some View {
@@ -647,21 +260,29 @@ struct AdvancedSettingsTab: View {
         } message: {
             Text(errorMessage)
         }
+        .onAppear {
+            Task {
+                settingsService = await sharedContainer.resolve(SettingsService.self)
+                loadSettings()
+            }
+        }
     }
 
     private func loadSettings() {
-        let settings = settingsService.loadGeneralSettings()
+        guard let service = settingsService else { return }
+        let settings = service.loadGeneralSettings()
         logLevel = settings.logLevel
     }
 
     private func updateLogLevel() {
-        var settings = settingsService.loadGeneralSettings()
+        guard let service = settingsService else { return }
+        var settings = service.loadGeneralSettings()
         settings = SettingsService.GeneralSettings(
             launchAtLogin: settings.launchAtLogin,
             showNotifications: settings.showNotifications,
             logLevel: logLevel
         )
-        settingsService.saveGeneralSettings(settings)
+        service.saveGeneralSettings(settings)
     }
 
     private func openLogsFolder() {
@@ -684,11 +305,16 @@ struct AdvancedSettingsTab: View {
     }
 
     private func resetAllSettings() {
-        settingsService.clearAllSettings()
-        // Reset to defaults
-        logLevel = "info"
-        enableDebugMode = false
-        logger.info("All settings reset to defaults")
+        Task {
+            guard let service = settingsService else { return }
+            await service.clearAllSettings()
+            // Reset to defaults
+            await MainActor.run {
+                logLevel = "info"
+                enableDebugMode = false
+            }
+            logger.info("All settings reset to defaults")
+        }
     }
 
     private func clearAllData() {
@@ -709,7 +335,7 @@ struct DeviantArtSettingsView: View {
     @State private var showError = false
     @State private var errorMessage = ""
 
-    private let settingsService = sharedContainer.resolveOrCrash(SettingsService.self)
+    @State private var settingsService: SettingsService?
 
     var body: some View {
         Form {
@@ -746,7 +372,10 @@ struct DeviantArtSettingsView: View {
         .formStyle(.grouped)
         .navigationTitle("DeviantArt Settings")
         .onAppear {
-            loadSettings()
+            Task {
+                settingsService = await sharedContainer.resolve(SettingsService.self)
+                loadSettings()
+            }
         }
         .alert("Error", isPresented: $showError) {
             Button("OK") {}
@@ -756,13 +385,15 @@ struct DeviantArtSettingsView: View {
     }
 
     private func loadSettings() {
-        let settings = settingsService.loadDeviantArtSettings()
+        guard let service = settingsService else { return }
+        let settings = service.loadDeviantArtSettings()
         clientId = settings.clientId
         clientSecret = settings.clientSecret
         isAuthenticated = settings.isAuthenticated
     }
 
     private func saveCredentials() {
+        guard let service = settingsService else { return }
         let settings = SettingsService.DeviantArtSettings(
             clientId: clientId,
             clientSecret: clientSecret,
@@ -770,13 +401,14 @@ struct DeviantArtSettingsView: View {
             refreshToken: nil,
             tokenExpiry: nil
         )
-        settingsService.saveDeviantArtSettings(settings)
+        service.saveDeviantArtSettings(settings)
         // Note: Actual OAuth flow would be implemented here
         errorMessage = "Credentials saved. OAuth flow not yet implemented."
         showError = true
     }
 
     private func disconnect() {
+        guard let service = settingsService else { return }
         let settings = SettingsService.DeviantArtSettings(
             clientId: clientId,
             clientSecret: clientSecret,
@@ -784,7 +416,7 @@ struct DeviantArtSettingsView: View {
             refreshToken: nil,
             tokenExpiry: nil
         )
-        settingsService.saveDeviantArtSettings(settings)
+        service.saveDeviantArtSettings(settings)
         isAuthenticated = false
     }
 }
@@ -796,7 +428,7 @@ struct PatreonSettingsView: View {
     @State private var showError = false
     @State private var errorMessage = ""
 
-    private let settingsService = sharedContainer.resolveOrCrash(SettingsService.self)
+    @State private var settingsService: SettingsService?
 
     var body: some View {
         Form {
@@ -832,7 +464,10 @@ struct PatreonSettingsView: View {
         .formStyle(.grouped)
         .navigationTitle("Patreon Settings")
         .onAppear {
-            loadSettings()
+            Task {
+                settingsService = await sharedContainer.resolve(SettingsService.self)
+                loadSettings()
+            }
         }
         .alert("Error", isPresented: $showError) {
             Button("OK") {}
@@ -842,29 +477,32 @@ struct PatreonSettingsView: View {
     }
 
     private func loadSettings() {
-        let settings = settingsService.loadPatreonSettings()
+        guard let service = settingsService else { return }
+        let settings = service.loadPatreonSettings()
         creatorAccessToken = settings.accessToken
         campaignId = settings.campaignId ?? ""
         isAuthenticated = settings.isAuthenticated
     }
 
     private func saveCredentials() {
+        guard let service = settingsService else { return }
         let settings = SettingsService.PatreonSettings(
             accessToken: creatorAccessToken,
             campaignId: campaignId.isEmpty ? nil : campaignId,
             tokenExpiry: nil
         )
-        settingsService.savePatreonSettings(settings)
+        service.savePatreonSettings(settings)
         isAuthenticated = true
     }
 
     private func disconnect() {
+        guard let service = settingsService else { return }
         let settings = SettingsService.PatreonSettings(
             accessToken: "",
             campaignId: nil,
             tokenExpiry: nil
         )
-        settingsService.savePatreonSettings(settings)
+        service.savePatreonSettings(settings)
         creatorAccessToken = ""
         campaignId = ""
         isAuthenticated = false
@@ -875,7 +513,7 @@ struct ComfyUISettingsView: View {
     @State private var serverURL = "http://127.0.0.1:8188"
     @State private var timeout = 300
 
-    private let settingsService = sharedContainer.resolveOrCrash(SettingsService.self)
+    @State private var settingsService: SettingsService?
 
     var body: some View {
         Form {
@@ -901,22 +539,27 @@ struct ComfyUISettingsView: View {
         .formStyle(.grouped)
         .navigationTitle("ComfyUI Settings")
         .onAppear {
-            loadSettings()
+            Task {
+                settingsService = await sharedContainer.resolve(SettingsService.self)
+                loadSettings()
+            }
         }
     }
 
     private func loadSettings() {
-        let settings = settingsService.loadComfyUISettings()
+        guard let service = settingsService else { return }
+        let settings = service.loadComfyUISettings()
         serverURL = settings.serverURL
         timeout = settings.timeout
     }
 
     private func saveSettings() {
+        guard let service = settingsService else { return }
         let settings = SettingsService.ComfyUISettings(
             serverURL: serverURL,
             timeout: timeout
         )
-        settingsService.saveComfyUISettings(settings)
+        service.saveComfyUISettings(settings)
     }
 }
 

@@ -13,43 +13,33 @@ public enum DependencyContainerError: Error, Sendable {
 }
 
 /// Dependency container implementing service locator pattern with constructor injection support
-@MainActor
-public final class DependencyContainer: Sendable {
-    private let lock = NSLock()
-    private nonisolated(unsafe) var services: [String: AnySendableBox] = [:]
-    private nonisolated(unsafe) var lifecycleServices: [String: LifecycleAware] = [:]
+public final actor DependencyContainer {
+    private var services: [String: AnySendableBox] = [:]
+    private var lifecycleServices: [String: LifecycleAware] = [:]
 
     public init() {}
 
     /// Register a service instance
     public func register<T: Sendable>(_ type: T.Type, instance: T) {
-        lock.lock()
-        defer { lock.unlock() }
         let key = String(reflecting: type)
         services[key] = AnySendableBox(instance)
     }
 
     /// Register a factory that creates the service on first resolve
-    public func register<T: Sendable>(_ type: T.Type, factory: @Sendable @escaping () -> T) {
-        lock.lock()
-        defer { lock.unlock() }
+    public func register<T: Sendable>(_ type: T.Type, factory: @Sendable @escaping () async -> T) {
         let key = String(reflecting: type)
         services[key] = AnySendableBox(LazyService(factory: factory))
     }
 
     /// Register a lifecycle-aware service
     public func register<T: LifecycleAware & Sendable>(_ type: T.Type, instance: T) {
-        lock.lock()
-        defer { lock.unlock() }
         let key = String(reflecting: type)
         services[key] = AnySendableBox(instance)
         lifecycleServices[key] = instance
     }
 
-    /// Resolve a registered service
-    public func resolve<T: Sendable>(_ type: T.Type) throws -> T {
-        lock.lock()
-        defer { lock.unlock() }
+    /// Resolve a registered service (async)
+    public func resolve<T: Sendable>(_ type: T.Type) async throws -> T {
         let key = String(reflecting: type)
 
         guard let box = services[key] else {
@@ -58,7 +48,7 @@ public final class DependencyContainer: Sendable {
 
         // Check if it's a lazy service
         if let lazy = box.value as? LazyService<T> {
-            let instance = lazy.factory()
+            let instance = await lazy.factory()
             services[key] = AnySendableBox(instance)
             return instance
         }
@@ -71,9 +61,7 @@ public final class DependencyContainer: Sendable {
     }
 
     /// Resolve an optional service (returns nil if not registered)
-    public func resolveOptional<T: Sendable>(_ type: T.Type) -> T? {
-        lock.lock()
-        defer { lock.unlock() }
+    public func resolveOptional<T: Sendable>(_ type: T.Type) async -> T? {
         let key = String(reflecting: type)
 
         guard let box = services[key] else {
@@ -81,7 +69,7 @@ public final class DependencyContainer: Sendable {
         }
 
         if let lazy = box.value as? LazyService<T> {
-            let instance = lazy.factory()
+            let instance = await lazy.factory()
             services[key] = AnySendableBox(instance)
             return instance
         }
@@ -89,12 +77,12 @@ public final class DependencyContainer: Sendable {
         return box.value as? T
     }
 
-    /// Resolve a service or crash if not registered (for use in initializers)
-    public func resolveOrCrash<T: Sendable>(_ type: T.Type) -> T {
+    /// Resolve a service with fallback value if not registered
+    public func resolve<T: Sendable>(_ type: T.Type, default defaultValue: T) async -> T {
         do {
-            return try resolve(type)
+            return try await resolve(type)
         } catch {
-            fatalError("Failed to resolve dependency \(type): \(error)")
+            return defaultValue
         }
     }
 
@@ -124,16 +112,26 @@ private struct AnySendableBox: @unchecked Sendable {
 
 /// Wrapper for lazy service initialization
 private struct LazyService<T: Sendable>: Sendable {
-    let factory: @Sendable () -> T
+    let factory: @Sendable () async -> T
 }
 
 /// Global shared container (for convenience, but prefer injection)
-@MainActor
-private final class SharedContainer {
-    static let instance = DependencyContainer()
-}
+public let sharedContainer = DependencyContainer()
 
-@MainActor
-public var sharedContainer: DependencyContainer {
-    SharedContainer.instance
+// MARK: - MainActor Resolution Helpers
+
+public extension DependencyContainer {
+    /// Async resolve that crashes if service not found (safe for MainActor)
+    func resolveOrCrash<T: Sendable>(_ type: T.Type) async -> T {
+        do {
+            return try await resolve(type)
+        } catch {
+            fatalError("Failed to resolve service: \(String(reflecting: type)) - \(error)")
+        }
+    }
+    
+    /// Async optional resolve (safe for MainActor)
+    func resolveSyncOptional<T: Sendable>(_ type: T.Type) async -> T? {
+        return await resolveOptional(type)
+    }
 }

@@ -18,8 +18,8 @@ struct JSONEditorView: View {
     @State private var changeReason = ""
     @State private var showSaveDialog = false
 
-    private let versioningService = sharedContainer.resolveOrCrash(ContentVersioningService.self)
-    private let contentRepository = sharedContainer.resolveOrCrash(GeneratedContentRepository.self)
+    @State private var versioningService: ContentVersioningService?
+    @State private var contentRepository: GeneratedContentRepository?
     private let logger = AppLogger.ui
 
     var body: some View {
@@ -84,7 +84,8 @@ struct JSONEditorView: View {
                     }
             }
         }
-        .onAppear {
+        .task {
+            await resolveServices()
             loadContent()
         }
         .alert("Validation Error", isPresented: $showValidationError) {
@@ -108,10 +109,22 @@ struct JSONEditorView: View {
         }
     }
 
+    private func resolveServices() async {
+        versioningService = await sharedContainer.resolveOptional(ContentVersioningService.self)
+        contentRepository = await sharedContainer.resolveOptional(GeneratedContentRepository.self)
+    }
+
     private func loadContent() {
         Task {
+            guard let repository = contentRepository else {
+                await MainActor.run {
+                    errorMessage = "Services not available"
+                    isLoading = false
+                }
+                return
+            }
             do {
-                guard let content = try await contentRepository.getById(id: contentId) else {
+                guard let content = try await repository.getById(id: contentId) else {
                     await MainActor.run {
                         errorMessage = "Content not found"
                         isLoading = false
@@ -165,6 +178,10 @@ struct JSONEditorView: View {
     }
 
     private func saveChanges() {
+        guard let service = versioningService else {
+            errorMessage = "Services not available"
+            return
+        }
         guard JSONUtils.validate(jsonText) else {
             validationError = "Cannot save invalid JSON"
             showValidationError = true
@@ -175,7 +192,7 @@ struct JSONEditorView: View {
 
         Task {
             do {
-                _ = try await versioningService.editContent(
+                _ = try await service.editContent(
                     contentId: contentId,
                     newContentJson: jsonText,
                     changeReason: changeReason.isEmpty ? nil : changeReason,

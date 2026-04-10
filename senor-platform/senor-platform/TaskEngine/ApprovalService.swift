@@ -1,7 +1,7 @@
 import Foundation
 
 /// Service for managing content approval workflows
-public final class ApprovalService {
+public final class ApprovalService: Sendable {
     private let approvalRepository: ApprovalQueueRepository
     private let contentRepository: GeneratedContentRepository
     private let publicationTargetRepository: PublicationTargetRepository
@@ -24,10 +24,6 @@ public final class ApprovalService {
         contentId: String,
         approvedBy: String = "user"
     ) async throws -> ApprovalQueueRecord {
-        guard let content = try await contentRepository.getById(id: contentId) else {
-            throw AppError.approvalStateInvalid("Content not found: \(contentId)")
-        }
-
         guard let queueEntry = try await approvalRepository.getByContent(contentId: contentId) else {
             throw AppError.approvalStateInvalid("Content not in approval queue: \(contentId)")
         }
@@ -54,10 +50,6 @@ public final class ApprovalService {
         reason: String? = nil,
         rejectedBy: String = "user"
     ) async throws -> ApprovalQueueRecord {
-        guard let content = try await contentRepository.getById(id: contentId) else {
-            throw AppError.approvalStateInvalid("Content not found: \(contentId)")
-        }
-
         guard let queueEntry = try await approvalRepository.getByContent(contentId: contentId) else {
             throw AppError.approvalStateInvalid("Content not in approval queue: \(contentId)")
         }

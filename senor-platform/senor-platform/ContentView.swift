@@ -90,42 +90,50 @@ class ContentViewModel: ObservableObject {
     @Published var errorMessage: String?
     
     // MARK: - Repositories
-    private let agentRepository: AgentRepository
-    private let taskRepository: TaskRepository
-    private let taskScheduleRepository: TaskScheduleRepository
-    private let taskRunRepository: TaskRunRepository
-    private let contentRepository: GeneratedContentRepository
-    private let approvalRepository: ApprovalQueueRepository
-    private let publicationRepository: PublicationTargetRepository
-    private let namingService: AgentNamingService
+    private var agentRepository: AgentRepository?
+    private var taskRepository: TaskRepository?
+    private var taskScheduleRepository: TaskScheduleRepository?
+    private var taskRunRepository: TaskRunRepository?
+    private var contentRepository: GeneratedContentRepository?
+    private var approvalRepository: ApprovalQueueRepository?
+    private var publicationRepository: PublicationTargetRepository?
+    private var namingService: AgentNamingService?
     private let logger = AppLogger.ui
-    
+
     private var cancellables = Set<AnyCancellable>()
-    
+
     init() {
-        // Resolve dependencies from container
-        let container = sharedContainer
-        self.agentRepository = container.resolveOrCrash(AgentRepository.self)
-        self.taskRepository = container.resolveOrCrash(TaskRepository.self)
-        self.taskScheduleRepository = container.resolveOrCrash(TaskScheduleRepository.self)
-        self.taskRunRepository = container.resolveOrCrash(TaskRunRepository.self)
-        self.contentRepository = container.resolveOrCrash(GeneratedContentRepository.self)
-        self.approvalRepository = container.resolveOrCrash(ApprovalQueueRepository.self)
-        self.publicationRepository = container.resolveOrCrash(PublicationTargetRepository.self)
-        self.namingService = container.resolveOrCrash(AgentNamingService.self)
-        
         // Subscribe to EventBus events
         setupEventBusSubscriptions()
     }
+
+    /// Resolves all repositories from the dependency container
+    func resolveRepositories() async {
+        guard agentRepository == nil else { return } // Already resolved
+
+        agentRepository = await sharedContainer.resolveOptional(AgentRepository.self)
+        taskRepository = await sharedContainer.resolveOptional(TaskRepository.self)
+        taskScheduleRepository = await sharedContainer.resolveOptional(TaskScheduleRepository.self)
+        taskRunRepository = await sharedContainer.resolveOptional(TaskRunRepository.self)
+        contentRepository = await sharedContainer.resolveOptional(GeneratedContentRepository.self)
+        approvalRepository = await sharedContainer.resolveOptional(ApprovalQueueRepository.self)
+        publicationRepository = await sharedContainer.resolveOptional(PublicationTargetRepository.self)
+        namingService = await sharedContainer.resolveOptional(AgentNamingService.self)
+
+        logger.info("Repositories resolved successfully")
+    }
     
     private func setupEventBusSubscriptions() {
-        // Listen for refresh events
-        EventBus.shared.onRefresh { [weak self] event in
-            Task { @MainActor in
-                await self?.refreshData()
+        Task {
+            let cancellable = await EventBus.shared.onRefresh { [weak self] event in
+                Task {
+                    await self?.handleRefreshEvent(event)
+                }
+            }
+            await MainActor.run {
+                cancellable.store(in: &self.cancellables)
             }
         }
-        .store(in: &cancellables)
         
         // Listen for agent creation requests
         EventBus.shared.onAction { [weak self] action in
@@ -150,7 +158,9 @@ class ContentViewModel: ObservableObject {
     func loadInitialData() async {
         isLoading = true
         defer { isLoading = false }
-        
+
+        // Resolve repositories first if needed
+        await resolveRepositories()
         await refreshData()
     }
     
@@ -173,12 +183,17 @@ class ContentViewModel: ObservableObject {
     // MARK: - Data Loading
     
     private func loadAgents() async throws {
-        let records = try await agentRepository.listAll()
+        guard let repository = agentRepository else {
+            throw AppError.serviceUnavailable("AgentRepository not available")
+        }
+        let records = try await repository.listAll()
         
-        let viewModels = try await withThrowingTaskGroup(of: AgentViewModel.self) { group in
+        let viewModels = try await withThrowingTaskGroup(of: AgentViewModel.self) { [weak self] group in
             for record in records {
-                group.addTask {
-                    let taskCount = try await self.taskRepository.listByAgent(agentId: record.id).count
+                group.addTask { [weak self] in
+                    guard let self = self else { return AgentViewModel(id: record.id, name: record.displayName, status: .idle, lastActivity: nil, taskCount: 0) }
+                    // Use count query instead of fetching all records (N+1 fix)
+                    let taskCount = try await self.taskRepository?.countByAgent(agentId: record.id) ?? 0
                     
                     // Map AgentRuntimeStatus to AgentViewModel.AgentStatus
                     let agentStatus: AgentViewModel.AgentStatus = {
@@ -213,7 +228,10 @@ class ContentViewModel: ObservableObject {
     }
     
     private func loadTasks() async throws {
-        let records = try await taskRepository.listEnabled()
+        guard let repository = taskRepository else {
+            throw AppError.serviceUnavailable("TaskRepository not available")
+        }
+        let records = try await repository.listEnabled()
         
         let viewModels = try await withThrowingTaskGroup(of: TaskViewModel.self) { group in
             for record in records {
@@ -245,17 +263,31 @@ class ContentViewModel: ObservableObject {
     }
     
     private func loadContent() async throws {
-        let records = try await contentRepository.listRecent(limit: 100)
+        guard let repository = contentRepository else {
+            throw AppError.serviceUnavailable("ContentRepository not available")
+        }
+        let records = try await repository.listRecent(limit: 100)
         
-        let viewModels = records.map { record -> ContentItemViewModel in
-            ContentItemViewModel(
-                id: record.id,
-                title: record.title,
-                previewImage: nil, // TODO: Extract from JSON if available
-                createdAt: record.createdAt,
-                status: self.contentStatus(for: record.id),
-                version: record.currentVersion
-            )
+        let viewModels = try await withThrowingTaskGroup(of: ContentItemViewModel.self) { group in
+            for record in records {
+                group.addTask {
+                    let status = await self.contentStatus(id: record.id)
+                    return ContentItemViewModel(
+                        id: record.id,
+                        title: record.title,
+                        previewImage: nil, // TODO: Extract from JSON if available
+                        createdAt: record.createdAt,
+                        status: status,
+                        version: record.currentVersion
+                    )
+                }
+            }
+            
+            var results: [ContentItemViewModel] = []
+            for try await vm in group {
+                results.append(vm)
+            }
+            return results.sorted { $0.createdAt > $1.createdAt }
         }
         
         await MainActor.run {
@@ -264,15 +296,18 @@ class ContentViewModel: ObservableObject {
     }
     
     private func loadApprovals() async throws {
-        let pendingRecords = try await approvalRepository.listPending(limit: 50)
+        guard let repository = approvalRepository else {
+            throw AppError.serviceUnavailable("ApprovalRepository not available")
+        }
+        let pendingRecords = try await repository.listPending(limit: 50)
         
         let viewModels = try await withThrowingTaskGroup(of: ApprovalViewModel?.self) { group in
             for record in pendingRecords {
                 group.addTask {
-                    guard let content = try await self.contentRepository.getById(id: record.generatedContentId) else {
-                        return nil
-                    }
-                    guard let agent = try await self.agentRepository.getById(id: content.agentId) else {
+                    guard let contentRepo = self.contentRepository,
+                          let agentRepo = self.agentRepository,
+                          let content = try await contentRepo.getById(id: record.generatedContentId),
+                          let agent = try await agentRepo.getById(id: content.agentId) else {
                         return nil
                     }
                     
@@ -301,11 +336,18 @@ class ContentViewModel: ObservableObject {
         }
     }
     
-    private func contentStatus(for contentId: String) -> ContentItemViewModel.ContentStatus {
-        // This is synchronous - could be improved
-        // For now, just return pending; async status check would need to be handled differently
-        // TODO: Make this async and properly check publication status
-        return ContentItemViewModel.ContentStatus.pending
+    private func contentStatus(id: String) async -> ContentItemViewModel.ContentStatus {
+        // Query the approval queue for actual status
+        guard let repository = approvalRepository,
+              let approval = try? await repository.getByContent(contentId: id) else {
+            return .pending
+        }
+        switch approval.approvalStatus {
+        case "approved": return .approved
+        case "rejected": return .rejected
+        case "published": return .published
+        default: return .pending
+        }
     }
     
     // MARK: - Actions
@@ -317,11 +359,17 @@ class ContentViewModel: ObservableObject {
             var attempts = 0
             var name: AgentNamingService.GeneratedName?
             while attempts < 100 && name == nil {
-                let baseName = namingService.names(from: category).randomElement() ?? "Agent"
+                guard let namingSvc = namingService else {
+                    throw AppError.serviceUnavailable("AgentNamingService not available")
+                }
+                let baseName = namingSvc.names(from: category).randomElement() ?? "Agent"
                 let seed = Int.random(in: 1...99)
                 let displayName = "\(baseName)-\(String(format: "%02d", seed))"
                 
-                let exists = try await agentRepository.existsWithName(name: displayName)
+                guard let repository = agentRepository else {
+                    throw AppError.serviceUnavailable("AgentRepository not available")
+                }
+                let exists = try await repository.existsWithName(name: displayName)
                 if !exists {
                     name = AgentNamingService.GeneratedName(
                         displayName: displayName,
@@ -335,10 +383,16 @@ class ContentViewModel: ObservableObject {
             if let name = name {
                 generatedName = name
             } else {
-                generatedName = try await namingService.generateUniqueName()
+                guard let namingSvc = namingService else {
+                throw AppError.serviceUnavailable("AgentNamingService not available")
+            }
+            generatedName = try await namingSvc.generateUniqueName()
             }
         } else {
-            generatedName = try await namingService.generateUniqueName()
+            guard let namingSvc = namingService else {
+                throw AppError.serviceUnavailable("AgentNamingService not available")
+            }
+            generatedName = try await namingSvc.generateUniqueName()
         }
         
         let agent = AgentRecord(
@@ -348,7 +402,10 @@ class ContentViewModel: ObservableObject {
             nameSeed: generatedName.seed
         )
         
-        let saved = try await agentRepository.create(agent: agent)
+        guard let repository = agentRepository else {
+            throw AppError.serviceUnavailable("AgentRepository not available")
+        }
+        let saved = try await repository.create(agent: agent)
         logger.info("Created agent: \(saved.displayName)")
         
         await refreshData()
@@ -356,49 +413,56 @@ class ContentViewModel: ObservableObject {
     }
     
     func deleteAgent(id: String) async throws {
-        try await agentRepository.delete(id: id)
+        guard let repository = agentRepository else {
+            throw AppError.serviceUnavailable("AgentRepository not available")
+        }
+        try await repository.delete(id: id)
         logger.info("Deleted agent: \(id)")
         await refreshData()
     }
-    
+
     func approveContent(id: String) async throws {
-        guard let approval = try await approvalRepository.getByContent(contentId: id) else {
+        guard let repository = approvalRepository else {
+            throw AppError.serviceUnavailable("ApprovalRepository not available")
+        }
+        guard let approval = try await repository.getByContent(contentId: id) else {
             throw AppError.approvalStateInvalid("No approval entry found for content")
         }
-        
+
         var updated = approval
-        updated.approvalStatus = "approved"
+        updated.approvalStatus = .approved
         updated.approvedAt = Date()
         updated.approvedBy = "user" // TODO: Get actual user
-        
-        _ = try await approvalRepository.update(entry: updated)
+
+        _ = try await repository.update(entry: updated)
         logger.info("Approved content: \(id)")
-        
         await refreshData()
     }
-    
+
     func rejectContent(id: String, reason: String? = nil) async throws {
-        guard let approval = try await approvalRepository.getByContent(contentId: id) else {
+        guard let repository = approvalRepository else {
+            throw AppError.serviceUnavailable("ApprovalRepository not available")
+        }
+        guard let approval = try await repository.getByContent(contentId: id) else {
             throw AppError.approvalStateInvalid("No approval entry found for content")
         }
-        
+
         var updated = approval
-        updated.approvalStatus = "rejected"
+        updated.approvalStatus = .rejected
         updated.rejectedAt = Date()
         updated.rejectionReason = reason
-        
-        _ = try await approvalRepository.update(entry: updated)
+
+        _ = try await repository.update(entry: updated)
         logger.info("Rejected content: \(id)")
-        
         await refreshData()
     }
-    
+
     func batchApprove(ids: [String]) async throws {
         for id in ids {
             try await approveContent(id: id)
         }
     }
-    
+
     func batchReject(ids: [String], reason: String? = nil) async throws {
         for id in ids {
             try await rejectContent(id: id, reason: reason)

@@ -370,10 +370,6 @@ public final class PatreonClient {
     ) async throws -> Post {
         try ensureAuthenticated()
         
-        guard let token = authToken else {
-            throw AppError.apiAuthenticationFailed("Patreon: No auth token available")
-        }
-        
         var attributes: [String: Any] = [
             "title": title,
             "content": content
@@ -409,32 +405,20 @@ public final class PatreonClient {
             ]
         ]
         
-        // Convert to JSON data
-        let jsonData = try JSONSerialization.data(withJSONObject: body)
+        // Convert body to Data for JSON:API request
+        let bodyData = try JSONSerialization.data(withJSONObject: body)
         
-        guard let postsURL = URL(string: Endpoints.posts) else {
-            throw AppError.invalidConfiguration("Invalid Patreon posts endpoint")
-        }
-        var request = URLRequest(url: postsURL)
-        request.httpMethod = "POST"
-        request.setValue("application/vnd.api+json", forHTTPHeaderField: "Content-Type")
-        request.setValue("Bearer \(token.accessToken)", forHTTPHeaderField: "Authorization")
-        request.httpBody = jsonData
+        // Use injected HTTPClient for consistency and retry support
+        let response = try await httpClient.request(
+            method: .post,
+            path: Endpoints.posts,
+            bodyData: bodyData,
+            contentType: "application/vnd.api+json",
+            authToken: authToken,
+            decodeAs: Post.self
+        )
         
-        let (data, response) = try await URLSession.shared.data(for: request)
-        
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw AppError.apiRequestFailed("posts", NSError(domain: "PatreonClient", code: -1))
-        }
-        
-        if (400...599).contains(httpResponse.statusCode) {
-            let errorBody = String(data: data, encoding: .utf8) ?? "Unknown error"
-            throw AppError.apiRequestFailed("posts", NSError(domain: "PatreonClient", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: errorBody]))
-        }
-        
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
-        return try decoder.decode(Post.self, from: data)
+        return response.data
     }
     
     /// Update an existing post
@@ -446,10 +430,6 @@ public final class PatreonClient {
         isPublic: Bool? = nil
     ) async throws -> Post {
         try ensureAuthenticated()
-        
-        guard let token = authToken else {
-            throw AppError.apiAuthenticationFailed("Patreon: No auth token available")
-        }
         
         var attributes: [String: Any] = [:]
         
@@ -474,32 +454,20 @@ public final class PatreonClient {
             ]
         ]
         
-        let jsonData = try JSONSerialization.data(withJSONObject: body)
+        // Convert body to Data for JSON:API request
+        let bodyData = try JSONSerialization.data(withJSONObject: body)
         
-        let postEndpoint = Endpoints.post(postId: postId)
-        guard let postURL = URL(string: postEndpoint) else {
-            throw AppError.invalidConfiguration("Invalid Patreon post endpoint")
-        }
-        var request = URLRequest(url: postURL)
-        request.httpMethod = "PATCH"
-        request.setValue("application/vnd.api+json", forHTTPHeaderField: "Content-Type")
-        request.setValue("Bearer \(token.accessToken)", forHTTPHeaderField: "Authorization")
-        request.httpBody = jsonData
+        // Use injected HTTPClient for consistency and retry support
+        let response = try await httpClient.request(
+            method: .patch,
+            path: Endpoints.post(postId: postId),
+            bodyData: bodyData,
+            contentType: "application/vnd.api+json",
+            authToken: authToken,
+            decodeAs: Post.self
+        )
         
-        let (data, response) = try await URLSession.shared.data(for: request)
-        
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw AppError.apiRequestFailed("post", NSError(domain: "PatreonClient", code: -1))
-        }
-        
-        if (400...599).contains(httpResponse.statusCode) {
-            let errorBody = String(data: data, encoding: .utf8) ?? "Unknown error"
-            throw AppError.apiRequestFailed("post", NSError(domain: "PatreonClient", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: errorBody]))
-        }
-        
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
-        return try decoder.decode(Post.self, from: data)
+        return response.data
     }
     
     // MARK: - Member Operations

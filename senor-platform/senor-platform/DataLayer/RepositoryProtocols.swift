@@ -20,6 +20,7 @@ public protocol TaskRepository: Sendable {
     func getById(id: String) async throws -> TaskRecord?
     func listByAgent(agentId: String) async throws -> [TaskRecord]
     func listEnabled() async throws -> [TaskRecord]
+    func countByAgent(agentId: String) async throws -> Int
 }
 
 /// Repository for managing task schedules
@@ -42,6 +43,7 @@ public protocol TaskRunRepository: Sendable {
     func listByAgent(agentId: String, limit: Int) async throws -> [TaskRunRecord]
     func listActive() async throws -> [TaskRunRecord]
     func listRecent(limit: Int) async throws -> [TaskRunRecord]
+    func countByAgent(agentId: String) async throws -> Int
 }
 
 /// Repository for managing generated content

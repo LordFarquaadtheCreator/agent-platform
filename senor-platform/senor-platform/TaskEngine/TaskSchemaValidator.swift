@@ -1,10 +1,25 @@
 import Foundation
 
 /// Validates task metadata against JSON Schema definitions
-public final class TaskSchemaValidator: Sendable {
+public final actor TaskSchemaValidator: Sendable {
     private let logger = AppLogger.taskEngine
 
+    /// Cache for compiled regular expressions - protected by actor isolation
+    private let regexCache = NSCache<NSString, NSRegularExpression>()
+
     public init() {}
+
+    /// Get cached regex or compile and cache a new one
+    private func cachedRegex(for pattern: String) -> NSRegularExpression? {
+        if let cached = regexCache.object(forKey: pattern as NSString) {
+            return cached
+        }
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: []) else {
+            return nil
+        }
+        regexCache.setObject(regex, forKey: pattern as NSString)
+        return regex
+    }
 
     /// Validate task metadata against a JSON schema
     public func validate(metadata: [String: Any], schema: [String: Any]) -> Result<Void, AppError> {
@@ -49,11 +64,13 @@ public final class TaskSchemaValidator: Sendable {
 
     /// Validate JSON string against schema string
     public func validate(metadataJson: String, schemaJson: String) -> Result<Void, AppError> {
-        guard let metadata = try? JSONSerialization.jsonObject(with: metadataJson.data(using: .utf8)!) as? [String: Any] else {
+        guard let metadataData = metadataJson.data(using: .utf8),
+              let metadata = try? JSONSerialization.jsonObject(with: metadataData) as? [String: Any] else {
             return .failure(.invalidJSON("Metadata is not valid JSON"))
         }
 
-        guard let schema = try? JSONSerialization.jsonObject(with: schemaJson.data(using: .utf8)!) as? [String: Any] else {
+        guard let schemaData = schemaJson.data(using: .utf8),
+              let schema = try? JSONSerialization.jsonObject(with: schemaData) as? [String: Any] else {
             return .failure(.invalidJSON("Schema is not valid JSON"))
         }
 
@@ -133,8 +150,10 @@ public final class TaskSchemaValidator: Sendable {
                 ))
             }
             if let pattern = schema["pattern"] as? String {
-                let regex = try? NSRegularExpression(pattern: pattern, options: [])
-                let range = NSRange(stringValue.startIndex..., in: stringValue)
+                // Use cached regex to avoid recompilation overhead
+                let regex = cachedRegex(for: pattern)
+                // Use safe Unicode-aware range calculation
+                let range = NSRange(location: 0, length: stringValue.utf16.count)
                 if regex?.firstMatch(in: stringValue, options: [], range: range) == nil {
                     errors.append(.init(
                         field: name,

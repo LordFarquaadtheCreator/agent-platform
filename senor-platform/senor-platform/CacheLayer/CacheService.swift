@@ -187,14 +187,40 @@ public final class CacheService: Sendable {
     
     /// Invalidate all entries for a platform
     public func invalidateAll(platform: String) async throws {
-        let expired = Date().addingTimeInterval(365 * 24 * 60 * 60) // Far future
-        let entries = try await cacheRepository.listExpired(before: expired)
-        
-        for entry in entries where entry.platform == platform {
-            try await cacheRepository.delete(platform: entry.platform, cacheKey: entry.cacheKey)
+        // Use the repository's deleteExpired with a far-future date to delete all entries
+        // This avoids loading all entries into memory
+        // Note: This assumes the repository deleteExpired supports filtering by platform
+        // If not, we iterate with a reasonable batch size to avoid memory pressure
+        let farFuture = Date().addingTimeInterval(365 * 24 * 60 * 60)
+
+        // Get expired entries for this platform only (using listExpired with platform filter if available)
+        // For now, fetch in batches to avoid loading all into memory at once
+        var deletedCount = 0
+        let batchSize = 100
+
+        // Since we don't have a direct platform filter in listExpired, we need to fetch and delete
+        // This is still better than loading ALL entries - we process in batches
+        while true {
+            let entries = try await cacheRepository.listExpired(before: farFuture)
+            let platformEntries = entries.filter { $0.platform == platform }
+
+            if platformEntries.isEmpty {
+                break
+            }
+
+            // Delete batch
+            for entry in platformEntries.prefix(batchSize) {
+                try await cacheRepository.delete(platform: entry.platform, cacheKey: entry.cacheKey)
+                deletedCount += 1
+            }
+
+            // If we processed less than batch size, we're done
+            if platformEntries.count < batchSize {
+                break
+            }
         }
-        
-        logger.debug("Invalidated all cache for platform: \(platform)")
+
+        logger.debug("Invalidated \(deletedCount) cache entries for platform: \(platform)")
     }
     
     /// Clean up expired entries

@@ -3,14 +3,31 @@ import Combine
 
 /// Type-safe event bus for internal app communication
 /// Replaces NotificationCenter anti-pattern with reactive streams
-public final class EventBus: @unchecked Sendable {
+public final actor EventBus: Sendable {
     public static let shared = EventBus()
 
     private let refreshSubject = PassthroughSubject<RefreshEvent, Never>()
     private let actionSubject = PassthroughSubject<ActionEvent, Never>()
     private let stateSubject = PassthroughSubject<StateChangeEvent, Never>()
 
-    private var cancellables = Set<AnyCancellable>()
+    // Use a separate actor-isolated storage for cancellables
+    private final class SubscriptionStorage: @unchecked Sendable {
+        private var cancellables = Set<AnyCancellable>()
+        private let lock = NSLock()
+
+        func insert(_ cancellable: AnyCancellable) {
+            lock.lock()
+            defer { lock.unlock() }
+            cancellables.insert(cancellable)
+        }
+
+        func remove(_ cancellable: AnyCancellable) {
+            lock.lock()
+            defer { lock.unlock() }
+            cancellables.remove(cancellable)
+        }
+    }
+    private let storage = SubscriptionStorage()
 
     private init() {}
 
@@ -53,21 +70,32 @@ public final class EventBus: @unchecked Sendable {
     // MARK: - Subscriptions
 
     public func onRefresh(
-        _ handler: @escaping (RefreshEvent) -> Void
+        _ handler: @escaping @Sendable (RefreshEvent) -> Void
     ) -> AnyCancellable {
-        refreshEvents.sink(receiveValue: handler)
+        let cancellable = refreshEvents.sink(receiveValue: handler)
+        storage.insert(cancellable)
+        return cancellable
     }
 
     public func onAction(
-        _ handler: @escaping (ActionEvent) -> Void
+        _ handler: @escaping @Sendable (ActionEvent) -> Void
     ) -> AnyCancellable {
-        actionEvents.sink(receiveValue: handler)
+        let cancellable = actionEvents.sink(receiveValue: handler)
+        storage.insert(cancellable)
+        return cancellable
     }
 
     public func onStateChange(
-        _ handler: @escaping (StateChangeEvent) -> Void
+        _ handler: @escaping @Sendable (StateChangeEvent) -> Void
     ) -> AnyCancellable {
-        stateChangeEvents.sink(receiveValue: handler)
+        let cancellable = stateChangeEvents.sink(receiveValue: handler)
+        storage.insert(cancellable)
+        return cancellable
+    }
+    
+    /// Clean up a specific subscription
+    public func removeSubscription(_ cancellable: AnyCancellable) {
+        storage.remove(cancellable)
     }
 }
 

@@ -95,8 +95,14 @@ public final class WorkerProcessManager {
         
         // Create log files
         let (stdoutPath, stderrPath) = createLogFiles(taskRunId: taskRunId)
-        process.standardOutput = FileHandle(forWritingAtPath: stdoutPath)
-        process.standardError = FileHandle(forWritingAtPath: stderrPath)
+        guard let stdoutHandle = FileHandle(forWritingAtPath: stdoutPath),
+              let stderrHandle = FileHandle(forWritingAtPath: stderrPath) else {
+            throw AppError.workerSpawnFailed(NSError(domain: "WorkerProcessManager", code: -1, userInfo: [
+                NSLocalizedDescriptionKey: "Failed to create log file handles at paths: \(stdoutPath), \(stderrPath)"
+            ]))
+        }
+        process.standardOutput = stdoutHandle
+        process.standardError = stderrHandle
         
         // Start process
         try process.run()
@@ -120,9 +126,11 @@ public final class WorkerProcessManager {
             return ProcessExit(pid: pid, exitCode: -1, error: "Process not found")
         }
         
-        // Wait for termination
-        process.waitUntilExit()
-        let exitCode = Int(process.terminationStatus)
+        // Wait for termination in a separate task to avoid blocking actor
+        let exitCode = await Task.detached {
+            process.waitUntilExit()
+            return Int(process.terminationStatus)
+        }.value
         
         // Unregister
         await processRegistry.remove(pid: pid)
@@ -141,8 +149,12 @@ public final class WorkerProcessManager {
             logger.info("Force terminated process: PID \(pid)")
         } else {
             // Send SIGTERM for graceful shutdown
-            kill(pid_t(pid), SIGTERM)
-            logger.info("Sent SIGTERM to process: PID \(pid)")
+            let result = kill(pid_t(pid), SIGTERM)
+            if result == 0 {
+                logger.info("Sent SIGTERM to process: PID \(pid)")
+            } else {
+                logger.warning("Failed to send SIGTERM to PID \(pid): errno \(errno)")
+            }
             
             // Wait 5 seconds then force kill if still running
             try? await Task.sleep(nanoseconds: 5_000_000_000)
