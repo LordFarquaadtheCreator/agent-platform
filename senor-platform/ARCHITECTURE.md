@@ -37,111 +37,98 @@ Senor Platform is a macOS SwiftUI application for managing AI agents that genera
 
 ## System Architecture Diagram
 
-```
-┌─────────────────────────────────────────────────────────────────────────────────────┐
-│                                    PRESENTATION LAYER                                │
-│  ┌──────────────────────────────────────────────────────────────────────────────┐  │
-│  │                                   Views                                        │  │
-│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌───────────────────────┐  │  │
-│  │  │ContentView  │  │SidebarView  │  │MainContent  │  │   InspectorView       │  │  │
-│  │  │(Root View)  │  │(Navigation) │  │  │(Dashboard)  │  │ (Details Panel)     │  │  │
-│  │  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘  └───────────┬───────────┘  │  │
-│  │         └─────────────────┴─────────────────┴─────────────────────┘              │  │
-│  │                              ↕                                                  │  │
-│  │                    ContentViewModel (MVVM)                                      │  │
-│  └──────────────────────────────┬───────────────────────────────────────────────────┘  │
-└───────────────────────────────┼────────────────────────────────────────────────────┘
-                                ↕
-┌───────────────────────────────┼────────────────────────────────────────────────────┐
-│                               ↕         APPLICATION LAYER                          │
-│  ┌────────────────────────────┴────────────────────────────────────────────────┐ │
-│  │                              AppCore                                          │ │
-│  │  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐ ┌──────────────────────┐ │ │
-│  │  │ AppState     │ │ Dependency   │ │   EventBus   │ │ ServiceProtocols     │ │ │
-│  │  │(Global State)│ │ Container    │ │  (Pub/Sub)   │ │ (Interfaces)         │ │ │
-│  │  └──────────────┘ └──────────────┘ └──────────────┘ └──────────────────────┘ │ │
-│  │  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐ ┌──────────────────────┐   │ │
-│  │  │ AppLogger    │ │ AppError     │ │ Settings     │ │ StatusEnums/Colors   │   │ │
-│  │  │ (Logging)    │ │ (Errors)     │ │ Service      │ │ (UI Helpers)         │   │ │
-│  │  └──────────────┘ └──────────────┘ └──────────────┘ └──────────────────────┘   │ │
-│  └───────────────────────────────────────────────────────────────────────────────┘ │
-│                                                                                     │
-│  ┌───────────────────────────────────────────────────────────────────────────────┐ │
-│  │                           Business Services                                   │ │
-│  │  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐ ┌──────────────────────┐   │ │
-│  │  │ AgentNaming  │ │ Approval     │ │ Content      │ │ Publication          │   │ │
-│  │  │   Service    │ │   Service    │ │ Versioning   │ │   Service            │   │ │
-│  │  └──────────────┘ └──────────────┘ └──────────────┘ └──────────────────────┘   │ │
-│  └───────────────────────────────────────────────────────────────────────────────┘ │
-│                                                                                     │
-│  ┌───────────────────────────────────────────────────────────────────────────────┐ │
-│  │                            Core Engines                                       │ │
-│  │  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────────────────┐  │ │
-│  │  │  SchedulerEngine │  │TaskExecution     │  │   WorkerProcessManager       │  │ │
-│  │  │  (Cron/Timer)    │  │   Pipeline       │  │   (Process Spawning)         │  │ │
-│  │  └──────────────────┘  └──────────────────┘  └──────────────────────────────┘  │ │
-│  └───────────────────────────────────────────────────────────────────────────────┘ │
-└────────────────────────────────────────────────────────────────────────────────────┘
-                                ↕
-┌───────────────────────────────┼────────────────────────────────────────────────────┐
-│                               ↕         DATA ACCESS LAYER                          │
-│  ┌────────────────────────────┴────────────────────────────────────────────────┐ │
-│  │                              DataLayer                                        │ │
-│  │  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────────────────┐  │ │
-│  │  │ DatabaseManager  │  │     Records      │  │ RepositoryImplementations    │  │ │
-│  │  │   (GRDB/SQLite)  │  │   (Codables)     │  │   (Data Access)              │  │ │
-│  │  └────────┬─────────┘  └──────────────────┘  └───────────┬──────────────────┘  │ │
-│  │           ↕                                              ↕                      │ │
-│  │  ┌────────┴──────────────────────────────────────────────────┐                  │ │
-│  │  │              RepositoryProtocols (Interfaces)             │                  │ │
-│  │  └─────────────────────────────────────────────────────────┘                  │ │
-│  └───────────────────────────────────────────────────────────────────────────────┘ │
-└────────────────────────────────────────────────────────────────────────────────────┘
-                                ↕
-┌───────────────────────────────┼────────────────────────────────────────────────────┐
-│                               ↕       EXTERNAL INTEGRATIONS                        │
-│  ┌────────────────────────────┴────────────────────────────────────────────────┐ │
-│  │                            Integrations                                       │ │
-│  │  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐                          │ │
-│  │  │ HTTPClient   │ │DeviantArt    │ │  Patreon     │                          │ │
-│  │  │ (Base HTTP)  │ │   Client     │ │  Client      │                          │ │
-│  │  └──────────────┘ └──────────────┘ └──────────────┘                          │ │
-│  └───────────────────────────────────────────────────────────────────────────────┘ │
-│                                                                                     │
-│  ┌───────────────────────────────────────────────────────────────────────────────┐ │
-│  │                            CacheLayer                                         │ │
-│  │  ┌────────────────────────────────────────────────────────────────────────┐  │ │
-│  │  │                        CacheService                                     │  │ │
-│  │  │              (Remote Post Caching + TTL Management)                      │  │ │
-│  │  └────────────────────────────────────────────────────────────────────────┘  │ │
-│  └───────────────────────────────────────────────────────────────────────────────┘ │
-└────────────────────────────────────────────────────────────────────────────────────┘
-                                ↕
-┌───────────────────────────────┼────────────────────────────────────────────────────┐
-│                               ↕         AGENT EXECUTION LAYER                    │
-│  ┌────────────────────────────┴────────────────────────────────────────────────┐ │
-│  │                            AgentTools                                         │ │
-│  │  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐ ┌──────────────────────┐  │ │
-│  │  │ AgentRunner  │ │ ComfyUITool  │ │ImageComposer │ │PublishingTools       │  │ │
-│  │  │(Main Entry)  │ │(Image Gen)   │ │   Tool       │ │(Platform Pub)       │  │ │
-│  │  └──────────────┘ └──────────────┘ └──────────────┘ └──────────────────────┘  │ │
-│  │  ┌────────────────────────────────────────────────────────────────────────┐  │ │
-│  │  │                      ToolProtocols (Tool Interface)                    │  │ │
-│  │  │  • AgentTool • ToolExecutionContext • ToolRegistry • ToolError        │  │ │
-│  │  └────────────────────────────────────────────────────────────────────────┘  │ │
-│  └───────────────────────────────────────────────────────────────────────────────┘ │
-│                                                                                     │
-│  ┌───────────────────────────────────────────────────────────────────────────────┐ │
-│  │                         WorkerRuntime                                           │ │
-│  │  ┌────────────────────────────────────────────────────────────────────────┐  │ │
-│  │  │                   WorkerProcessManager                                   │  │ │
-│  │  │  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────────────┐  │  │ │
-│  │  │  │ProcessRegistry│ │   Process    │ │    Process Lifecycle Mgmt     │  │  │ │
-│  │  │  │   (Actor)    │ │   Spawning   │ │  (Spawn/Wait/Terminate)       │  │  │ │
-│  │  │  └──────────────┘  └──────────────┘  └──────────────────────────────┘  │  │ │
-│  │  └────────────────────────────────────────────────────────────────────────┘  │ │
-│  └───────────────────────────────────────────────────────────────────────────────┘ │
-└────────────────────────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TB
+    subgraph PRESENTATION["📱 Presentation Layer"]
+        VIEWS["Views"]
+        CV["ContentView"]
+        SV["SidebarView"]
+        MV["MainContentView"]
+        IV["InspectorView"]
+        VM["ContentViewModel<br/>(MVVM)"]
+
+        VIEWS --> CV & SV & MV & IV
+        CV & SV & MV & IV --> VM
+    end
+
+    subgraph APP["⚙️ Application Layer"]
+        subgraph CORE["AppCore"]
+            AS["AppState"]
+            DC["DependencyContainer"]
+            EB["EventBus"]
+            SP["ServiceProtocols"]
+            AL["AppLogger"]
+            AE["AppError"]
+            SS["SettingsService"]
+        end
+
+        subgraph BIZ["Business Services"]
+            ANS["AgentNamingService"]
+            APS["ApprovalService"]
+            CVS["ContentVersioningService"]
+            PUBS["PublicationService"]
+        end
+
+        subgraph ENGINES["Core Engines"]
+            SCH["SchedulerEngine"]
+            TEP["TaskExecutionPipeline"]
+            WPM["WorkerProcessManager"]
+        end
+    end
+
+    subgraph DATA["💾 Data Access Layer"]
+        subgraph DL["DataLayer"]
+            DM["DatabaseManager<br/>(GRDB/SQLite)"]
+            REC["Records"]
+            RP["RepositoryProtocols"]
+            RI["RepositoryImplementations"]
+        end
+    end
+
+    subgraph EXT["🌐 External Integrations"]
+        subgraph INT["Integrations"]
+            HC["HTTPClient"]
+            DAC["DeviantArtClient"]
+            PC["PatreonClient"]
+        end
+
+        subgraph CACHE["CacheLayer"]
+            CS["CacheService"]
+        end
+    end
+
+    subgraph AGENT["🤖 Agent Execution Layer"]
+        subgraph AT["AgentTools"]
+            AR["AgentRunner"]
+            CUT["ComfyUITool"]
+            ICT["ImageComposerTool"]
+            PT["PublishingTools"]
+            TP["ToolProtocols"]
+        end
+
+        subgraph WR["WorkerRuntime"]
+            WPM2["WorkerProcessManager"]
+            PR["ProcessRegistry<br/>(Actor)"]
+        end
+    end
+
+    PRESENTATION --> APP
+    APP --> DATA
+    DATA --> EXT
+    EXT --> AGENT
+
+    classDef presentation fill:#e3f2fd,stroke:#0d47a1,stroke-width:2px,color:#0d47a1
+    classDef app fill:#fff3e0,stroke:#e65100,stroke-width:2px,color:#e65100
+    classDef data fill:#e8f5e9,stroke:#1b5e20,stroke-width:2px,color:#1b5e20
+    classDef external fill:#fce4ec,stroke:#880e4f,stroke-width:2px,color:#880e4f
+    classDef agent fill:#f3e5f5,stroke:#4a148c,stroke-width:2px,color:#4a148c
+    classDef default color:#212121
+
+    class PRESENTATION,VIEWS,CV,SV,MV,IV,VM presentation
+    class APP,CORE,BIZ,ENGINES,AS,DC,EB,SP,AL,AE,SS,ANS,APS,CVS,PUBS,SCH,TEP,WPM app
+    class DATA,DL,DM,REC,RP,RI data
+    class EXT,INT,CACHE,HC,DAC,PC,CS external
+    class AGENT,AT,WR,AR,CUT,ICT,PT,TP,WPM2,PR agent
 ```
 
 ---
