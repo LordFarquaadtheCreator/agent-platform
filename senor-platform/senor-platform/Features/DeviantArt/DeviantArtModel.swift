@@ -6,6 +6,7 @@ import CryptoKit
 public final class DeviantArtModel: ObservableObject {
     @Published public private(set) var profile: DeviantArtClient.UserProfile?
     @Published public private(set) var deviations: [DeviantArtClient.Deviation] = []
+    @Published public private(set) var stashItems: [DeviantArtClient.StashItem] = []
     @Published public private(set) var isLoading = false
     @Published public private(set) var errorMessage: String?
     @Published public private(set) var isAuthenticated = false
@@ -41,9 +42,15 @@ public final class DeviantArtModel: ObservableObject {
         isLoading = true
         defer { isLoading = false }
         do {
-            profile = try await client.getUserProfile()
-            let gallery = try await client.getGalleryAll(limit: 24)
-            deviations = gallery.results
+            async let profileTask = client.getUserProfile()
+            async let galleryTask = client.getGalleryAll(limit: 24)
+            async let stashTask = client.getStashContents(limit: 24)
+
+            let (profileResult, galleryResult, stashResult) = try await (profileTask, galleryTask, stashTask)
+
+            profile = profileResult
+            deviations = galleryResult.results
+            stashItems = stashResult.items
             errorMessage = nil
         } catch {
             errorMessage = error.localizedDescription
@@ -140,6 +147,7 @@ public final class DeviantArtModel: ObservableObject {
         isAuthenticated = false
         profile = nil
         deviations = []
+        stashItems = []
     }
 
     /// Clear error message

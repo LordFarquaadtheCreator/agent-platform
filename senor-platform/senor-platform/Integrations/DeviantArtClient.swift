@@ -30,6 +30,7 @@ public final class DeviantArtClient {
         static func stashSubmit() -> String { "\(base)/stash/submit" }
         static func stashContent(stashId: String) -> String { "\(base)/stash/\(stashId)" }
         static func stashPublish(stashId: String) -> String { "\(base)/stash/publish/\(stashId)" }
+        static let stashContents = "\(base)/stash/contents"
         static func deviation(deviationId: String) -> String { "\(base)/deviation/\(deviationId)" }
         static let deviations = "\(base)/deviations"
         static let galleryAll = "\(base)/gallery/all"
@@ -40,6 +41,14 @@ public final class DeviantArtClient {
 
     // MARK: - DTOs
 
+    public struct StashStack: Codable, Identifiable {
+        public let stackid: String
+        public let title: String?
+        public let items: [StashItem]?
+
+        public var id: String { stackid }
+    }
+
     public struct StashItem: Codable, Identifiable {
         public let itemid: String
         public let stackid: String?
@@ -48,13 +57,31 @@ public final class DeviantArtClient {
         public let size: Int?
         public let fileSize: Int?
         public let status: String
+        public let thumb: String? // Preview thumbnail URL
+        public let position: Int?
 
         enum CodingKeys: String, CodingKey {
-            case itemid, stackid, title, path, size, status
+            case itemid, stackid, title, path, size, status, thumb, position
             case fileSize = "filesize"
         }
 
         public var id: String { itemid }
+        public var isPublished: Bool { status == "published" }
+        public var previewURL: URL? {
+            thumb.flatMap { URL(string: $0) }
+        }
+    }
+
+    public struct StashContentsResponse: Codable {
+        public let items: [StashItem]
+        public let hasMore: Bool
+        public let nextOffset: Int?
+
+        enum CodingKeys: String, CodingKey {
+            case items
+            case hasMore = "has_more"
+            case nextOffset = "next_offset"
+        }
     }
 
     public struct StashPublishResponse: Codable {
@@ -74,9 +101,11 @@ public final class DeviantArtClient {
         public let allowsComments: Bool?
         public let isFavourited: Bool?
         public let isDeleted: Bool?
+        public let thumbs: [Thumb]?
+        public let content: ContentInfo?
 
         enum CodingKeys: String, CodingKey {
-            case deviationid, url, title, category, author, stats
+            case deviationid, url, title, category, author, stats, thumbs, content
             case publishedTime = "published_time"
             case allowsComments = "allows_comments"
             case isFavourited = "is_favourited"
@@ -84,6 +113,41 @@ public final class DeviantArtClient {
         }
 
         public var id: String { deviationid }
+
+        public var previewURL: URL? {
+            // Prefer medium-large thumb, fall back to content src, then smallest thumb
+            if let mediumThumb = thumbs?.first(where: { $0.quality == .medium }) ?? thumbs?.first(where: { $0.quality == .small }) {
+                return URL(string: mediumThumb.src)
+            }
+            if let contentSrc = content?.src {
+                return URL(string: contentSrc)
+            }
+            return thumbs?.first.map { URL(string: $0.src) } ?? nil
+        }
+
+        public struct Thumb: Codable {
+            public let src: String
+            public let width: Int
+            public let height: Int
+
+            var quality: ThumbQuality {
+                let maxDim = max(width, height)
+                if maxDim >= 400 { return .large }
+                if maxDim >= 200 { return .medium }
+                return .small
+            }
+        }
+
+        public enum ThumbQuality {
+            case small, medium, large
+        }
+
+        public struct ContentInfo: Codable {
+            public let src: String?
+            public let width: Int?
+            public let height: Int?
+            public let filesize: Int?
+        }
 
         public struct User: Codable {
             public let userid: String
@@ -319,6 +383,34 @@ public final class DeviantArtClient {
         if let url = response.data.url {
             logger.info("Published deviation: \(url)")
         }
+
+        return response.data
+    }
+
+    /// Get sta.sh contents (unpublished items)
+    public func getStashContents(
+        stackId: String? = nil,
+        offset: Int = 0,
+        limit: Int = 24
+    ) async throws -> StashContentsResponse {
+        try ensureAuthenticated()
+
+        var queryItems: [URLQueryItem] = [
+            URLQueryItem(name: "offset", value: String(offset)),
+            URLQueryItem(name: "limit", value: String(limit))
+        ]
+
+        if let stackId = stackId {
+            queryItems.append(URLQueryItem(name: "stackid", value: stackId))
+        }
+
+        let response = try await httpClient.request(
+            method: .get,
+            path: Endpoints.stashContents,
+            queryItems: queryItems,
+            authToken: authToken,
+            decodeAs: StashContentsResponse.self
+        )
 
         return response.data
     }

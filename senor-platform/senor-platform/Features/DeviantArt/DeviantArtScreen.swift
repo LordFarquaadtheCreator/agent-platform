@@ -47,8 +47,12 @@ struct DeviantArtScreen: View {
                         if let profile = model.profile {
                             profileCard(profile)
                         }
+                        if !model.stashItems.isEmpty {
+                            AppText("Sta.sh (Unpublished)", style: .title3)
+                            stashGrid(model.stashItems)
+                        }
                         if !model.deviations.isEmpty {
-                            AppText("Gallery", style: .title3)
+                            AppText("Published Gallery", style: .title3)
                             deviationsGrid(model.deviations)
                         }
                     }
@@ -98,16 +102,115 @@ struct DeviantArtScreen: View {
         }
     }
 
+    private func stashGrid(_ items: [DeviantArtClient.StashItem]) -> some View {
+        LazyVGrid(columns: [GridItem(.adaptive(minimum: 200))], spacing: AppTheme.Spacing.medium) {
+            ForEach(items) { item in
+                stashCard(item)
+            }
+        }
+    }
+
     private func deviationCard(_ deviation: DeviantArtClient.Deviation) -> some View {
         AppCard {
-            AppVStack(spacing: .small, alignment: .leading) {
+            VStack(alignment: .leading, spacing: AppTheme.Spacing.small) {
+                // Image Preview
+                if let previewURL = deviation.previewURL {
+                    AsyncImage(url: previewURL) { phase in
+                        switch phase {
+                        case .empty:
+                            RoundedRectangle(cornerRadius: AppTheme.CornerRadius.card)
+                                .fill(AppTheme.ColorToken.textSecondary.opacity(0.2))
+                                .overlay(ProgressView())
+                                .frame(height: 150)
+                        case .success(let image):
+                            image
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                                .frame(height: 150)
+                                .clipShape(RoundedRectangle(cornerRadius: AppTheme.CornerRadius.card))
+                        case .failure:
+                            RoundedRectangle(cornerRadius: AppTheme.CornerRadius.card)
+                                .fill(AppTheme.ColorToken.textSecondary.opacity(0.2))
+                                .overlay(AppIcon(AppTheme.Icon.content, size: .large, color: AppTheme.ColorToken.textSecondary))
+                                .frame(height: 150)
+                        @unknown default:
+                            EmptyView()
+                        }
+                    }
+                } else {
+                    RoundedRectangle(cornerRadius: AppTheme.CornerRadius.card)
+                        .fill(AppTheme.ColorToken.textSecondary.opacity(0.2))
+                        .overlay(AppIcon(AppTheme.Icon.content, size: .large, color: AppTheme.ColorToken.textSecondary))
+                        .frame(height: 150)
+                }
+
+                // Published Badge
+                HStack {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundColor(AppTheme.ColorToken.statusSuccess)
+                    AppText("Published", style: .caption)
+                        .foregroundColor(AppTheme.ColorToken.statusSuccess)
+                }
+
                 AppText(deviation.title, style: .headline)
+                    .lineLimit(1)
+
                 if let stats = deviation.stats {
                     AppText("\(stats.views ?? 0) views · \(stats.favourites ?? 0) favs", style: .caption, color: AppTheme.ColorToken.textSecondary)
                 }
                 if let published = deviation.publishedTime {
                     AppText(published, style: .caption2, color: AppTheme.ColorToken.textSecondary)
                 }
+            }
+        }
+    }
+
+    private func stashCard(_ item: DeviantArtClient.StashItem) -> some View {
+        AppCard {
+            VStack(alignment: .leading, spacing: AppTheme.Spacing.small) {
+                // Image Preview
+                if let previewURL = item.previewURL {
+                    AsyncImage(url: previewURL) { phase in
+                        switch phase {
+                        case .empty:
+                            RoundedRectangle(cornerRadius: AppTheme.CornerRadius.card)
+                                .fill(AppTheme.ColorToken.textSecondary.opacity(0.2))
+                                .overlay(ProgressView())
+                                .frame(height: 150)
+                        case .success(let image):
+                            image
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                                .frame(height: 150)
+                                .clipShape(RoundedRectangle(cornerRadius: AppTheme.CornerRadius.card))
+                        case .failure:
+                            RoundedRectangle(cornerRadius: AppTheme.CornerRadius.card)
+                                .fill(AppTheme.ColorToken.textSecondary.opacity(0.2))
+                                .overlay(AppIcon(AppTheme.Icon.content, size: .large, color: AppTheme.ColorToken.textSecondary))
+                                .frame(height: 150)
+                        @unknown default:
+                            EmptyView()
+                        }
+                    }
+                } else {
+                    RoundedRectangle(cornerRadius: AppTheme.CornerRadius.card)
+                        .fill(AppTheme.ColorToken.textSecondary.opacity(0.2))
+                        .overlay(AppIcon(AppTheme.Icon.content, size: .large, color: AppTheme.ColorToken.textSecondary))
+                        .frame(height: 150)
+                }
+
+                // Sta.sh Status Badge
+                HStack {
+                    Image(systemName: "archivebox.fill")
+                        .foregroundColor(AppTheme.ColorToken.statusWarning)
+                    AppText("In Sta.sh", style: .caption)
+                        .foregroundColor(AppTheme.ColorToken.statusWarning)
+                }
+
+                AppText(item.title, style: .headline)
+                    .lineLimit(1)
+
+                AppText("Not published yet", style: .caption, color: AppTheme.ColorToken.textSecondary)
             }
         }
     }
