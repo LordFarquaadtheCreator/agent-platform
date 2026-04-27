@@ -50,7 +50,9 @@ private struct SettingsContent: View {
                     AppText("General", style: .headline)
                     Toggle("Launch at Login", isOn: $model.generalSettings.launchAtLogin)
                     Toggle("Show Notifications", isOn: $model.generalSettings.showNotifications)
-                    TextField("Log Level", text: $model.generalSettings.logLevel)
+                    AppText("Log Level", style: .caption)
+                    // swiftlint:disable:next unlabeled_input_field
+                    TextField("info, debug, warning, error", text: $model.generalSettings.logLevel)
                     Button("Save General Settings") {
                         model.saveGeneral()
                     }
@@ -61,7 +63,9 @@ private struct SettingsContent: View {
             AppCard {
                 AppVStack(spacing: .medium, alignment: .leading) {
                     AppText("Task Runtime", style: .headline)
-                    TextField("Task Script Path", text: $model.taskScriptPath)
+                    AppText("Task Script Path", style: .caption)
+                    // swiftlint:disable:next unlabeled_input_field
+                    TextField("/usr/local/bin/senor-task", text: $model.taskScriptPath)
                     Button("Save Script Path") {
                         model.saveTaskScriptPath()
                     }
@@ -73,12 +77,18 @@ private struct SettingsContent: View {
                 AppVStack(spacing: .medium, alignment: .leading) {
                     AppText("DeviantArt", style: .headline)
 
-                    TextField("Client ID", text: $model.deviantArtSettings.clientId)
-                    SecureField("Client Secret", text: Binding(
+                    AppText("Client ID", style: .caption)
+                    // swiftlint:disable:next unlabeled_input_field
+                    TextField("Enter DeviantArt Client ID", text: $model.deviantArtSettings.clientId)
+                    AppText("Client Secret", style: .caption)
+                    // swiftlint:disable:next unlabeled_input_field
+                    SecureField("Enter DeviantArt Client Secret", text: Binding(
                         get: { model.deviantArtSettings.clientSecret },
                         set: { model.deviantArtSettings.clientSecret = $0 }
                     ))
-                    TextField("Redirect URI", text: $model.deviantArtSettings.redirectURI)
+                    AppText("Redirect URI", style: .caption)
+                    // swiftlint:disable:next unlabeled_input_field
+                    TextField("senorplatform://oauth/deviantart", text: $model.deviantArtSettings.redirectURI)
                         .textContentType(.URL)
                         .font(.system(.body, design: .monospaced))
 
@@ -110,17 +120,39 @@ private struct SettingsContent: View {
             AppCard {
                 AppVStack(spacing: .medium, alignment: .leading) {
                     AppText("Patreon", style: .headline)
-                    SecureField("Access Token", text: Binding(
+
+                    if let workspace = appState.workspace {
+                        HStack {
+                            AppStatusPill(
+                                title: workspace.patreonModel.isAuthenticated ? "Connected" : "Not Connected",
+                                color: workspace.patreonModel.isAuthenticated ? AppTheme.ColorToken.statusSuccess : AppTheme.ColorToken.statusWarning
+                            )
+                            Spacer()
+                        }
+                    }
+
+                    AppText("Access Token", style: .caption)
+                    // swiftlint:disable:next unlabeled_input_field
+                    SecureField("Enter Patreon Access Token", text: Binding(
                         get: { model.patreonSettings.accessToken },
                         set: { model.patreonSettings.accessToken = $0 }
                     ))
-                    TextField("Campaign ID", text: Binding(
+                    AppText("Refresh Token (optional)", style: .caption)
+                    // swiftlint:disable:next unlabeled_input_field
+                    SecureField("Enter Refresh Token", text: Binding(
+                        get: { model.patreonSettings.refreshToken ?? "" },
+                        set: { model.patreonSettings.refreshToken = $0.isEmpty ? nil : $0 }
+                    ))
+                    AppText("Campaign ID (optional)", style: .caption)
+                    // swiftlint:disable:next unlabeled_input_field
+                    TextField("Enter Campaign ID", text: Binding(
                         get: { model.patreonSettings.campaignId ?? "" },
                         set: { model.patreonSettings.campaignId = $0.isEmpty ? nil : $0 }
                     ))
                     Button("Save Patreon Credentials") {
                         do {
                             try model.savePatreon()
+                            appState.workspace?.patreonModel.reloadWithNewSettings()
                         } catch {
                             appState.errorMessage = error.localizedDescription
                         }
@@ -132,7 +164,9 @@ private struct SettingsContent: View {
             AppCard {
                 AppVStack(spacing: .medium, alignment: .leading) {
                     AppText("ComfyUI", style: .headline)
-                    TextField("Server URL", text: $model.comfyUISettings.serverURL)
+                    AppText("Server URL", style: .caption)
+                    // swiftlint:disable:next unlabeled_input_field
+                    TextField("http://127.0.0.1:8188", text: $model.comfyUISettings.serverURL)
                     Stepper("Timeout: \(model.comfyUISettings.timeout)s", value: $model.comfyUISettings.timeout, in: 30...900, step: 30)
                     Button("Save ComfyUI Settings") {
                         model.saveComfyUI()

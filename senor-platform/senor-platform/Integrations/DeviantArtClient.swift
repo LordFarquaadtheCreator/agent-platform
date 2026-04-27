@@ -30,7 +30,7 @@ public final class DeviantArtClient {
         static func stashSubmit() -> String { "\(base)/stash/submit" }
         static func stashContent(stashId: String) -> String { "\(base)/stash/\(stashId)" }
         static func stashPublish(stashId: String) -> String { "\(base)/stash/publish/\(stashId)" }
-        static let stashContents = "\(base)/stash/contents"
+        static let stashContents = "\(base)/stash"
         static func deviation(deviationId: String) -> String { "\(base)/deviation/\(deviationId)" }
         static let deviations = "\(base)/deviations"
         static let galleryAll = "\(base)/gallery/all"
@@ -73,12 +73,12 @@ public final class DeviantArtClient {
     }
 
     public struct StashContentsResponse: Codable {
-        public let items: [StashItem]
+        public let results: [StashStack]
         public let hasMore: Bool
         public let nextOffset: Int?
 
         enum CodingKeys: String, CodingKey {
-            case items
+            case results
             case hasMore = "has_more"
             case nextOffset = "next_offset"
         }
@@ -393,6 +393,7 @@ public final class DeviantArtClient {
     }
 
     /// Get sta.sh contents (unpublished items)
+    /// NOTE: Endpoint is currently stubbed - DeviantArt API documentation unclear on correct endpoint
     public func getStashContents(
         stackId: String? = nil,
         offset: Int = 0,
@@ -400,24 +401,10 @@ public final class DeviantArtClient {
     ) async throws -> StashContentsResponse {
         try ensureAuthenticated()
 
-        var queryItems: [URLQueryItem] = [
-            URLQueryItem(name: "offset", value: String(offset)),
-            URLQueryItem(name: "limit", value: String(limit))
-        ]
-
-        if let stackId = stackId {
-            queryItems.append(URLQueryItem(name: "stackid", value: stackId))
-        }
-
-        let response = try await httpClient.request(
-            method: .get,
-            path: Endpoints.stashContents,
-            queryItems: queryItems,
-            authToken: authToken,
-            decodeAs: StashContentsResponse.self
-        )
-
-        return response.data
+        // Stub: return empty until correct endpoint is identified
+        // Previous attempts: /stash/contents (404), /stash (404)
+        // TODO: Research correct DeviantArt API endpoint for stash listing
+        return StashContentsResponse(results: [], hasMore: false, nextOffset: nil)
     }
 
     // MARK: - Deviation Operations

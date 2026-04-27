@@ -84,6 +84,7 @@ public final class PatreonModel: ObservableObject {
 
     private let client: PatreonClient?
     private var settings: SettingsService.PatreonSettings?
+    private var hasLoaded = false
 
     init(client: PatreonClient?, settings: SettingsService.PatreonSettings? = nil) {
         self.client = client
@@ -116,12 +117,25 @@ public final class PatreonModel: ObservableObject {
         isLoadingProfile || isLoadingPosts || isLoadingMembers || isRefreshingToken
     }
 
+    public var isAuthenticated: Bool {
+        authState == .authenticated
+    }
+
+    func reloadWithNewSettings() {
+        // Trigger objectWillChange to refresh auth state
+        objectWillChange.send()
+    }
+
     // MARK: - Load Methods
 
     func load() async {
+        guard !hasLoaded && !isLoadingProfile else {
+            AppLogger.api.debug("Skipping duplicate load - hasLoaded=\(hasLoaded), isLoadingProfile=\(isLoadingProfile)")
+            return
+        }
+        hasLoaded = true
         await loadProfile()
-        await loadPosts()
-        await loadMembers()
+        // loadProfile now chains to loadPosts() and loadMembers() after campaign loads
     }
 
     func loadProfile() async {
@@ -141,11 +155,28 @@ public final class PatreonModel: ObservableObject {
 
         do {
             identity = try await client.getIdentity()
+            AppLogger.api.debug("Identity loaded, fetching campaigns...")
             let campaigns = try await client.getCampaigns()
-            campaign = campaigns.data.first
+            AppLogger.api.debug("Campaigns response: \(campaigns.data.count) campaigns")
+            if let firstCampaign = campaigns.data.first {
+                AppLogger.api.debug("First campaign ID: \(firstCampaign.id)")
+                campaign = firstCampaign
+                await loadPosts()
+                await loadMembers()
+            } else {
+                AppLogger.api.error("No campaigns found in response")
+            }
         } catch let error as AppError {
+            AppLogger.api.error("Profile load error: \(error)")
+            if case .apiRequestFailed(_, let underlying) = error,
+               let apiError = underlying as? HTTPClient.APIError,
+               let body = apiError.responseBody,
+               let bodyString = String(data: body, encoding: .utf8) {
+                AppLogger.api.error("Response body: \(bodyString)")
+            }
             profileError = mapAppError(error)
         } catch {
+            AppLogger.api.error("Profile load unknown error: \(error)")
             profileError = .unknown(error.localizedDescription)
         }
     }
@@ -156,6 +187,8 @@ public final class PatreonModel: ObservableObject {
             return
         }
 
+        AppLogger.api.debug("Posts: campaign.id=\(campaign?.id ?? "nil"), settings.campaignId=\(settings?.campaignId ?? "nil")")
+        AppLogger.api.debug("Posts: campaign.id=\(campaign?.id ?? "nil"), settings.campaignId=\(settings?.campaignId ?? "nil")")
         guard let campaignId = campaign?.id ?? settings?.campaignId else {
             postsError = .unknown("No campaign selected")
             return
@@ -168,9 +201,12 @@ public final class PatreonModel: ObservableObject {
         do {
             let response = try await client.getCampaignPosts(campaignId: campaignId)
             posts = response.data
+            AppLogger.api.debug("Loaded \(posts.count) posts")
         } catch let error as AppError {
+            AppLogger.api.error("Posts error: \(error)")
             postsError = mapAppError(error)
         } catch {
+            AppLogger.api.error("Posts unknown error: \(error)")
             postsError = .unknown(error.localizedDescription)
         }
     }
@@ -181,6 +217,7 @@ public final class PatreonModel: ObservableObject {
             return
         }
 
+        AppLogger.api.debug("Members: campaign.id=\(campaign?.id ?? "nil"), settings.campaignId=\(settings?.campaignId ?? "nil")")
         guard let campaignId = campaign?.id ?? settings?.campaignId else {
             membersError = .unknown("No campaign selected")
             return
@@ -193,9 +230,15 @@ public final class PatreonModel: ObservableObject {
         do {
             let response = try await client.getCampaignMembers(campaignId: campaignId)
             members = response.data
+            AppLogger.api.debug("Loaded \(members.count) members")
+            for member in members {
+                AppLogger.api.debug("Member: id=\(member.id), name=\(member.attributes?.fullName ?? "nil")")
+            }
         } catch let error as AppError {
+            AppLogger.api.error("Members error: \(error)")
             membersError = mapAppError(error)
         } catch {
+            AppLogger.api.error("Members unknown error: \(error)")
             membersError = .unknown(error.localizedDescription)
         }
     }
@@ -220,6 +263,8 @@ public final class PatreonModel: ObservableObject {
         switch error {
         case .apiAuthenticationFailed:
             return .authExpired
+        case .apiResourceNotFound(let resource):
+            return .networkFailure("Not found: \(resource)")
         case .apiRequestFailed(_, let underlying):
             if let apiError = underlying as? HTTPClient.APIError {
                 if apiError.isRateLimited {
@@ -227,6 +272,9 @@ public final class PatreonModel: ObservableObject {
                 }
                 if apiError.isUnauthorized {
                     return .authExpired
+                }
+                if apiError.isNotFound {
+                    return .networkFailure("Resource not found (404)")
                 }
                 return .networkFailure(apiError.message)
             }

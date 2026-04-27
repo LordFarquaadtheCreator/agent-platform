@@ -255,6 +255,16 @@ public final class AppBootstrap {
         let httpClient = HTTPClient(
             configuration: HTTPClient.Configuration(baseURL: patreonURL)
         )
-        return await PatreonClient(configuration: config, httpClient: httpClient)
+        let client = await PatreonClient(configuration: config, httpClient: httpClient)
+        if !settings.accessToken.isEmpty {
+            let token = HTTPClient.AuthToken(
+                accessToken: settings.accessToken,
+                refreshToken: settings.refreshToken,
+                expiresAt: settings.tokenExpiry,
+                tokenType: "Bearer"
+            )
+            client.setAuthToken(token)
+        }
+        return client
     }
 }

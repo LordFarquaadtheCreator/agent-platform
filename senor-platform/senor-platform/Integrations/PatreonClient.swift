@@ -11,14 +11,28 @@ public struct PatreonCampaign: Codable, Identifiable {
         public let summary: String?
         public let creationName: String?
         public let payPerName: String?
-        public let isMonthly: Bool?
-        public let isChargedImmediately: Bool?
+        public let thanksMsg: String?
+        public let thanksVideoUrl: String?
         public let imageUrl: String?
         public let url: String?
         public let publishedAt: String?
         public let patronCount: Int?
         public let pledgeSum: Int?
         public let pledgeSumCurrency: String?
+
+        enum CodingKeys: String, CodingKey {
+            case summary
+            case creationName = "creation_name"
+            case payPerName = "pay_per_name"
+            case thanksMsg = "thanks_msg"
+            case thanksVideoUrl = "thanks_video_url"
+            case imageUrl = "image_url"
+            case url
+            case publishedAt = "published_at"
+            case patronCount = "patron_count"
+            case pledgeSum = "pledge_sum"
+            case pledgeSumCurrency = "pledge_sum_currency"
+        }
     }
 }
 
@@ -43,6 +57,17 @@ public struct PatreonPost: Codable, Identifiable {
         public let isPublic: Bool?
         public let publishedAt: String?
         public let editedAt: String?
+
+        enum CodingKeys: String, CodingKey {
+            case title
+            case content
+            case teaserText = "teaser_text"
+            case url
+            case isPaid = "is_paid"
+            case isPublic = "is_public"
+            case publishedAt = "published_at"
+            case editedAt = "edited_at"
+        }
     }
 
     public struct PatreonPostRelationships: Codable, Sendable {
@@ -78,6 +103,15 @@ public struct PatreonMember: Codable, Identifiable {
         public let lastChargeStatus: String?
         public let lifetimeSupportCents: Int?
         public let currentlyEntitledAmountCents: Int?
+
+        enum CodingKeys: String, CodingKey {
+            case fullName = "full_name"
+            case email
+            case patronStatus = "patron_status"
+            case lastChargeStatus = "last_charge_status"
+            case lifetimeSupportCents = "lifetime_support_cents"
+            case currentlyEntitledAmountCents = "currently_entitled_amount_cents"
+        }
     }
 
     public struct PatreonMemberRelationships: Codable, Sendable {
@@ -238,6 +272,11 @@ public final class PatreonClient {
         return !token.isExpired
     }
 
+    /// Inject an existing auth token (e.g., loaded from Keychain on startup)
+    public func setAuthToken(_ token: HTTPClient.AuthToken) {
+        authToken = token
+    }
+
     // MARK: - Identity/User Operations
 
     /// Get current user's identity
@@ -267,7 +306,7 @@ public final class PatreonClient {
 
     /// Get all campaigns for the current user
     public func getCampaigns(
-        includeFields: [String] = ["summary", "creation_name", "image_url", "url", "published_at"]
+        includeFields: [String] = ["creation_name"]
     ) async throws -> CampaignsResponse {
         try ensureAuthenticated()
 
@@ -283,6 +322,11 @@ public final class PatreonClient {
             authToken: authToken,
             decodeAs: CampaignsResponse.self
         )
+
+        logger.debug("Campaigns data count: \(response.data.data.count)")
+        for campaign in response.data.data {
+            logger.debug("Campaign ID: \(campaign.id), attributes: \(campaign.attributes)")
+        }
 
         return response.data
     }
@@ -315,7 +359,7 @@ public final class PatreonClient {
     /// Get all posts for a campaign
     public func getCampaignPosts(
         campaignId: String,
-        includeFields: [String] = ["title", "content", "is_paid", "is_public", "published_at", "url", "edited_at"],
+        includeFields: [String] = ["title", "teaser_text", "is_paid", "is_public", "published_at", "url", "edited_at"],
         cursor: String? = nil
     ) async throws -> PostsResponse {
         try ensureAuthenticated()

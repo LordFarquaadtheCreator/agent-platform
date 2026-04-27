@@ -48,6 +48,7 @@ public final class SettingsService {
         case deviantArtClientId = "deviantart_client_id"
         case deviantArtClientSecret = "deviantart_client_secret"
         case patreonAccessToken = "patreon_access_token"
+        case patreonRefreshToken = "patreon_refresh_token"
     }
 
     public init() {}
@@ -118,6 +119,7 @@ public final class SettingsService {
 
     public struct PatreonSettings: Codable, Sendable {
         public var accessToken: String
+        public var refreshToken: String?
         public var campaignId: String?
         public var tokenExpiry: Date?
 
@@ -128,10 +130,13 @@ public final class SettingsService {
     }
 
     public func savePatreonSettings(_ settings: PatreonSettings) throws {
-        // Store sensitive token in Keychain, not UserDefaults
+        // Store sensitive tokens in Keychain, not UserDefaults
         let keychain = Keychain()
         if !settings.accessToken.isEmpty {
             try keychain.save(string: settings.accessToken, account: KeychainKeys.patreonAccessToken.rawValue)
+        }
+        if let refreshToken = settings.refreshToken, !refreshToken.isEmpty {
+            try keychain.save(string: refreshToken, account: KeychainKeys.patreonRefreshToken.rawValue)
         }
         defaults.set(settings.campaignId, forKey: Keys.patreonCampaignId)
         defaults.set(settings.tokenExpiry, forKey: Keys.patreonTokenExpiry)
@@ -141,8 +146,10 @@ public final class SettingsService {
     public func loadPatreonSettings() -> PatreonSettings {
         let keychain = Keychain()
         let accessToken = keychain.retrieveString(account: KeychainKeys.patreonAccessToken.rawValue) ?? ""
+        let refreshToken = keychain.retrieveString(account: KeychainKeys.patreonRefreshToken.rawValue)
         return PatreonSettings(
             accessToken: accessToken,
+            refreshToken: refreshToken,
             campaignId: defaults.string(forKey: Keys.patreonCampaignId),
             tokenExpiry: defaults.object(forKey: Keys.patreonTokenExpiry) as? Date
         )

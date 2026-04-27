@@ -5,12 +5,13 @@ struct senor_platformApp: App {
     @StateObject private var appState = AppShellModel()
 
     var body: some Scene {
-        WindowGroup {
+        Window("Senor Platform", id: "main") {
             ContentView()
                 .environmentObject(appState)
                 .frame(minWidth: AppTheme.Layout.windowMinWidth, minHeight: AppTheme.Layout.windowMinHeight)
         }
         .windowResizability(.contentSize)
+        .handlesExternalEvents(matching: ["senorplatform"])
         .commands {
             CommandMenu("Agents") {
                 Button("New Agent") {

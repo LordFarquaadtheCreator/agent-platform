@@ -47,9 +47,9 @@ struct DeviantArtScreen: View {
                         if let profile = model.profile {
                             profileCard(profile)
                         }
-                        if !model.stashItems.isEmpty {
-                            AppText("Sta.sh (Unpublished)", style: .title3)
-                            stashGrid(model.stashItems)
+                        if !model.stashStacks.isEmpty {
+                            AppText("Sta.sh Stacks", style: .title3)
+                            stashStacksGrid(model.stashStacks)
                         }
                         if !model.deviations.isEmpty {
                             AppText("Published Gallery", style: .title3)
@@ -102,10 +102,10 @@ struct DeviantArtScreen: View {
         }
     }
 
-    private func stashGrid(_ items: [DeviantArtClient.StashItem]) -> some View {
+    private func stashStacksGrid(_ stacks: [DeviantArtClient.StashStack]) -> some View {
         LazyVGrid(columns: [GridItem(.adaptive(minimum: 200))], spacing: AppTheme.Spacing.medium) {
-            ForEach(items) { item in
-                stashCard(item)
+            ForEach(stacks) { stack in
+                stashStackCard(stack)
             }
         }
     }
@@ -165,52 +165,25 @@ struct DeviantArtScreen: View {
         }
     }
 
-    private func stashCard(_ item: DeviantArtClient.StashItem) -> some View {
+    private func stashStackCard(_ stack: DeviantArtClient.StashStack) -> some View {
         AppCard {
             VStack(alignment: .leading, spacing: AppTheme.Spacing.small) {
-                // Image Preview
-                if let previewURL = item.previewURL {
-                    AsyncImage(url: previewURL) { phase in
-                        switch phase {
-                        case .empty:
-                            RoundedRectangle(cornerRadius: AppTheme.CornerRadius.card)
-                                .fill(AppTheme.ColorToken.textSecondary.opacity(0.2))
-                                .overlay(ProgressView())
-                                .frame(height: 150)
-                        case .success(let image):
-                            image
-                                .resizable()
-                                .aspectRatio(contentMode: .fill)
-                                .frame(height: 150)
-                                .clipShape(RoundedRectangle(cornerRadius: AppTheme.CornerRadius.card))
-                        case .failure:
-                            RoundedRectangle(cornerRadius: AppTheme.CornerRadius.card)
-                                .fill(AppTheme.ColorToken.textSecondary.opacity(0.2))
-                                .overlay(AppIcon(AppTheme.Icon.content, size: .large, color: AppTheme.ColorToken.textSecondary))
-                                .frame(height: 150)
-                        @unknown default:
-                            EmptyView()
-                        }
-                    }
-                } else {
-                    RoundedRectangle(cornerRadius: AppTheme.CornerRadius.card)
-                        .fill(AppTheme.ColorToken.textSecondary.opacity(0.2))
-                        .overlay(AppIcon(AppTheme.Icon.content, size: .large, color: AppTheme.ColorToken.textSecondary))
-                        .frame(height: 150)
-                }
-
-                // Sta.sh Status Badge
+                // Sta.sh Stack Badge
                 HStack {
                     Image(systemName: "archivebox.fill")
                         .foregroundColor(AppTheme.ColorToken.statusWarning)
-                    AppText("In Sta.sh", style: .caption)
+                    AppText("Sta.sh Stack", style: .caption)
                         .foregroundColor(AppTheme.ColorToken.statusWarning)
                 }
 
-                AppText(item.title, style: .headline)
+                AppText(stack.title ?? "Untitled Stack", style: .headline)
                     .lineLimit(1)
 
-                AppText("Not published yet", style: .caption, color: AppTheme.ColorToken.textSecondary)
+                if let items = stack.items, !items.isEmpty {
+                    AppText("\(items.count) items", style: .caption, color: AppTheme.ColorToken.textSecondary)
+                } else {
+                    AppText("Empty stack", style: .caption, color: AppTheme.ColorToken.textSecondary)
+                }
             }
         }
     }
