@@ -206,14 +206,12 @@ public final class SettingsViewModel: ObservableObject {
     }
 }
 
-import Combine
-
 @MainActor
 public final class WorkspaceModel: ObservableObject {
     public let dependencies: AppDependencies
     public let router = AppRouter()
     public let dashboardViewModel = DashboardViewModel()
-    
+
     private var cancellables = Set<AnyCancellable>()
     public let settingsViewModel: SettingsViewModel
     public lazy var deviantArtViewModel = DeviantArtViewModel(client: dependencies.deviantArtClient, settingsService: dependencies.settingsService)
@@ -252,7 +250,7 @@ public final class WorkspaceModel: ObservableObject {
     public init(dependencies: AppDependencies) {
         self.dependencies = dependencies
         self.settingsViewModel = SettingsViewModel(settingsService: dependencies.settingsService)
-        
+
         // Forward router changes to workspace observers
         router.objectWillChange
             .sink { [weak self] _ in
@@ -332,4 +330,3 @@ public final class AppShellModel: ObservableObject {
 }
 
 public typealias AppState = AppShellModel
-
