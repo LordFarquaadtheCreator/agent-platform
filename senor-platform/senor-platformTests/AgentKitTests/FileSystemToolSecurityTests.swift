@@ -1,6 +1,8 @@
 import XCTest
 @testable import senor_platform
 
+// swiftlint:disable force_try
+
 private struct ReadResponse: Decodable {
     let content: String
     let encoding: String
@@ -175,14 +177,14 @@ actor MockFileManager: ToolFileManager {
                 .size: data.count,
                 .type: FileAttributeType.typeRegular,
                 .creationDate: Date(timeIntervalSince1970: 1),
-                .modificationDate: Date(timeIntervalSince1970: 2),
+                .modificationDate: Date(timeIntervalSince1970: 2)
             ]
         }
         if directories.contains(url) {
             return [
                 .type: FileAttributeType.typeDirectory,
                 .creationDate: Date(timeIntervalSince1970: 1),
-                .modificationDate: Date(timeIntervalSince1970: 2),
+                .modificationDate: Date(timeIntervalSince1970: 2)
             ]
         }
         throw ToolError.fileError(NSError(
@@ -293,6 +295,7 @@ struct MockServiceProvider: ToolServiceProvider {
     let fileManager: MockFileManager
     let commandExecutor: MockCommandExecutor
 
+    // swiftlint:disable:next unavailable_function
     func getHTTPClient() async throws -> any ToolHTTPClient {
         fatalError("HTTP client is not used in these tests")
     }
@@ -347,7 +350,7 @@ final class FileSystemToolSecurityTests: XCTestCase {
             workingDirectory: sandbox,
             environment: [
                 "PATH": "/usr/bin:/bin",
-                "FOO": "bar",
+                "FOO": "bar"
             ],
             serviceProvider: MockServiceProvider(
                 fileManager: fileManager,
@@ -368,6 +371,7 @@ final class FileSystemToolSecurityTests: XCTestCase {
 
     private func json(_ value: Any) throws -> String {
         let data = try JSONSerialization.data(withJSONObject: value)
+        // swiftlint:disable:next optional_data_string_conversion
         return String(decoding: data, as: UTF8.self)
     }
 
@@ -775,3 +779,5 @@ final class FileSystemToolSecurityTests: XCTestCase {
         XCTAssertEqual(response.path, sandbox.path)
     }
 }
+
+// swiftlint:enable force_try

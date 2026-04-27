@@ -73,7 +73,7 @@ final class DeviantArtTests: XCTestCase {
         }
         """
 
-        let data = json.data(using: .utf8)!
+        let data = try XCTUnwrap(json.data(using: .utf8))
         let deviation = try JSONDecoder().decode(DeviantArtClient.Deviation.self, from: data)
 
         XCTAssertEqual(deviation.id, "ABC123")
@@ -85,7 +85,7 @@ final class DeviantArtTests: XCTestCase {
         XCTAssertEqual(deviation.stats?.comments, 10)
         XCTAssertEqual(deviation.stats?.downloads, 5)
         XCTAssertEqual(deviation.publishedTime, "1234567890")
-        XCTAssertEqual(deviation.allowsComments, true)
+        XCTAssertTrue(deviation.allowsComments)
         XCTAssertEqual(deviation.thumbs?.count, 2)
     }
 
@@ -130,7 +130,7 @@ final class DeviantArtTests: XCTestCase {
         }
         """
 
-        let data = json.data(using: .utf8)!
+        let data = try XCTUnwrap(json.data(using: .utf8))
         let profile = try JSONDecoder().decode(DeviantArtClient.UserProfile.self, from: data)
 
         XCTAssertEqual(profile.user.username, "TestArtist")
@@ -160,7 +160,7 @@ final class DeviantArtTests: XCTestCase {
         }
         """
 
-        let data = json.data(using: .utf8)!
+        let data = try XCTUnwrap(json.data(using: .utf8))
         let response = try JSONDecoder().decode(DeviantArtClient.GalleryResponse.self, from: data)
 
         XCTAssertEqual(response.results.count, 2)
@@ -187,7 +187,7 @@ final class DeviantArtTests: XCTestCase {
         }
         """
 
-        let data = json.data(using: .utf8)!
+        let data = try XCTUnwrap(json.data(using: .utf8))
         let metadata = try JSONDecoder().decode(DeviantArtClient.DeviationMetadata.self, from: data)
 
         XCTAssertEqual(metadata.deviationid, "META123")
@@ -196,8 +196,8 @@ final class DeviantArtTests: XCTestCase {
         XCTAssertEqual(metadata.tags?.first?.tagName, "digital")
         XCTAssertEqual(metadata.description, "<p>This is a test description</p>")
         XCTAssertEqual(metadata.license, "CC BY-NC-ND 3.0")
-        XCTAssertEqual(metadata.allowsComments, true)
-        XCTAssertEqual(metadata.isFavouritable, true)
+        XCTAssertTrue(metadata.allowsComments)
+        XCTAssertTrue(metadata.isFavouritable)
     }
 
     func testStashStackDecoding() throws {
@@ -225,7 +225,7 @@ final class DeviantArtTests: XCTestCase {
         }
         """
 
-        let data = json.data(using: .utf8)!
+        let data = try XCTUnwrap(json.data(using: .utf8))
         let stack = try JSONDecoder().decode(DeviantArtClient.StashStack.self, from: data)
 
         XCTAssertEqual(stack.id, "STACK123")
@@ -257,10 +257,12 @@ final class DeviantArtTests: XCTestCase {
         let service = ImageCacheService(cacheName: "TestCache", maxCacheSizeMB: 10)
 
         // Verify cache directory exists by attempting to cache a test
+        // swiftlint:disable:next force_unwrapping
         let testURL = URL(string: "https://example.com/test.jpg")!
 
         // Mock - just verify service initializes without crashing
         XCTAssertNotNil(service)
+        _ = testURL  // Silence unused warning
     }
 
     // MARK: - Cache Key Tests

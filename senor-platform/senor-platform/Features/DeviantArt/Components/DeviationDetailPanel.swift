@@ -4,6 +4,7 @@ import MarkdownUI
 struct DeviationDetailPanel: View {
     let deviation: DeviantArtClient.Deviation
     @ObservedObject var viewModel: DeviantArtViewModel
+    @EnvironmentObject private var appState: AppShellModel
 
     var body: some View {
         ScrollView {
@@ -145,10 +146,14 @@ struct DeviationDetailPanel: View {
     private var actionsSection: some View {
         VStack(spacing: AppTheme.Spacing.medium) {
             if let url = URL(string: deviation.url) {
-                Link(destination: url) {
+                Button {
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString(url.absoluteString, forType: .string)
+                    appState.showToast("Link copied to clipboard")
+                } label: {
                     HStack {
-                        Image(systemName: "arrow.up.right.square")
-                        Text("Open on DeviantArt")
+                        Image(systemName: "doc.on.doc")
+                        Text("Copy Link")
                     }
                     .frame(maxWidth: .infinity)
                     .padding()
@@ -171,4 +176,5 @@ struct DeviationDetailPanel: View {
 
 #Preview {
     DeviationDetailPanel(deviation: DeviantArtClient.Deviation.preview, viewModel: DeviantArtViewModel.preview)
+        .environmentObject(AppShellModel())
 }

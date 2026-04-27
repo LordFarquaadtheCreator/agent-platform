@@ -61,9 +61,9 @@ final class ToolArchitectureTests: XCTestCase {
         let resolvedDeviantArtClient = try await provider.getDeviantArtClient()
         let resolvedPatreonClient = try await provider.getPatreonClient()
 
-        XCTAssertTrue((resolvedHTTPClient as AnyObject) === (httpClient as AnyObject))
-        XCTAssertTrue((resolvedFileManager as AnyObject) === fileManager)
-        XCTAssertTrue((resolvedCommandExecutor as AnyObject) === commandExecutor)
+        XCTAssertIdentical(resolvedHTTPClient as AnyObject, httpClient as AnyObject)
+        XCTAssertIdentical(resolvedFileManager as AnyObject, fileManager)
+        XCTAssertIdentical(resolvedCommandExecutor as AnyObject, commandExecutor)
         XCTAssertEqual(token, "secret")
         XCTAssertNotNil(resolvedDeviantArtClient)
         XCTAssertNotNil(resolvedPatreonClient)
@@ -74,6 +74,7 @@ final class ToolArchitectureTests: XCTestCase {
             let resolved = AgentKit.toolTypesByName[toolType.toolName]
             XCTAssertNotNil(resolved)
             XCTAssertEqual(
+                // swiftlint:disable:next force_unwrapping
                 ObjectIdentifier(resolved!),
                 ObjectIdentifier(toolType)
             )

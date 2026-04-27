@@ -79,7 +79,7 @@ struct PatreonScreen: View {
             VStack(alignment: .leading, spacing: AppTheme.Spacing.large) {
                 // Profile/Campaign Card
                 if let error = viewModel.profileError {
-                    errorCard(error, retryAction: { Task { await viewModel.retryProfile() } })
+                    errorCard(error) { Task { await viewModel.retryProfile() } }
                 } else if let identity = viewModel.identity {
                     profileCard(identity)
                 }
@@ -91,7 +91,7 @@ struct PatreonScreen: View {
 
                 // Posts Section
                 if let error = viewModel.postsError {
-                    errorCard(error, title: "Posts Error", retryAction: { Task { await viewModel.retryPosts() } })
+                    errorCard(error, title: "Posts Error") { Task { await viewModel.retryPosts() } }
                 } else if !viewModel.posts.isEmpty {
                     postsSection
                 } else if !viewModel.isLoadingPosts {
@@ -100,7 +100,7 @@ struct PatreonScreen: View {
 
                 // Members Section
                 if let error = viewModel.membersError {
-                    errorCard(error, title: "Members Error", retryAction: { Task { await viewModel.retryMembers() } })
+                    errorCard(error, title: "Members Error") { Task { await viewModel.retryMembers() } }
                 } else if !viewModel.members.isEmpty {
                     membersSection
                 } else if !viewModel.isLoadingMembers {

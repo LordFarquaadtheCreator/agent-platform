@@ -7,6 +7,7 @@
 
 import XCTest
 
+// swiftlint:disable:next type_name
 final class senor_platformUITests: XCTestCase {
 
     override func setUpWithError() throws {

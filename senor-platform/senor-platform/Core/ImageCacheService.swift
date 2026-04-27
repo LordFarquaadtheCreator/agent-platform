@@ -100,7 +100,7 @@ public actor ImageCacheService {
 
     /// Get cached image for URL (convenience method)
     public func getCachedImage(for url: URL) -> URL? {
-        return getCachedImage(key: url.absoluteString)
+        getCachedImage(key: url.absoluteString)
     }
 
     /// Preload/cache multiple images
@@ -124,8 +124,7 @@ public actor ImageCacheService {
         var deletedCount = 0
         var freedSpace: Int64 = 0
 
-        for fileURL in files {
-            if isExpired(fileURL: fileURL) {
+        for fileURL in files where isExpired(fileURL: fileURL) {
                 if let attrs = try? fileManager.attributesOfItem(atPath: fileURL.path),
                    let size = attrs[.size] as? Int64 {
                     freedSpace += size
@@ -133,7 +132,6 @@ public actor ImageCacheService {
                 try? fileManager.removeItem(at: fileURL)
                 try? fileManager.removeItem(at: metadataURL(for: fileURL))
                 deletedCount += 1
-            }
         }
 
         currentCacheSize -= freedSpace
@@ -174,7 +172,7 @@ public actor ImageCacheService {
     }
 
     private func metadataURL(for fileURL: URL) -> URL {
-        return fileURL.appendingPathExtension("meta")
+        fileURL.appendingPathExtension("meta")
     }
 
     private func storeMetadata(for fileURL: URL, originalURL: String) throws {
@@ -266,8 +264,7 @@ public actor ImageCacheService {
                 }
                 return (fileURL, date)
             }
-            .sorted { $0.1 < $1.1 }
-            .first?.0
+            .min { $0.1 < $1.1 }?.0
     }
 }
 
@@ -278,4 +275,3 @@ private struct ImageMetadata: Codable, Sendable {
     let cachedAt: Date
     var lastAccessed: Date
 }
-

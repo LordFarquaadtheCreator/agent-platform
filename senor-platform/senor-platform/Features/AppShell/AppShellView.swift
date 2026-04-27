@@ -3,23 +3,31 @@ import SwiftUI
 struct AppShellView: View {
     @EnvironmentObject private var appState: AppShellModel
     @ObservedObject var workspace: WorkspaceModel
+    @State private var showSidebar = true
     @State private var showInspector = true
 
     var body: some View {
-        HStack(spacing: 0) {
+        SplitView(
+            sidebarVisible: $showSidebar,
+            detailVisible: $showInspector
+        ) {
             AppSidebarView(router: workspace.router, approvalsViewModel: workspace.approvalsViewModel)
-                .frame(minWidth: AppTheme.Layout.sidebarMinWidth, idealWidth: AppTheme.Layout.sidebarIdealWidth)
-
+        } content: {
             AppMainAreaView(workspace: workspace, router: workspace.router)
-                .frame(minWidth: AppTheme.Layout.mainAreaMinWidth)
-
-            if showInspector {
-                AppInspectorPanel(workspace: workspace, router: workspace.router)
-                    .frame(minWidth: AppTheme.Layout.detailMinWidth, idealWidth: AppTheme.Layout.detailIdealWidth)
-            }
+        } detail: {
+            AppInspectorPanel(workspace: workspace, router: workspace.router)
         }
         .toolbar {
             ToolbarItemGroup {
+                Button {
+                    showSidebar.toggle()
+                } label: {
+                    Label(
+                        showSidebar ? "Hide Sidebar" : "Show Sidebar",
+                        systemImage: "sidebar.left"
+                    )
+                }
+
                 Button {
                     showInspector.toggle()
                 } label: {
@@ -63,15 +71,6 @@ private struct AppSidebarView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack(spacing: AppTheme.Spacing.small) {
-                AppIcon(AppTheme.Icon.agent, size: .medium, color: AppTheme.ColorToken.accent)
-                AppText("SenorPlatform", style: .headline)
-                Spacer()
-            }
-            .padding(AppTheme.Spacing.medium)
-
-            AppDivider()
-
             List {
                 ForEach(AppSection.allCases) { section in
                     Button {
@@ -98,6 +97,7 @@ private struct AppSidebarView: View {
             }
             .listStyle(.sidebar)
         }
+        .padding(AppTheme.Spacing.medium)
         .background(AppTheme.ColorToken.chromeBackground)
     }
 }
@@ -314,4 +314,10 @@ private struct ContentInspectorCard: View {
             appState.errorMessage = error.localizedDescription
         }
     }
+}
+
+// MARK: - Preview
+
+#Preview {
+    Text("AppShellView preview requires full dependency injection")
 }

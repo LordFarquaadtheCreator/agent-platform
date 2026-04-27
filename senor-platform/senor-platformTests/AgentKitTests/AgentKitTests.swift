@@ -33,7 +33,7 @@ final class AgentKitTests: XCTestCase {
             "comfyui",
             "image_composer",
             "deviantart_publish",
-            "patreon_publish",
+            "patreon_publish"
         ]
 
         XCTAssertEqual(Set(AgentKit.toolNames), expected)

@@ -106,11 +106,13 @@ public final class DeviantArtViewModel: ObservableObject {
 
     private func loadFromCache() async {
         // Caching disabled due to Swift 6 concurrency issues with generic Sendable constraints
+        // swiftlint:disable:next todo
         // TODO: Re-enable once Swift 6 concurrency issues are resolved
     }
 
     private func cacheData(profile: DeviantArtClient.UserProfile, deviations: [DeviantArtClient.Deviation]) async {
         // Caching disabled due to Swift 6 concurrency issues with generic Sendable constraints
+        // swiftlint:disable:next todo
         // TODO: Re-enable once Swift 6 concurrency issues are resolved
     }
 

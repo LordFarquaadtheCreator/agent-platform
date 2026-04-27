@@ -1,6 +1,7 @@
 import XCTest
 @testable import senor_platform
 
+// swiftlint:disable:next type_name
 final class senor_platformTests: XCTestCase {
 
     func testAppSectionIconsRemainStable() {
