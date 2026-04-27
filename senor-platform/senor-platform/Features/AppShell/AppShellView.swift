@@ -7,20 +7,42 @@ struct AppShellView: View {
     @State private var showInspector = true
     @State private var inspectorWidth: CGFloat = AppTheme.Layout.detailIdealWidth
 
+    // MARK: - Registries
+
+    private let contentRegistry = MainContentRegistry(providers: [
+        DashboardContentProvider(),
+        AgentsContentProvider(),
+        TasksContentProvider(),
+        ContentContentProvider(),
+        ApprovalsContentProvider(),
+        ToolsContentProvider(),
+        SettingsContentProvider(),
+        DeviantArtContentProvider(),
+        PatreonContentProvider()
+    ])
+
+    private let inspectorRegistry = InspectorContentRegistry(providers: [
+        DeviantArtInspectorProvider(),
+        AgentsInspectorProvider(),
+        ContentInspectorProvider(),
+        PatreonInspectorProvider()
+    ])
+
     var body: some View {
+        let router = workspace.router
         HStack(spacing: 0) {
             if showSidebar {
-                AppSidebarView(router: workspace.router, approvalsViewModel: workspace.approvalsViewModel)
+                AppSidebarView(router: router, approvalsViewModel: workspace.approvalsViewModel)
                     .frame(minWidth: AppTheme.Layout.sidebarIdealWidth, idealWidth: AppTheme.Layout.sidebarIdealWidth, maxWidth: AppTheme.Layout.sidebarIdealWidth)
             }
 
-            AppMainAreaView(workspace: workspace, router: workspace.router)
+            contentRegistry.view(for: router.selectedSection, using: workspace, router: router, appState: appState)
                 .frame(minWidth: AppTheme.Layout.mainAreaMinWidth)
 
             if showInspector {
                 ResizeHandle(width: $inspectorWidth, minWidth: AppTheme.Layout.detailMinWidth)
 
-                AppInspectorPanel(workspace: workspace, router: workspace.router)
+                inspectorRegistry.view(for: router.selectedSection, using: workspace, router: router, appState: appState)
                     .frame(width: inspectorWidth)
             }
         }
@@ -72,25 +94,14 @@ struct AppShellView: View {
     }
 }
 
+// MARK: - Sidebar View
+
 private struct AppSidebarView: View {
     @ObservedObject var router: AppRouter
     @ObservedObject var approvalsViewModel: ApprovalsViewModel
 
     var body: some View {
         VStack(spacing: 0) {
-            // Header
-            HStack(spacing: AppTheme.Spacing.small) {
-                AppIcon(AppTheme.Icon.agent, size: .medium, color: AppTheme.ColorToken.accent)
-                AppText("Senor", style: .headline)
-                Spacer()
-            }
-            .padding(.horizontal, AppTheme.Spacing.medium)
-            .padding(.vertical, AppTheme.Spacing.medium)
-
-            AppDivider()
-                .padding(.horizontal, AppTheme.Spacing.medium)
-
-            // Navigation
             List {
                 ForEach(AppSection.allCases) { section in
                     Button {
@@ -125,220 +136,6 @@ private struct AppSidebarView: View {
             Spacer()
         }
         .background(AppTheme.ColorToken.chromeBackground)
-    }
-}
-
-private struct AppMainAreaView: View {
-    @EnvironmentObject private var appState: AppShellModel
-    @ObservedObject var workspace: WorkspaceModel
-    @ObservedObject var router: AppRouter
-
-    var body: some View {
-        switch router.selectedSection {
-        case .dashboard:
-            DashboardScreen(viewModel: workspace.dashboardViewModel)
-
-        case .agents:
-            AgentsScreen(viewModel: workspace.agentsViewModel, router: workspace.router) {
-                appState.present(.newAgent)
-            }
-
-        case .tasks:
-            TasksScreen(viewModel: workspace.tasksViewModel) {
-                appState.present(.newTask)
-            }
-
-        case .content:
-            ContentScreen(viewModel: workspace.contentViewModel, router: workspace.router)
-
-        case .approvals:
-            ApprovalsScreen(viewModel: workspace.approvalsViewModel)
-
-        case .tools:
-            ToolsHostView()
-
-        case .settings:
-            SettingsScreen(viewModel: workspace.settingsViewModel)
-
-        case .deviantArt:
-            DeviantArtScreen(viewModel: workspace.deviantArtViewModel, router: workspace.router)
-
-        case .patreon:
-            PatreonScreen(viewModel: workspace.patreonViewModel, router: workspace.router)
-        }
-    }
-}
-
-private struct AppInspectorPanel: View {
-    @EnvironmentObject private var appState: AppShellModel
-    @ObservedObject var workspace: WorkspaceModel
-    @ObservedObject var router: AppRouter
-
-    var body: some View {
-        Group {
-            if router.selectedSection == .deviantArt, let deviation = selectedDeviation {
-                DeviationDetailPanel(deviation: deviation, viewModel: workspace.deviantArtViewModel)
-            } else if router.selectedSection == .content, let content = selectedContent {
-                ContentInspectorCard(
-                    content: content,
-                    approvalsViewModel: workspace.approvalsViewModel
-                )
-            } else if router.selectedSection == .agents, let agent = selectedAgent {
-                AgentInspectorCard(agent: agent)
-            } else {
-                AppEmptyState(
-                    title: "Nothing Selected",
-                    systemImage: AppTheme.Icon.sidebar,
-                    message: "Choose an agent or content item to inspect details."
-                )
-            }
-        }
-        .padding(AppTheme.Spacing.medium)
-    }
-
-    private var selectedAgent: Agent? {
-        workspace.agentsViewModel.agents.first { $0.id == router.selectedAgentID }
-    }
-
-    private var selectedContent: ContentSummary? {
-        workspace.contentViewModel.contentItems.first { $0.id == router.selectedContentID }
-    }
-
-    private var selectedDeviation: DeviantArtClient.Deviation? {
-        workspace.deviantArtViewModel.deviations.first { $0.id == router.selectedDeviationID }
-    }
-}
-
-private struct AgentInspectorCard: View {
-    let agent: Agent
-
-    var body: some View {
-        AppCard {
-            AppVStack(spacing: .medium, alignment: .leading) {
-                AppText(agent.displayName, style: .title3)
-                AppStatusPill(
-                    title: agent.status.displayName,
-                    color: StatusColor.from(agent.status.rawValue).swiftUIColor
-                )
-                AppDivider()
-                LabeledContent("Tasks", value: "\(agent.taskCount)")
-                LabeledContent("Created", value: agent.createdAt.formatted())
-                LabeledContent("Updated", value: agent.updatedAt.formatted())
-            }
-        }
-    }
-}
-
-private struct ContentInspectorCard: View {
-    @EnvironmentObject private var appState: AppShellModel
-    let content: ContentSummary
-    @ObservedObject var approvalsViewModel: ApprovalsViewModel
-    @State private var rejectReason = ""
-    @State private var showRejectDialog = false
-    @State private var isProcessing = false
-
-    var body: some View {
-        AppCard {
-            AppVStack(spacing: .medium, alignment: .leading) {
-                AppText(content.title, style: .title3)
-                AppStatusPill(
-                    title: content.status.title,
-                    color: StatusColor.from(content.status.rawValue).swiftUIColor
-                )
-                AppDivider()
-                LabeledContent("Version", value: "\(content.version)")
-                LabeledContent("Created", value: content.createdAt.formatted())
-
-                Button("Edit JSON") {
-                    appState.present(.editContent(content.id))
-                }
-                .appButtonStyle(.bordered)
-
-                Button("Version History") {
-                    appState.present(.versionHistory(content.id))
-                }
-                .appButtonStyle(.bordered)
-
-                if content.status == .pending {
-                    Button("Approve") {
-                        Task { await approve() }
-                    }
-                    .appButtonStyle(.borderedProminent)
-                    .tint(AppTheme.ColorToken.statusSuccess)
-
-                    Button("Reject") {
-                        showRejectDialog = true
-                    }
-                    .appButtonStyle(.borderedDestructive)
-                }
-
-                if content.status == .approved {
-                    Button("Publish to DeviantArt") {
-                        Task { await publish(.deviantArt) }
-                    }
-                    .appButtonStyle(.borderedProminent)
-
-                    Button("Publish to Patreon") {
-                        Task { await publish(.patreon) }
-                    }
-                    .appButtonStyle(.bordered)
-                }
-            }
-        }
-        .disabled(isProcessing)
-        .alert("Reject Content", isPresented: $showRejectDialog) {
-            TextField("Reason", text: $rejectReason)
-            Button("Cancel", role: .cancel) {}
-            Button("Reject", role: .destructive) {
-                Task { await reject() }
-            }
-        } message: {
-            AppText("Add an optional reason for rejecting this content.", style: .body)
-        }
-    }
-
-    private func approve() async {
-        isProcessing = true
-        defer { isProcessing = false }
-        do {
-            try await approvalsViewModel.approve(contentId: content.id)
-        } catch {
-            appState.errorMessage = error.localizedDescription
-        }
-    }
-
-    private func reject() async {
-        isProcessing = true
-        defer { isProcessing = false }
-        do {
-            try await approvalsViewModel.reject(contentId: content.id, reason: rejectReason.isEmpty ? nil : rejectReason)
-            rejectReason = ""
-        } catch {
-            appState.errorMessage = error.localizedDescription
-        }
-    }
-
-    private func publish(_ platform: PublicationPlatform) async {
-        isProcessing = true
-        defer { isProcessing = false }
-        do {
-            try await approvalsViewModel.publish(
-                PublicationRequest(
-                    contentId: content.id,
-                    platform: platform,
-                    title: content.title,
-                    category: nil,
-                    isMature: false,
-                    tags: nil,
-                    campaignId: nil,
-                    isPaid: nil,
-                    isPublic: nil,
-                    tiers: nil
-                )
-            )
-        } catch {
-            appState.errorMessage = error.localizedDescription
-        }
     }
 }
 
