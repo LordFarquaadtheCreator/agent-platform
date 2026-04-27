@@ -2,7 +2,7 @@ import Foundation
 import Combine
 
 @MainActor
-public final class DashboardModel: ObservableObject {
+public final class DashboardViewModel: ObservableObject {
     @Published public private(set) var snapshot = DashboardSnapshot(
         activeAgentCount: 0,
         pendingApprovalCount: 0,
@@ -17,7 +17,7 @@ public final class DashboardModel: ObservableObject {
 }
 
 @MainActor
-public final class AgentsModel: ObservableObject {
+public final class AgentsViewModel: ObservableObject {
     @Published public private(set) var agents: [Agent] = []
 
     private let createAgentUseCase: CreateAgentUseCase
@@ -39,7 +39,7 @@ public final class AgentsModel: ObservableObject {
 }
 
 @MainActor
-public final class TasksModel: ObservableObject {
+public final class TasksViewModel: ObservableObject {
     @Published public private(set) var tasks: [TaskSummary] = []
     @Published public private(set) var creationContext = TaskCreationContext(agents: [], taskTypes: [])
 
@@ -72,7 +72,7 @@ public final class TasksModel: ObservableObject {
 }
 
 @MainActor
-public final class ContentModel: ObservableObject {
+public final class ContentViewModel: ObservableObject {
     @Published public private(set) var contentItems: [ContentSummary] = []
 
     private let loadEditorUseCase: LoadContentEditorUseCase
@@ -113,7 +113,7 @@ public final class ContentModel: ObservableObject {
 }
 
 @MainActor
-public final class ApprovalsModel: ObservableObject {
+public final class ApprovalsViewModel: ObservableObject {
     @Published public private(set) var approvals: [ApprovalSummary] = []
 
     private let approveContentUseCase: ApproveContentUseCase
@@ -154,7 +154,7 @@ public final class ApprovalsModel: ObservableObject {
 }
 
 @MainActor
-public final class SettingsModel: ObservableObject {
+public final class SettingsViewModel: ObservableObject {
     @Published public var generalSettings: SettingsService.GeneralSettings
     @Published public var deviantArtSettings: SettingsService.DeviantArtSettings
     @Published public var patreonSettings: SettingsService.PatreonSettings
@@ -210,31 +210,31 @@ public final class SettingsModel: ObservableObject {
 public final class WorkspaceModel: ObservableObject {
     public let dependencies: AppDependencies
     public let router = AppRouter()
-    public let dashboardModel = DashboardModel()
-    public let settingsModel: SettingsModel
-    public lazy var deviantArtModel = DeviantArtModel(client: dependencies.deviantArtClient, settingsService: dependencies.settingsService)
-    public lazy var patreonModel = PatreonModel(
+    public let dashboardViewModel = DashboardViewModel()
+    public let settingsViewModel: SettingsViewModel
+    public lazy var deviantArtViewModel = DeviantArtViewModel(client: dependencies.deviantArtClient, settingsService: dependencies.settingsService)
+    public lazy var patreonViewModel = PatreonViewModel(
         client: dependencies.patreonClient,
         settings: dependencies.settingsService.loadPatreonSettings()
     )
-    public lazy var agentsModel = AgentsModel(
+    public lazy var agentsViewModel = AgentsViewModel(
         createAgentUseCase: dependencies.createAgentUseCase
     ) { [weak self] in
         await self?.refreshAll()
     }
-    public lazy var tasksModel = TasksModel(
+    public lazy var tasksViewModel = TasksViewModel(
         loadContextUseCase: dependencies.loadTaskCreationContextUseCase,
         createTaskUseCase: dependencies.createTaskUseCase
     ) { [weak self] in
         await self?.refreshAll()
     }
-    public lazy var contentModel = ContentModel(
+    public lazy var contentViewModel = ContentViewModel(
         loadEditorUseCase: dependencies.loadContentEditorUseCase,
         editContentUseCase: dependencies.editContentUseCase
     ) { [weak self] in
         await self?.refreshAll()
     }
-    public lazy var approvalsModel = ApprovalsModel(
+    public lazy var approvalsViewModel = ApprovalsViewModel(
         approveContentUseCase: dependencies.approveContentUseCase,
         rejectContentUseCase: dependencies.rejectContentUseCase,
         publishContentUseCase: dependencies.publishContentUseCase
@@ -247,7 +247,7 @@ public final class WorkspaceModel: ObservableObject {
 
     public init(dependencies: AppDependencies) {
         self.dependencies = dependencies
-        self.settingsModel = SettingsModel(settingsService: dependencies.settingsService)
+        self.settingsViewModel = SettingsViewModel(settingsService: dependencies.settingsService)
     }
 
     public func refreshAll() async {
@@ -256,12 +256,12 @@ public final class WorkspaceModel: ObservableObject {
 
         do {
             let snapshot = try await dependencies.loadWorkspaceUseCase.execute()
-            dashboardModel.apply(snapshot.dashboard)
-            agentsModel.apply(snapshot.agents)
-            tasksModel.apply(snapshot.tasks)
-            contentModel.apply(snapshot.content)
-            approvalsModel.apply(snapshot.approvals)
-            settingsModel.reload()
+            dashboardViewModel.apply(snapshot.dashboard)
+            agentsViewModel.apply(snapshot.agents)
+            tasksViewModel.apply(snapshot.tasks)
+            contentViewModel.apply(snapshot.content)
+            approvalsViewModel.apply(snapshot.approvals)
+            settingsViewModel.reload()
             lastErrorMessage = nil
         } catch {
             lastErrorMessage = error.localizedDescription
@@ -274,6 +274,7 @@ public final class AppShellModel: ObservableObject {
     @Published public private(set) var workspace: WorkspaceModel?
     @Published public var activeSheet: AppSheet?
     @Published public var errorMessage: String?
+    @Published public var toastMessage: String?
     @Published public private(set) var isInitializing = true
 
     private let bootstrap: AppBootstrap
@@ -312,6 +313,10 @@ public final class AppShellModel: ObservableObject {
 
     public func dismissSheet() {
         activeSheet = nil
+    }
+
+    public func showToast(_ message: String) {
+        toastMessage = message
     }
 }
 

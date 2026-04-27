@@ -21,19 +21,19 @@ struct ContentView: View {
             if let workspace = appState.workspace {
                 switch sheet {
                 case .newAgent:
-                    AgentFormSheet(model: workspace.agentsModel)
+                    AgentFormSheet(viewModel: workspace.agentsViewModel)
 
                 case .newTask:
-                    TaskFormSheet(model: workspace.tasksModel)
+                    TaskFormSheet(viewModel: workspace.tasksViewModel)
 
                 case .settings:
-                    SettingsSheetView(model: workspace.settingsModel)
+                    SettingsSheetView(viewModel: workspace.settingsViewModel)
 
                 case .editContent(let contentId):
-                    ContentJSONEditorSheet(model: workspace.contentModel, contentId: contentId)
+                    ContentJSONEditorSheet(viewModel: workspace.contentViewModel, contentId: contentId)
 
                 case .versionHistory(let contentId):
-                    ContentVersionHistorySheet(model: workspace.contentModel, contentId: contentId)
+                    ContentVersionHistorySheet(viewModel: workspace.contentViewModel, contentId: contentId)
                 }
             }
         }
@@ -45,12 +45,16 @@ struct ContentView: View {
         } message: {
             AppText(appState.errorMessage ?? "", style: .body)
         }
+        .toast(message: $appState.toastMessage)
         .onOpenURL { url in
-            guard url.scheme == "senorplatform",
-                  url.host == "oauth",
-                  url.path == "/deviantart" else { return }
-            Task {
-                await appState.workspace?.deviantArtModel.handleCallback(url: url)
+            guard url.scheme == "senorplatform" else { return }
+            guard url.host == "oauth" else { return }
+
+            if url.path == "/deviantart" {
+                guard let viewModel = appState.workspace?.deviantArtViewModel else { return }
+                Task {
+                    await viewModel.handleCallback(url: url)
+                }
             }
         }
     }

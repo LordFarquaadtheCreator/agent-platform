@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct SettingsScreen: View {
-    @ObservedObject var model: SettingsModel
+    @ObservedObject var viewModel: SettingsViewModel
 
     var body: some View {
         ScrollView {
@@ -10,7 +10,7 @@ struct SettingsScreen: View {
                     title: "Settings",
                     detail: "Manage runtime, integrations, and platform behavior."
                 )
-                SettingsContent(model: model)
+                SettingsContent(viewModel: viewModel)
             }
             .appScreenPadding()
         }
@@ -20,12 +20,12 @@ struct SettingsScreen: View {
 struct SettingsSheetView: View {
     @EnvironmentObject private var appState: AppShellModel
     @Environment(\.dismiss) private var dismiss
-    @ObservedObject var model: SettingsModel
+    @ObservedObject var viewModel: SettingsViewModel
 
     var body: some View {
         NavigationStack {
             ScrollView {
-                SettingsContent(model: model)
+                SettingsContent(viewModel: viewModel)
                     .appScreenPadding()
             }
             .navigationTitle("Settings")
@@ -41,20 +41,20 @@ struct SettingsSheetView: View {
 
 private struct SettingsContent: View {
     @EnvironmentObject private var appState: AppShellModel
-    @ObservedObject var model: SettingsModel
+    @ObservedObject var viewModel: SettingsViewModel
 
     var body: some View {
         AppVStack(spacing: .large, alignment: .leading) {
             AppCard {
                 AppVStack(spacing: .medium, alignment: .leading) {
                     AppText("General", style: .headline)
-                    Toggle("Launch at Login", isOn: $model.generalSettings.launchAtLogin)
-                    Toggle("Show Notifications", isOn: $model.generalSettings.showNotifications)
+                    Toggle("Launch at Login", isOn: $viewModel.generalSettings.launchAtLogin)
+                    Toggle("Show Notifications", isOn: $viewModel.generalSettings.showNotifications)
                     AppText("Log Level", style: .caption)
                     // swiftlint:disable:next unlabeled_input_field
-                    TextField("info, debug, warning, error", text: $model.generalSettings.logLevel)
+                    TextField("info, debug, warning, error", text: $viewModel.generalSettings.logLevel)
                     Button("Save General Settings") {
-                        model.saveGeneral()
+                        viewModel.saveGeneral()
                     }
                     .appButtonStyle(.borderedProminent)
                 }
@@ -65,9 +65,9 @@ private struct SettingsContent: View {
                     AppText("Task Runtime", style: .headline)
                     AppText("Task Script Path", style: .caption)
                     // swiftlint:disable:next unlabeled_input_field
-                    TextField("/usr/local/bin/senor-task", text: $model.taskScriptPath)
+                    TextField("/usr/local/bin/senor-task", text: $viewModel.taskScriptPath)
                     Button("Save Script Path") {
-                        model.saveTaskScriptPath()
+                        viewModel.saveTaskScriptPath()
                     }
                     .appButtonStyle(.bordered)
                 }
@@ -79,24 +79,24 @@ private struct SettingsContent: View {
 
                     AppText("Client ID", style: .caption)
                     // swiftlint:disable:next unlabeled_input_field
-                    TextField("Enter DeviantArt Client ID", text: $model.deviantArtSettings.clientId)
+                    TextField("Enter DeviantArt Client ID", text: $viewModel.deviantArtSettings.clientId)
                     AppText("Client Secret", style: .caption)
                     // swiftlint:disable:next unlabeled_input_field
                     SecureField("Enter DeviantArt Client Secret", text: Binding(
-                        get: { model.deviantArtSettings.clientSecret },
-                        set: { model.deviantArtSettings.clientSecret = $0 }
+                        get: { viewModel.deviantArtSettings.clientSecret },
+                        set: { viewModel.deviantArtSettings.clientSecret = $0 }
                     ))
                     AppText("Redirect URI", style: .caption)
                     // swiftlint:disable:next unlabeled_input_field
-                    TextField("senorplatform://oauth/deviantart", text: $model.deviantArtSettings.redirectURI)
+                    TextField("senorplatform://oauth/deviantart", text: $viewModel.deviantArtSettings.redirectURI)
                         .textContentType(.URL)
                         .font(.system(.body, design: .monospaced))
 
                     if let workspace = appState.workspace {
                         HStack {
                             AppStatusPill(
-                                title: workspace.deviantArtModel.isAuthenticated ? "Connected" : "Not Connected",
-                                color: workspace.deviantArtModel.isAuthenticated ? AppTheme.ColorToken.statusSuccess : AppTheme.ColorToken.statusWarning
+                                title: workspace.deviantArtViewModel.isAuthenticated ? "Connected" : "Not Connected",
+                                color: workspace.deviantArtViewModel.isAuthenticated ? AppTheme.ColorToken.statusSuccess : AppTheme.ColorToken.statusWarning
                             )
                             Spacer()
                         }
@@ -104,14 +104,14 @@ private struct SettingsContent: View {
                         HStack(spacing: AppTheme.Spacing.medium) {
                             Button("Save Credentials") {
                                 do {
-                                    try model.saveDeviantArt()
+                                    try viewModel.saveDeviantArt()
                                 } catch {
                                     appState.errorMessage = error.localizedDescription
                                 }
                             }
                             .appButtonStyle(.bordered)
 
-                            DeviantArtConnectButton(model: workspace.deviantArtModel)
+                            DeviantArtConnectButton(viewModel: workspace.deviantArtViewModel)
                         }
                     }
                 }
@@ -124,8 +124,8 @@ private struct SettingsContent: View {
                     if let workspace = appState.workspace {
                         HStack {
                             AppStatusPill(
-                                title: workspace.patreonModel.isAuthenticated ? "Connected" : "Not Connected",
-                                color: workspace.patreonModel.isAuthenticated ? AppTheme.ColorToken.statusSuccess : AppTheme.ColorToken.statusWarning
+                                title: workspace.patreonViewModel.isAuthenticated ? "Connected" : "Not Connected",
+                                color: workspace.patreonViewModel.isAuthenticated ? AppTheme.ColorToken.statusSuccess : AppTheme.ColorToken.statusWarning
                             )
                             Spacer()
                         }
@@ -134,25 +134,25 @@ private struct SettingsContent: View {
                     AppText("Access Token", style: .caption)
                     // swiftlint:disable:next unlabeled_input_field
                     SecureField("Enter Patreon Access Token", text: Binding(
-                        get: { model.patreonSettings.accessToken },
-                        set: { model.patreonSettings.accessToken = $0 }
+                        get: { viewModel.patreonSettings.accessToken },
+                        set: { viewModel.patreonSettings.accessToken = $0 }
                     ))
                     AppText("Refresh Token (optional)", style: .caption)
                     // swiftlint:disable:next unlabeled_input_field
                     SecureField("Enter Refresh Token", text: Binding(
-                        get: { model.patreonSettings.refreshToken ?? "" },
-                        set: { model.patreonSettings.refreshToken = $0.isEmpty ? nil : $0 }
+                        get: { viewModel.patreonSettings.refreshToken ?? "" },
+                        set: { viewModel.patreonSettings.refreshToken = $0.isEmpty ? nil : $0 }
                     ))
                     AppText("Campaign ID (optional)", style: .caption)
                     // swiftlint:disable:next unlabeled_input_field
                     TextField("Enter Campaign ID", text: Binding(
-                        get: { model.patreonSettings.campaignId ?? "" },
-                        set: { model.patreonSettings.campaignId = $0.isEmpty ? nil : $0 }
+                        get: { viewModel.patreonSettings.campaignId ?? "" },
+                        set: { viewModel.patreonSettings.campaignId = $0.isEmpty ? nil : $0 }
                     ))
                     Button("Save Patreon Credentials") {
                         do {
-                            try model.savePatreon()
-                            appState.workspace?.patreonModel.reloadWithNewSettings()
+                            try viewModel.savePatreon()
+                            appState.workspace?.patreonViewModel.reloadWithNewSettings()
                         } catch {
                             appState.errorMessage = error.localizedDescription
                         }
@@ -166,10 +166,10 @@ private struct SettingsContent: View {
                     AppText("ComfyUI", style: .headline)
                     AppText("Server URL", style: .caption)
                     // swiftlint:disable:next unlabeled_input_field
-                    TextField("http://127.0.0.1:8188", text: $model.comfyUISettings.serverURL)
-                    Stepper("Timeout: \(model.comfyUISettings.timeout)s", value: $model.comfyUISettings.timeout, in: 30...900, step: 30)
+                    TextField("http://127.0.0.1:8188", text: $viewModel.comfyUISettings.serverURL)
+                    Stepper("Timeout: \(viewModel.comfyUISettings.timeout)s", value: $viewModel.comfyUISettings.timeout, in: 30...900, step: 30)
                     Button("Save ComfyUI Settings") {
-                        model.saveComfyUI()
+                        viewModel.saveComfyUI()
                     }
                     .appButtonStyle(.bordered)
                 }
@@ -181,7 +181,7 @@ private struct SettingsContent: View {
                     Button("Clear All Settings") {
                         Task {
                             do {
-                                try await model.clearAll()
+                                try await viewModel.clearAll()
                             } catch {
                                 appState.errorMessage = error.localizedDescription
                             }
@@ -197,38 +197,47 @@ private struct SettingsContent: View {
 // MARK: - DeviantArt Connect Button
 
 private struct DeviantArtConnectButton: View {
-    @ObservedObject var model: DeviantArtModel
+    @EnvironmentObject private var appState: AppShellModel
+    @ObservedObject var viewModel: DeviantArtViewModel
 
     var body: some View {
         Group {
-            if model.isAuthenticated {
+            if viewModel.isAuthenticated {
                 Button("Disconnect") {
                     do {
-                        try model.disconnect()
+                        try viewModel.disconnect()
                     } catch {
-                        // Error handled by model.errorMessage
+                        // Error handled by viewModel.errorMessage
                     }
                 }
                 .appButtonStyle(.borderedDestructive)
             } else {
                 Button("Connect") {
                     Task {
-                        if let url = await model.startConnection() {
-                            NSWorkspace.shared.open(url)
+                        if let url = await viewModel.startConnection() {
+                            NSPasteboard.general.clearContents()
+                            NSPasteboard.general.setString(url.absoluteString, forType: .string)
+                            appState.showToast("OAuth URL copied to clipboard")
                         }
                     }
                 }
                 .appButtonStyle(.borderedProminent)
-                .disabled(model.isConnecting)
+                .disabled(viewModel.isConnecting)
             }
         }
         .alert("DeviantArt Error", isPresented: Binding(
-            get: { model.errorMessage != nil },
-            set: { if !$0 { model.clearError() } }
+            get: { viewModel.errorMessage != nil },
+            set: { if !$0 { viewModel.clearError() } }
         )) {
             Button("OK", role: .cancel) {}
         } message: {
-            Text(model.errorMessage ?? "Unknown error")
+            Text(viewModel.errorMessage ?? "Unknown error")
         }
     }
+}
+
+// MARK: - Previews
+
+#Preview {
+    SettingsScreen(viewModel: SettingsViewModel(settingsService: SettingsService()))
 }
