@@ -145,6 +145,10 @@ public final class PatreonViewModel: ObservableObject {
         // loadProfile now chains to loadPosts() and loadMembers() after campaign loads
     }
 
+    func refresh() async {
+        await loadProfile()
+    }
+
     func loadProfile() async {
         guard let client = client else {
             profileError = .notConfigured

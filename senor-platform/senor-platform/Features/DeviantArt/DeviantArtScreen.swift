@@ -30,7 +30,14 @@ struct DeviantArtScreen: View {
             }
             if let lastUpdated = viewModel.lastUpdated {
                 AppText(RelativeDateFormatter.format(lastUpdated), style: .caption2, color: AppTheme.ColorToken.textSecondary)
+                    .padding(.trailing, AppTheme.Spacing.small)
             }
+            Button {
+                Task { await viewModel.refresh() }
+            } label: {
+                Label("Refresh", systemImage: AppTheme.Icon.refresh)
+            }
+            .disabled(viewModel.isRefreshing)
         }
         .padding(AppTheme.Spacing.screenPadding)
     }

@@ -38,10 +38,24 @@ struct PatreonScreen: View {
 
     private var header: some View {
         VStack(alignment: .leading, spacing: AppTheme.Spacing.small) {
-            AppSectionHeader(
-                title: "Patreon",
-                detail: viewModel.identity?.data.attributes.fullName ?? viewModel.identity?.data.attributes.vanity
-            )
+            HStack {
+                AppSectionHeader(
+                    title: "Patreon",
+                    detail: viewModel.identity?.data.attributes.fullName ?? viewModel.identity?.data.attributes.vanity
+                )
+                Spacer()
+                if viewModel.isAnyLoading {
+                    ProgressView()
+                        .scaleEffect(0.8)
+                        .padding(.trailing, AppTheme.Spacing.small)
+                }
+                Button {
+                    Task { await viewModel.refresh() }
+                } label: {
+                    Label("Refresh", systemImage: AppTheme.Icon.refresh)
+                }
+                .disabled(viewModel.isAnyLoading)
+            }
             .padding(AppTheme.Spacing.screenPadding)
 
             // Auth state indicator
