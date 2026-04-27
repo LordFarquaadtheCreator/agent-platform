@@ -5,17 +5,24 @@ struct AppShellView: View {
     @ObservedObject var workspace: WorkspaceModel
     @State private var showSidebar = true
     @State private var showInspector = true
+    @State private var inspectorWidth: CGFloat = AppTheme.Layout.detailIdealWidth
 
     var body: some View {
-        SplitView(
-            sidebarVisible: $showSidebar,
-            detailVisible: $showInspector
-        ) {
-            AppSidebarView(router: workspace.router, approvalsViewModel: workspace.approvalsViewModel)
-        } content: {
+        HStack(spacing: 0) {
+            if showSidebar {
+                AppSidebarView(router: workspace.router, approvalsViewModel: workspace.approvalsViewModel)
+                    .frame(minWidth: AppTheme.Layout.sidebarIdealWidth, idealWidth: AppTheme.Layout.sidebarIdealWidth, maxWidth: AppTheme.Layout.sidebarIdealWidth)
+            }
+
             AppMainAreaView(workspace: workspace, router: workspace.router)
-        } detail: {
-            AppInspectorPanel(workspace: workspace, router: workspace.router)
+                .frame(minWidth: AppTheme.Layout.mainAreaMinWidth)
+
+            if showInspector {
+                ResizeHandle(width: $inspectorWidth, minWidth: AppTheme.Layout.detailMinWidth)
+
+                AppInspectorPanel(workspace: workspace, router: workspace.router)
+                    .frame(width: inspectorWidth)
+            }
         }
         .toolbar {
             ToolbarItemGroup {
@@ -71,33 +78,52 @@ private struct AppSidebarView: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            // Header
+            HStack(spacing: AppTheme.Spacing.small) {
+                AppIcon(AppTheme.Icon.agent, size: .medium, color: AppTheme.ColorToken.accent)
+                AppText("Senor", style: .headline)
+                Spacer()
+            }
+            .padding(.horizontal, AppTheme.Spacing.medium)
+            .padding(.vertical, AppTheme.Spacing.medium)
+
+            AppDivider()
+                .padding(.horizontal, AppTheme.Spacing.medium)
+
+            // Navigation
             List {
                 ForEach(AppSection.allCases) { section in
                     Button {
                         router.selectedSection = section
                     } label: {
-                        Label {
-                            HStack {
-                                AppText(section.title, style: .body)
-                                if section == .approvals && !approvalsViewModel.approvals.isEmpty {
-                                    Spacer()
-                                    AppStatusPill(title: "\(approvalsViewModel.approvals.count)", color: AppTheme.ColorToken.statusError)
-                                }
-                            }
-                        } icon: {
+                        HStack(spacing: AppTheme.Spacing.small) {
                             Image(systemName: section.icon)
+                                .frame(width: 24)
+                            AppText(section.title, style: .body)
+                            Spacer()
+                            if section == .approvals && !approvalsViewModel.approvals.isEmpty {
+                                AppStatusPill(title: "\(approvalsViewModel.approvals.count)", color: AppTheme.ColorToken.statusError)
+                            }
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                     }
                     .buttonStyle(.plain)
-                    .padding(.vertical, AppTheme.Spacing.listRowPadding)
+                    .padding(.vertical, AppTheme.Spacing.small)
+                    .padding(.horizontal, AppTheme.Spacing.small)
+                    .background(
+                        section == router.selectedSection
+                            ? AppTheme.ColorToken.accent.opacity(0.15)
+                            : Color.clear
+                    )
+                    .cornerRadius(AppTheme.CornerRadius.small)
                     .contentShape(Rectangle())
-                    .listRowBackground(section == router.selectedSection ? AppTheme.ColorToken.chromeBackground.opacity(0.6) : nil)
                 }
             }
-            .listStyle(.sidebar)
+            .listStyle(.plain)
+            .padding(.horizontal, AppTheme.Spacing.small)
+
+            Spacer()
         }
-        .padding(AppTheme.Spacing.medium)
         .background(AppTheme.ColorToken.chromeBackground)
     }
 }
@@ -138,7 +164,7 @@ private struct AppMainAreaView: View {
             DeviantArtScreen(viewModel: workspace.deviantArtViewModel, router: workspace.router)
 
         case .patreon:
-            PatreonScreen(viewModel: workspace.patreonViewModel)
+            PatreonScreen(viewModel: workspace.patreonViewModel, router: workspace.router)
         }
     }
 }
@@ -313,6 +339,48 @@ private struct ContentInspectorCard: View {
         } catch {
             appState.errorMessage = error.localizedDescription
         }
+    }
+}
+
+// MARK: - Resize Handle
+
+private struct ResizeHandle: View {
+    @Binding var width: CGFloat
+    let minWidth: CGFloat
+    @State private var startWidth: CGFloat = 0
+    @State private var dragStartLocation: CGFloat = 0
+
+    var body: some View {
+        Rectangle()
+            .fill(Color.clear)
+            .frame(width: 8)
+            .contentShape(Rectangle())
+            .onHover { hovering in
+                if hovering {
+                    NSCursor.resizeLeftRight.push()
+                } else {
+                    NSCursor.pop()
+                }
+            }
+            .gesture(
+                DragGesture()
+                    .onChanged { value in
+                        if startWidth == 0 {
+                            startWidth = width
+                            dragStartLocation = value.location.x
+                        }
+                        let delta = dragStartLocation - value.location.x
+                        width = max(minWidth, startWidth + delta)
+                    }
+                    .onEnded { _ in
+                        startWidth = 0
+                    }
+            )
+            .overlay(
+                Rectangle()
+                    .fill(Color.gray.opacity(0.3))
+                    .frame(width: 1)
+            )
     }
 }
 

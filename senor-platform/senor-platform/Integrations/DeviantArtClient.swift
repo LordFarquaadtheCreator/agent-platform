@@ -41,16 +41,16 @@ public final class DeviantArtClient {
 
     // MARK: - DTOs (from DeviantArtDTOs)
 
-    public typealias StashStack = DeviantArtDTOs.StashStack
-    public typealias StashItem = DeviantArtDTOs.StashItem
-    public typealias StashContentsResponse = DeviantArtDTOs.StashContentsResponse
-    public typealias StashPublishResponse = DeviantArtDTOs.StashPublishResponse
-    public typealias Deviation = DeviantArtDTOs.Deviation
-    public typealias DeviationContent = DeviantArtDTOs.DeviationContent
-    public typealias DeviationMetadata = DeviantArtDTOs.DeviationMetadata
-    public typealias GalleryResponse = DeviantArtDTOs.GalleryResponse
-    public typealias UserProfile = DeviantArtDTOs.UserProfile
-    public typealias PublishResponse = DeviantArtDTOs.PublishResponse
+    public typealias StashStack = senor_platform.StashStack
+    public typealias StashItem = senor_platform.StashItem
+    public typealias StashContentsResponse = senor_platform.StashContentsResponse
+    public typealias StashPublishResponse = senor_platform.StashPublishResponse
+    public typealias Deviation = senor_platform.Deviation
+    public typealias DeviationContent = senor_platform.DeviationContent
+    public typealias DeviationMetadata = senor_platform.DeviationMetadata
+    public typealias GalleryResponse = senor_platform.GalleryResponse
+    public typealias UserProfile = senor_platform.UserProfile
+    public typealias PublishResponse = senor_platform.PublishResponse
 
     // MARK: - Initialization
 

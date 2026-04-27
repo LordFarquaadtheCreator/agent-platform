@@ -3,6 +3,7 @@ import MarkdownUI
 
 struct PatreonScreen: View {
     @ObservedObject var viewModel: PatreonViewModel
+    @ObservedObject var router: AppRouter
 
     var body: some View {
         VStack(spacing: 0) {
@@ -223,6 +224,14 @@ struct PatreonScreen: View {
                 }
             }
         }
+        .overlay(
+            RoundedRectangle(cornerRadius: AppTheme.CornerRadius.card)
+                .stroke(router.selectedPostID == post.id ? AppTheme.ColorToken.accent : Color.clear, lineWidth: 2)
+        )
+        .onTapGesture {
+            router.selectedPostID = post.id
+            router.selectedMemberID = nil
+        }
     }
 
     private var membersSection: some View {
@@ -260,6 +269,14 @@ struct PatreonScreen: View {
                     AppText("Lifetime: \(formatCents(lifetime))", style: .caption, color: AppTheme.ColorToken.textSecondary)
                 }
             }
+        }
+        .overlay(
+            RoundedRectangle(cornerRadius: AppTheme.CornerRadius.card)
+                .stroke(router.selectedMemberID == member.id ? AppTheme.ColorToken.accent : Color.clear, lineWidth: 2)
+        )
+        .onTapGesture {
+            router.selectedMemberID = member.id
+            router.selectedPostID = nil
         }
     }
 
@@ -357,7 +374,7 @@ struct PatreonScreen: View {
 // MARK: - Previews
 
 #Preview("Not Configured") {
-    PatreonScreen(viewModel: PatreonViewModel(client: nil, settings: nil))
+    PatreonScreen(viewModel: PatreonViewModel(client: nil, settings: nil), router: AppRouter())
 }
 
 // MARK: - AttributedString HTML Extension

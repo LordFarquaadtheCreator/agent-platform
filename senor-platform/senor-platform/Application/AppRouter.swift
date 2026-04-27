@@ -8,6 +8,8 @@ public final class AppRouter: ObservableObject {
     @Published public var selectedTaskID: String?
     @Published public var selectedContentID: String?
     @Published public var selectedDeviationID: String?
+    @Published public var selectedPostID: String?
+    @Published public var selectedMemberID: String?
 
     public init() {}
 }
