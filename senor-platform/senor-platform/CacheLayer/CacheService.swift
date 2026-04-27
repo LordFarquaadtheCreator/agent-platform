@@ -309,9 +309,13 @@ public enum CacheStatus: Sendable {
 // MARK: - Cache Keys
 
 public enum CacheKey: Sendable {
+    // DeviantArt
     case deviation(id: String)
     case gallery(username: String, offset: Int)
     case userProfile(username: String?)
+    case deviationMetadata(deviationId: String)
+
+    // Patreon
     case post(campaignId: String, postId: String)
     case campaignPosts(campaignId: String, cursor: String?)
     case campaignMembers(campaignId: String, cursor: String?)
@@ -321,28 +325,31 @@ public enum CacheKey: Sendable {
     public var stringValue: String {
         switch self {
         case .deviation(let id):
-            return "deviation:\(id)"
+            return "da:deviation:\(id)"
 
         case .gallery(let username, let offset):
-            return "gallery:\(username):\(offset)"
+            return "da:gallery:\(username):\(offset)"
 
         case .userProfile(let username):
-            return "profile:\(username ?? "me")"
+            return "da:profile:\(username ?? "me")"
+
+        case .deviationMetadata(let deviationId):
+            return "da:metadata:\(deviationId)"
 
         case .post(let campaignId, let postId):
-            return "post:\(campaignId):\(postId)"
+            return "patreon:post:\(campaignId):\(postId)"
 
         case .campaignPosts(let campaignId, let cursor):
-            return "campaign-posts:\(campaignId):\(cursor ?? "first")"
+            return "patreon:posts:\(campaignId):\(cursor ?? "first")"
 
         case .campaignMembers(let campaignId, let cursor):
-            return "campaign-members:\(campaignId):\(cursor ?? "first")"
+            return "patreon:members:\(campaignId):\(cursor ?? "first")"
 
         case .campaign(let campaignId):
-            return "campaign:\(campaignId)"
+            return "patreon:campaign:\(campaignId)"
 
         case .identity:
-            return "identity"
+            return "patreon:identity"
         }
     }
 }

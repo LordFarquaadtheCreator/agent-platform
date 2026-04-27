@@ -41,12 +41,16 @@ public final class DeviantArtClient {
 
     // MARK: - DTOs
 
-    public struct StashStack: Codable, Identifiable {
+    public struct StashStack: Codable, Identifiable, Sendable {
         public let stackid: String
         public let title: String?
         public let items: [StashItem]?
 
         public var id: String { stackid }
+
+        enum CodingKeys: String, CodingKey, Sendable {
+            case stackid, title, items
+        }
     }
 
     public struct StashItem: Codable, Identifiable {
@@ -60,7 +64,7 @@ public final class DeviantArtClient {
         public let thumb: String? // Preview thumbnail URL
         public let position: Int?
 
-        enum CodingKeys: String, CodingKey {
+        enum CodingKeys: String, CodingKey, Sendable {
             case itemid, stackid, title, path, size, status, thumb, position
             case fileSize = "filesize"
         }
@@ -77,20 +81,24 @@ public final class DeviantArtClient {
         public let hasMore: Bool
         public let nextOffset: Int?
 
-        enum CodingKeys: String, CodingKey {
+        enum CodingKeys: String, CodingKey, Sendable {
             case results
             case hasMore = "has_more"
             case nextOffset = "next_offset"
         }
     }
 
-    public struct StashPublishResponse: Codable {
+    public struct StashPublishResponse: Codable, Sendable {
         public let status: String
         public let deviationid: String?
         public let url: String?
+
+        enum CodingKeys: String, CodingKey, Sendable {
+            case status, deviationid, url
+        }
     }
 
-    public struct Deviation: Codable, Identifiable {
+    public struct Deviation: Codable, Identifiable, Sendable {
         public let deviationid: String
         public let url: String
         public let title: String
@@ -104,7 +112,7 @@ public final class DeviantArtClient {
         public let thumbs: [Thumb]?
         public let content: ContentInfo?
 
-        enum CodingKeys: String, CodingKey {
+        enum CodingKeys: String, CodingKey, Sendable {
             case deviationid, url, title, category, author, stats, thumbs, content
             case publishedTime = "published_time"
             case allowsComments = "allows_comments"
@@ -125,7 +133,7 @@ public final class DeviantArtClient {
             return thumbs?.first.map { URL(string: $0.src) } ?? nil
         }
 
-        public struct Thumb: Codable {
+        public struct Thumb: Codable, Sendable {
             public let src: String
             public let width: Int
             public let height: Int
@@ -142,20 +150,20 @@ public final class DeviantArtClient {
             case small, medium, large
         }
 
-        public struct ContentInfo: Codable {
+        public struct ContentInfo: Codable, Sendable {
             public let src: String?
             public let width: Int?
             public let height: Int?
             public let filesize: Int?
         }
 
-        public struct User: Codable {
+        public struct User: Codable, Sendable {
             public let userid: String
             public let username: String
             public let usericon: String?
         }
 
-        public struct Stats: Codable {
+        public struct Stats: Codable, Sendable {
             public let views: Int?
             public let favourites: Int?
             public let comments: Int?
@@ -163,13 +171,17 @@ public final class DeviantArtClient {
         }
     }
 
-    public struct DeviationContent: Codable {
+    public struct DeviationContent: Codable, Sendable {
         public let html: String?
         public let css: String?
         public let body: String?
+
+        enum CodingKeys: String, CodingKey, Sendable {
+            case html, css, body
+        }
     }
 
-    public struct DeviationMetadata: Codable {
+    public struct DeviationMetadata: Codable, Sendable {
         public let deviationid: String
         public let type: String?
         public let tags: [Tag]?
@@ -180,7 +192,7 @@ public final class DeviantArtClient {
         public let isFavourited: Bool?
         public let isDeleted: Bool?
 
-        enum CodingKeys: String, CodingKey {
+        enum CodingKeys: String, CodingKey, Sendable {
             case deviationid, type, tags, description, license
             case allowsComments = "allows_comments"
             case isFavouritable = "is_favouritable"
@@ -188,38 +200,54 @@ public final class DeviantArtClient {
             case isDeleted = "is_deleted"
         }
 
-        public struct Tag: Codable {
+        public struct Tag: Codable, Sendable {
             public let tagName: String
+
+            enum CodingKeys: String, CodingKey, Sendable {
+                case tagName = "tag_name"
+            }
         }
     }
 
-    public struct GalleryResponse: Codable {
+    public struct GalleryResponse: Codable, Sendable {
         public let results: [Deviation]
         public let hasMore: Bool
         public let nextOffset: Int?
 
-        enum CodingKeys: String, CodingKey {
+        enum CodingKeys: String, CodingKey, Sendable {
             case results
             case hasMore = "has_more"
             case nextOffset = "next_offset"
         }
     }
 
-    public struct UserProfile: Codable {
+    public struct UserProfile: Codable, Sendable {
         public let user: UserInfo
         public let stats: UserStats?
 
-        public struct UserInfo: Codable {
+        enum CodingKeys: String, CodingKey, Sendable {
+            case user, stats
+        }
+
+        public struct UserInfo: Codable, Sendable {
             public let userid: String
             public let username: String
             public let usericon: String?
             public let type: String?
+
+            enum CodingKeys: String, CodingKey, Sendable {
+                case userid, username, usericon, type
+            }
         }
 
-        public struct UserStats: Codable {
+        public struct UserStats: Codable, Sendable {
             public let watchers: Int?
             public let friends: Int?
             public let deviations: Int?
+
+            enum CodingKeys: String, CodingKey, Sendable {
+                case watchers, friends, deviations
+            }
         }
     }
 

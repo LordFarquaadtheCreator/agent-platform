@@ -209,9 +209,14 @@ struct PatreonScreen: View {
                 }
             }
 
-            ForEach(model.posts.prefix(6)) { post in
-                postCard(post)
+            ScrollView(.vertical, showsIndicators: true) {
+                LazyVStack(spacing: AppTheme.Spacing.medium) {
+                    ForEach(model.posts) { post in
+                        postCard(post)
+                    }
+                }
             }
+            .frame(maxHeight: 400)
         }
     }
 
@@ -234,9 +239,11 @@ struct PatreonScreen: View {
                     AppText(formatDate(published), style: .caption, color: AppTheme.ColorToken.textSecondary)
                 }
 
-                if let teaser = post.attributes.teaserText {
-                    AppText(teaser, style: .body, color: AppTheme.ColorToken.textSecondary)
-                        .lineLimit(2)
+                if let content = post.attributes.content {
+                    // Convert HTML to Markdown for rendering
+                    Text(AttributedString(htmlString: content, lineLimit: 2))
+                        .font(AppTheme.Typography.body)
+                        .foregroundColor(AppTheme.ColorToken.textSecondary)
                 }
             }
         }
@@ -328,12 +335,30 @@ struct PatreonScreen: View {
 
     private func formatDate(_ isoString: String) -> String {
         let formatter = ISO8601DateFormatter()
-        guard let date = formatter.date(from: isoString) else { return isoString }
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        guard let date = formatter.date(from: isoString) else {
+            // Try without fractional seconds
+            let fallbackFormatter = ISO8601DateFormatter()
+            fallbackFormatter.formatOptions = [.withInternetDateTime]
+            guard let fallbackDate = fallbackFormatter.date(from: isoString) else { return isoString }
+            let displayFormatter = DateFormatter()
+            displayFormatter.dateStyle = .medium
+            displayFormatter.timeStyle = .none
+            return displayFormatter.string(from: fallbackDate)
+        }
 
         let displayFormatter = DateFormatter()
         displayFormatter.dateStyle = .medium
-        displayFormatter.timeStyle = .short
+        displayFormatter.timeStyle = .none
         return displayFormatter.string(from: date)
+    }
+
+    private func stripHTML(_ html: String) -> String {
+        return html.replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression)
+                  .replacingOccurrences(of: "&quot;", with: "\"")
+                  .replacingOccurrences(of: "&amp;", with: "&")
+                  .replacingOccurrences(of: "&lt;", with: "<")
+                  .replacingOccurrences(of: "&gt;", with: ">")
     }
 
     private func statusColor(for status: String) -> Color {
@@ -347,5 +372,23 @@ struct PatreonScreen: View {
         default:
             return AppTheme.ColorToken.statusInfo
         }
+    }
+}
+
+// MARK: - AttributedString HTML Extension
+
+extension AttributedString {
+    init(htmlString: String, lineLimit: Int? = nil) {
+        guard let data = htmlString.data(using: .utf8),
+              let nsAttributedString = try? NSAttributedString(
+                data: data,
+                options: [.documentType: NSAttributedString.DocumentType.html,
+                         .characterEncoding: String.Encoding.utf8.rawValue],
+                documentAttributes: nil
+              ) else {
+            self.init(htmlString)
+            return
+        }
+        self.init(nsAttributedString)
     }
 }

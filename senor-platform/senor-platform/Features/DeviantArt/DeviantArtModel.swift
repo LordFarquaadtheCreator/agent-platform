@@ -8,45 +8,73 @@ public final class DeviantArtModel: ObservableObject {
     @Published public private(set) var deviations: [DeviantArtClient.Deviation] = []
     @Published public private(set) var stashStacks: [DeviantArtClient.StashStack] = []
     @Published public private(set) var isLoading = false
+    @Published public private(set) var isRefreshing = false
     @Published public private(set) var errorMessage: String?
     @Published public private(set) var isAuthenticated = false
     @Published public private(set) var isConnecting = false
+    @Published public private(set) var lastUpdated: Date?
+    @Published public var deviationMetadata: [String: DeviantArtClient.DeviationMetadata] = [:]
 
     private let client: DeviantArtClient?
     private let settingsService: SettingsService
+    private let cacheService: CacheService?
     private var pendingCodeVerifier: String?
     private var pendingState: String?
+
+    // 3-hour cache TTL for DeviantArt
+    private static let cacheTTL: TimeInterval = 3 * 3600
 
     private enum PendingKeys {
         static let codeVerifier = "deviantArt.pendingCodeVerifier"
         static let state = "deviantArt.pendingState"
     }
 
-    init(client: DeviantArtClient?, settingsService: SettingsService) {
+    init(client: DeviantArtClient?, settingsService: SettingsService, cacheService: CacheService? = nil) {
         self.client = client
         self.settingsService = settingsService
+        self.cacheService = cacheService
         self.isAuthenticated = client?.isAuthenticated ?? settingsService.loadDeviantArtSettings().isAuthenticated
     }
 
     func load() async {
-        print("[DeviantArt] load() starting...")
+        await load(forceRefresh: false)
+    }
+
+    func refresh() async {
+        await load(forceRefresh: true)
+    }
+
+    private func load(forceRefresh: Bool) async {
+        print("[DeviantArt] load() starting... (forceRefresh: \(forceRefresh))")
         let settings = settingsService.loadDeviantArtSettings()
-        print("[DeviantArt] Settings loaded - hasAccessToken: \(settings.accessToken != nil), hasRefreshToken: \(settings.refreshToken != nil)")
 
         guard settings.isAuthenticated else {
             isAuthenticated = false
-            print("[DeviantArt] Not authenticated in settings")
             return
         }
         guard let client, client.isAuthenticated else {
             isAuthenticated = false
             errorMessage = "Token expired. Please reconnect DeviantArt."
-            print("[DeviantArt] Client not authenticated")
             return
         }
-        print("[DeviantArt] Client authenticated, fetching data...")
-        isLoading = true
-        defer { isLoading = false }
+
+        // Show loading state for initial load, refreshing state for background refresh
+        if profile == nil && deviations.isEmpty {
+            isLoading = true
+        } else {
+            isRefreshing = true
+        }
+        defer {
+            isLoading = false
+            isRefreshing = false
+        }
+
+        // Try cache first if not forcing refresh
+        if !forceRefresh {
+            await loadFromCache()
+        }
+
+        // Fetch fresh data in background
         do {
             async let profileTask = client.getUserProfile()
             async let galleryTask = client.getGalleryAll(limit: 24)
@@ -55,22 +83,57 @@ public final class DeviantArtModel: ObservableObject {
 
             profile = profileResult
             deviations = galleryResult.results
+            lastUpdated = Date()
+
+            // Cache the fresh data
+            await cacheData(profile: profileResult, deviations: galleryResult.results)
 
             // Stash fetch is non-fatal (endpoint may not exist)
             do {
                 let stashResult = try await client.getStashContents(limit: 24)
                 stashStacks = stashResult.results
-                print("[DeviantArt] Stash loaded: \(stashResult.results.count) stacks")
             } catch {
-                print("[DeviantArt] Stash fetch skipped (endpoint unavailable): \(error.localizedDescription)")
+                print("[DeviantArt] Stash fetch skipped: \(error.localizedDescription)")
                 stashStacks = []
             }
 
             errorMessage = nil
             print("[DeviantArt] Load successful - profile: \(profileResult.user.username), deviations: \(galleryResult.results.count)")
         } catch {
-            errorMessage = error.localizedDescription
-            print("[DeviantArt] Load failed: \(error)")
+            // Only show error if we don't have cached data
+            if profile == nil {
+                errorMessage = error.localizedDescription
+            }
+            print("[DeviantArt] Load failed (using cache if available): \(error)")
+        }
+    }
+
+    private func loadFromCache() async {
+        // Caching disabled due to Swift 6 concurrency issues with generic Sendable constraints
+        // TODO: Re-enable once Swift 6 concurrency issues are resolved
+    }
+
+    private func cacheData(profile: DeviantArtClient.UserProfile, deviations: [DeviantArtClient.Deviation]) async {
+        // Caching disabled due to Swift 6 concurrency issues with generic Sendable constraints
+        // TODO: Re-enable once Swift 6 concurrency issues are resolved
+    }
+
+    /// Load metadata for a specific deviation (tags, description, license)
+    func loadMetadata(for deviationId: String) async {
+        guard let client else { return }
+
+        // Check if already loaded
+        if deviationMetadata[deviationId] != nil { return }
+
+        // Fetch from API (caching disabled due to Swift 6 concurrency issues)
+        do {
+            let metadata = try await client.getDeviationMetadata(deviationId: deviationId)
+            if let first = metadata.first {
+                deviationMetadata[deviationId] = first
+                print("[DeviantArt] Loaded metadata from API for \(deviationId)")
+            }
+        } catch {
+            print("[DeviantArt] Failed to load metadata: \(error)")
         }
     }
 
