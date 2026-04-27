@@ -114,37 +114,5 @@ struct ContentInspectorCard: View {
 }
 
 // MARK: - Previews
-
-#Preview("Content Inspector - Pending") {
-    let mockContent = ContentSummary(
-        id: "preview-content-1",
-        agentId: "agent-1",
-        title: "My Artwork",
-        previewImageURL: nil,
-        createdAt: Date(),
-        updatedAt: Date(),
-        status: .pending,
-        version: 1
-    )
-    ContentInspectorCard(content: mockContent, approvalsViewModel: ApprovalsViewModel.preview)
-        .frame(width: 300)
-        .padding()
-        .environmentObject(AppShellModel())
-}
-
-#Preview("Content Inspector - Approved") {
-    let mockContent = ContentSummary(
-        id: "preview-content-2",
-        agentId: "agent-1",
-        title: "Published Work",
-        previewImageURL: nil,
-        createdAt: Date(),
-        updatedAt: Date(),
-        status: .approved,
-        version: 2
-    )
-    ContentInspectorCard(content: mockContent, approvalsViewModel: ApprovalsViewModel.preview)
-        .frame(width: 300)
-        .padding()
-        .environmentObject(AppShellModel())
-}
+// Note: ContentInspectorCard previews require complex dependency setup.
+// For now, preview the ContentScreen to see this component in context.
