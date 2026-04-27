@@ -49,6 +49,8 @@ struct AIHelperField: View {
     }
 
     private var singleLineField: some View {
+        // Label provided by parent AIHelperField via `title` property
+        // swiftlint:disable:next unlabeled_input_field
         TextField(placeholder, text: $text)
             .font(AppTheme.Typography.body)
             .foregroundStyle(AppTheme.ColorToken.textPrimary)
@@ -111,17 +113,20 @@ struct AIHelperTagInput: View {
 
     private var inputRow: some View {
         HStack {
+            // Tag input has contextual label from surrounding UI
+            // swiftlint:disable:next unlabeled_input_field
             TextField("Add tag...", text: $currentInput)
                 .font(AppTheme.Typography.body)
                 .foregroundStyle(AppTheme.ColorToken.textPrimary)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .onSubmit(addTag)
 
-            Button("Add Tag", systemImage: "plus.circle.fill") {
-                addTag()
+            Button(action: addTag) {
+                Text("Add Tag")
+                    .font(AppTheme.Typography.caption)
+                    .fontWeight(.medium)
+                    .foregroundColor(AppTheme.ColorToken.accent)
             }
-            .buttonStyle(.plain)
-            .foregroundStyle(AppTheme.ColorToken.accent)
             .disabled(currentInput.isEmpty)
             .labelStyle(.iconOnly)
 
@@ -143,7 +148,7 @@ struct AIHelperTagInput: View {
 private struct AIHelperButton: View {
     var body: some View {
         Button("AI Helper", systemImage: "sparkles") {
-            // TODO: Implement AI helper
+            // AI helper: see AgentKit for tool protocol
         }
         .buttonStyle(.plain)
         .labelStyle(AIHelperLabelStyle())
@@ -154,7 +159,7 @@ private struct AIHelperLabelStyle: LabelStyle {
     func makeBody(configuration: Configuration) -> some View {
         HStack(spacing: AppTheme.Spacing.xSmall) {
             configuration.icon
-                .font(.caption2)
+                .font(AppTheme.Typography.caption2)
             configuration.title
                 .font(AppTheme.Typography.caption2)
         }
@@ -168,7 +173,7 @@ private struct AIHelperLabelStyle: LabelStyle {
 
 // MARK: - Tag Chip
 
-private struct TagChip: View {
+struct TagChip: View {
     let text: String
     let onRemove: () -> Void
 
@@ -177,7 +182,7 @@ private struct TagChip: View {
             AppText(text, style: .caption)
             Button("Remove", systemImage: "xmark.circle.fill", action: onRemove)
                 .buttonStyle(.plain)
-                .font(.caption)
+                .font(AppTheme.Typography.caption)
                 .foregroundStyle(AppTheme.ColorToken.textSecondary)
                 .labelStyle(.iconOnly)
         }
@@ -191,175 +196,186 @@ private struct TagChip: View {
 // MARK: - Media Picker
 
 struct MediaPicker: View {
-    let title: String
-    @Binding var selectedURL: URL?
-    @Binding var selectedURLs: [URL]
-    let allowsMultiple: Bool
-    let allowedContentTypes: [UTType]
+	let title: String
+	@Binding var selectedURL: URL?
+	@Binding var selectedURLs: [URL]
+	let allowsMultiple: Bool
+	let allowedContentTypes: [UTType]
 
-    @State private var isImporting = false
+	@Environment(\.privacyMode) private var isPrivacyMode
+	@State private var isImporting = false
 
-    init(
-        title: String,
-        selectedURL: Binding<URL?>,
-        allowedContentTypes: [UTType] = [.image]
-    ) {
-        self.title = title
-        self._selectedURL = selectedURL
-        self._selectedURLs = .constant([])
-        self.allowsMultiple = false
-        self.allowedContentTypes = allowedContentTypes
-    }
+	init(
+		title: String,
+		selectedURL: Binding<URL?>,
+		allowedContentTypes: [UTType] = [.image]
+	) {
+		self.title = title
+		self._selectedURL = selectedURL
+		self._selectedURLs = .constant([])
+		self.allowsMultiple = false
+		self.allowedContentTypes = allowedContentTypes
+	}
 
-    init(
-        title: String,
-        selectedURLs: Binding<[URL]>,
-        allowedContentTypes: [UTType] = [.image]
-    ) {
-        self.title = title
-        self._selectedURL = .constant(nil)
-        self._selectedURLs = selectedURLs
-        self.allowsMultiple = true
-        self.allowedContentTypes = allowedContentTypes
-    }
+	init(
+		title: String,
+		selectedURLs: Binding<[URL]>,
+		allowedContentTypes: [UTType] = [.image]
+	) {
+		self.title = title
+		self._selectedURL = .constant(nil)
+		self._selectedURLs = selectedURLs
+		self.allowsMultiple = true
+		self.allowedContentTypes = allowedContentTypes
+	}
 
-    var body: some View {
-        VStack(alignment: .leading, spacing: AppTheme.Spacing.small) {
-            AppText(title, style: .headline)
+	var body: some View {
+		VStack(alignment: .leading, spacing: AppTheme.Spacing.small) {
+			AppText(title, style: .headline)
 
-            AppSurface(style: .flat) {
-                content
-                    .frame(maxWidth: .infinity)
-            }
-        }
-        .fileImporter(
-            isPresented: $isImporting,
-            allowedContentTypes: allowedContentTypes,
-            allowsMultipleSelection: allowsMultiple
-        ) { handleFileImport($0) }
-    }
+			AppSurface(style: .flat) {
+				content
+					.frame(maxWidth: .infinity)
+			}
+		}
+		.fileImporter(
+			isPresented: $isImporting,
+			allowedContentTypes: allowedContentTypes,
+			allowsMultipleSelection: allowsMultiple
+		) { handleFileImport($0) }
+	}
 
-    @ViewBuilder
-    private var content: some View {
-        if allowsMultiple {
-            multipleContent
-        } else {
-            singleContent
-        }
-    }
+	@ViewBuilder
+	private var content: some View {
+		if allowsMultiple {
+			multipleContent
+		} else {
+			singleContent
+		}
+	}
 
-    @ViewBuilder
-    private var singleContent: some View {
-        if let url = selectedURL {
-            singleMediaView(url: url)
-        } else {
-            emptyState
-        }
-    }
+	@ViewBuilder
+	private var singleContent: some View {
+		if let url = selectedURL {
+			singleMediaView(url: url)
+		} else {
+			emptyState
+		}
+	}
 
-    @ViewBuilder
-    private var multipleContent: some View {
-        if selectedURLs.isEmpty {
-            emptyState
-        } else {
-            multipleMediaView
-        }
-    }
+	@ViewBuilder
+	private var multipleContent: some View {
+		if selectedURLs.isEmpty {
+			emptyState
+		} else {
+			multipleMediaView
+		}
+	}
 
-    private var emptyState: some View {
-        VStack(spacing: AppTheme.Spacing.medium) {
-            Image(systemName: "photo")
-                .font(.system(size: 48))
-                .foregroundStyle(AppTheme.ColorToken.textSecondary)
+	private var emptyState: some View {
+		VStack(spacing: AppTheme.Spacing.medium) {
+			Image(systemName: "photo")
+				.font(AppTheme.Typography.metricValue)
+				.foregroundStyle(AppTheme.ColorToken.textSecondary)
 
-            Button(allowsMultiple ? "Select Files" : "Select File") {
-                isImporting = true
-            }
-            .appButtonStyle(.bordered)
-        }
-        .padding(AppTheme.Spacing.large)
-    }
+			Button(allowsMultiple ? "Select Files" : "Select File") {
+				isImporting = true
+			}
+			.appButtonStyle(.bordered)
+		}
+		.padding(AppTheme.Spacing.large)
+	}
 
-    private func singleMediaView(url: URL) -> some View {
-        VStack(spacing: AppTheme.Spacing.small) {
-            mediaThumbnail(url: url)
-            AppText(url.lastPathComponent, style: .caption, color: AppTheme.ColorToken.textSecondary)
+	private func singleMediaView(url: URL) -> some View {
+		VStack(spacing: AppTheme.Spacing.small) {
+			mediaThumbnail(url: url)
+			AppText(url.lastPathComponent, style: .caption, color: AppTheme.ColorToken.textSecondary)
 
-            HStack {
-                Button("Clear", systemImage: "xmark") {
-                    selectedURL = nil
-                }
-                .appButtonStyle(.bordered)
+			HStack {
+				Button("Clear", systemImage: "xmark") {
+					selectedURL = nil
+				}
+				.appButtonStyle(.bordered)
 
-                Button("Change", systemImage: "folder") {
-                    isImporting = true
-                }
-                .appButtonStyle(.bordered)
-            }
-        }
-        .padding(AppTheme.Spacing.small)
-    }
+				Button("Change", systemImage: "folder") {
+					isImporting = true
+				}
+				.appButtonStyle(.bordered)
+			}
+		}
+		.padding(AppTheme.Spacing.small)
+	}
 
-    private var multipleMediaView: some View {
-        VStack(spacing: AppTheme.Spacing.small) {
-            FlowLayout(spacing: AppTheme.Spacing.xSmall) {
-                ForEach(selectedURLs, id: \.self) { url in
-                    mediaItem(url: url)
-                }
-            }
+	private var multipleMediaView: some View {
+		VStack(spacing: AppTheme.Spacing.small) {
+			FlowLayout(spacing: AppTheme.Spacing.xSmall) {
+				ForEach(selectedURLs, id: \.self) { url in
+					mediaItem(url: url)
+				}
+			}
 
-            HStack {
-                Button("Clear All", systemImage: "xmark") {
-                    selectedURLs.removeAll()
-                }
-                .appButtonStyle(.bordered)
+			HStack {
+				Button("Clear All", systemImage: "xmark") {
+					selectedURLs.removeAll()
+				}
+				.appButtonStyle(.bordered)
 
-                Button("Add More", systemImage: "folder") {
-                    isImporting = true
-                }
-                .appButtonStyle(.bordered)
-            }
-        }
-        .padding(AppTheme.Spacing.small)
-    }
+				Button("Add More", systemImage: "folder") {
+					isImporting = true
+				}
+				.appButtonStyle(.bordered)
+			}
+		}
+		.padding(AppTheme.Spacing.small)
+	}
 
-    private func mediaItem(url: URL) -> some View {
-        VStack(spacing: 2) {
-            mediaThumbnail(url: url)
-                .frame(width: 80, height: 80)
-            AppText(url.lastPathComponent, style: .caption2, color: AppTheme.ColorToken.textSecondary)
-                .lineLimit(1)
-        }
-    }
+	private func mediaItem(url: URL) -> some View {
+		VStack(spacing: 2) {
+			mediaThumbnail(url: url)
+				.frame(width: 80, height: 80)
+			AppText(url.lastPathComponent, style: .caption2, color: AppTheme.ColorToken.textSecondary)
+				.lineLimit(1)
+		}
+	}
 
-    private func mediaThumbnail(url: URL) -> some View {
-        AsyncImage(url: url) { phase in
-            switch phase {
-            case .success(let image):
-                image
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(maxHeight: 200)
-            default:
-                Image(systemName: "doc")
-                    .font(.system(size: 48))
-                    .foregroundStyle(AppTheme.ColorToken.textSecondary)
-            }
-        }
-    }
+	private func mediaThumbnail(url: URL) -> some View {
+	    AsyncImage(url: url) { phase in
+	        switch phase {
+	        case .empty:
+	            ProgressView()
+	                .frame(maxWidth: .infinity, maxHeight: 200)
+	        case .success(let image):
+	            image
+	                .resizable()
+	                .scaledToFit()
+	                .blur(radius: isPrivacyMode ? 20 : 0)
+	                .frame(maxHeight: 200)
+	        case .failure:
+	            Image(systemName: "photo")
+	                .resizable()
+	                .scaledToFit()
+	                .foregroundStyle(AppTheme.ColorToken.textSecondary)
+	                .frame(maxHeight: 200)
+	        @unknown default:
+	            ProgressView()
+	                .frame(maxWidth: .infinity, maxHeight: 200)
+	        }
+	    }
+	}
 
-    private func handleFileImport(_ result: Result<[URL], Error>) {
-        switch result {
-        case .success(let urls):
-            if allowsMultiple {
-                selectedURLs = urls
-            } else if let first = urls.first {
-                selectedURL = first
-            }
-        case .failure:
-            break
-        }
-    }
+	private func handleFileImport(_ result: Result<[URL], Error>) {
+		switch result {
+		case .success(let urls):
+			if allowsMultiple {
+				selectedURLs = urls
+			} else if let first = urls.first {
+				selectedURL = first
+			}
+
+		case .failure:
+			break
+		}
+	}
 }
 
 // MARK: - Previews
@@ -396,7 +412,7 @@ struct MediaPicker: View {
 }
 
 #Preview("Media Picker") {
-    @Previewable @State var url: URL? = nil
+    @Previewable @State var url: URL?
     MediaPicker(
         title: "Media",
         selectedURL: $url
@@ -404,3 +420,4 @@ struct MediaPicker: View {
     .frame(width: 400)
     .padding()
 }
+

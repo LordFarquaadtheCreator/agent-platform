@@ -14,7 +14,7 @@ struct CategoryBadge: View {
         .padding(.horizontal, AppTheme.Spacing.badgeHorizontalPadding)
         .padding(.vertical, AppTheme.Spacing.badgeVerticalPadding)
         .background(AppTheme.ColorToken.accent.opacity(0.9))
-        .foregroundColor(.white)
+        .foregroundStyle(AppTheme.ColorToken.white)
         .clipShape(Capsule())
     }
 }

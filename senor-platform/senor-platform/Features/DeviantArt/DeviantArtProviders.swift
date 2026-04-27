@@ -14,7 +14,8 @@ struct DeviantArtContentProvider: MainContentProvider {
 struct DeviantArtInspectorProvider: InspectorContentProvider {
     let section: AppSection = .deviantArt
     func content(using workspace: WorkspaceModel, router: AppRouter, appState: AppShellModel) -> AnyView {
-        guard let deviation = workspace.deviantArtViewModel.deviations.first(where: { $0.id == router.selectedDeviationID }) else {
+        let deviation = workspace.deviantArtViewModel.deviations.first { $0.id == router.selectedDeviationID }
+        guard let deviation else {
             return AnyView(AppEmptyState(
                 title: "Nothing Selected",
                 systemImage: AppTheme.Icon.sidebar,

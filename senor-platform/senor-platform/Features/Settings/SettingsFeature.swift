@@ -50,8 +50,11 @@ private struct SettingsContent: View {
                     AppText("General", style: .headline)
                     Toggle("Launch at Login", isOn: $viewModel.generalSettings.launchAtLogin)
                     Toggle("Show Notifications", isOn: $viewModel.generalSettings.showNotifications)
-                    AppText("Log Level", style: .caption)
-                    TextField("info, debug, warning, error", text: $viewModel.generalSettings.logLevel)
+                    AppInputField(
+                        title: "Log Level",
+                        placeholder: "info, debug, warning, error",
+                        text: $viewModel.generalSettings.logLevel
+                    )
                     Button("Save General Settings") {
                         viewModel.saveGeneral()
                     }
@@ -62,8 +65,11 @@ private struct SettingsContent: View {
             AppCard {
                 AppVStack(spacing: .medium, alignment: .leading) {
                     AppText("Task Runtime", style: .headline)
-                    AppText("Task Script Path", style: .caption)
-                    TextField("/usr/local/bin/senor-task", text: $viewModel.taskScriptPath)
+                    AppInputField(
+                        title: "Task Script Path",
+                        placeholder: "/usr/local/bin/senor-task",
+                        text: $viewModel.taskScriptPath
+                    )
                     Button("Save Script Path") {
                         viewModel.saveTaskScriptPath()
                     }
@@ -75,23 +81,35 @@ private struct SettingsContent: View {
                 AppVStack(spacing: .medium, alignment: .leading) {
                     AppText("DeviantArt", style: .headline)
 
-                    AppText("Client ID", style: .caption)
-                    TextField("Enter DeviantArt Client ID", text: $viewModel.deviantArtSettings.clientId)
-                    AppText("Client Secret", style: .caption)
-                    SecureField("Enter DeviantArt Client Secret", text: Binding(
-                        get: { viewModel.deviantArtSettings.clientSecret },
-                        set: { viewModel.deviantArtSettings.clientSecret = $0 }
-                    ))
-                    AppText("Redirect URI", style: .caption)
-                    TextField("senorplatform://oauth/deviantart", text: $viewModel.deviantArtSettings.redirectURI)
-                        .textContentType(.URL)
-                        .font(.system(.body, design: .monospaced))
+                    AppInputField(
+                        title: "Client ID",
+                        placeholder: "Enter DeviantArt Client ID",
+                        text: $viewModel.deviantArtSettings.clientId
+                    )
+                    AppInputField(
+                        title: "Client Secret",
+                        placeholder: "Enter DeviantArt Client Secret",
+                        text: Binding(
+                            get: { viewModel.deviantArtSettings.clientSecret },
+                            set: { viewModel.deviantArtSettings.clientSecret = $0 }
+                        ),
+                        isSecure: true
+                    )
+                    AppInputField(
+                        title: "Redirect URI",
+                        placeholder: "senorplatform://oauth/deviantart",
+                        text: $viewModel.deviantArtSettings.redirectURI
+                    )
 
                     if let workspace = appState.workspace {
                         AppHStack(spacing: .medium) {
                             AppStatusPill(
-                                title: workspace.deviantArtViewModel.isAuthenticated ? "Connected" : "Not Connected",
-                                color: workspace.deviantArtViewModel.isAuthenticated ? AppTheme.ColorToken.statusSuccess : AppTheme.ColorToken.statusWarning
+                                title: workspace.deviantArtViewModel.isAuthenticated
+                                    ? "Connected"
+                                    : "Not Connected",
+                                color: workspace.deviantArtViewModel.isAuthenticated
+                                    ? AppTheme.ColorToken.statusSuccess
+                                    : AppTheme.ColorToken.statusWarning
                             )
                             Spacer()
                         }
@@ -119,28 +137,43 @@ private struct SettingsContent: View {
                     if let workspace = appState.workspace {
                         AppHStack(spacing: .medium) {
                             AppStatusPill(
-                                title: workspace.patreonViewModel.isAuthenticated ? "Connected" : "Not Connected",
-                                color: workspace.patreonViewModel.isAuthenticated ? AppTheme.ColorToken.statusSuccess : AppTheme.ColorToken.statusWarning
+                                title: workspace.patreonViewModel.isAuthenticated
+                                    ? "Connected"
+                                    : "Not Connected",
+                                color: workspace.patreonViewModel.isAuthenticated
+                                    ? AppTheme.ColorToken.statusSuccess
+                                    : AppTheme.ColorToken.statusWarning
                             )
                             Spacer()
                         }
                     }
 
-                    AppText("Access Token", style: .caption)
-                    SecureField("Enter Patreon Access Token", text: Binding(
-                        get: { viewModel.patreonSettings.accessToken },
-                        set: { viewModel.patreonSettings.accessToken = $0 }
-                    ))
-                    AppText("Refresh Token (optional)", style: .caption)
-                    SecureField("Enter Refresh Token", text: Binding(
-                        get: { viewModel.patreonSettings.refreshToken ?? "" },
-                        set: { viewModel.patreonSettings.refreshToken = $0.isEmpty ? nil : $0 }
-                    ))
-                    AppText("Campaign ID (optional)", style: .caption)
-                    TextField("Enter Campaign ID", text: Binding(
-                        get: { viewModel.patreonSettings.campaignId ?? "" },
-                        set: { viewModel.patreonSettings.campaignId = $0.isEmpty ? nil : $0 }
-                    ))
+                    AppInputField(
+                        title: "Access Token",
+                        placeholder: "Enter Patreon Access Token",
+                        text: Binding(
+                            get: { viewModel.patreonSettings.accessToken },
+                            set: { viewModel.patreonSettings.accessToken = $0 }
+                        ),
+                        isSecure: true
+                    )
+                    AppInputField(
+                        title: "Refresh Token (optional)",
+                        placeholder: "Enter Refresh Token",
+                        text: Binding(
+                            get: { viewModel.patreonSettings.refreshToken ?? "" },
+                            set: { viewModel.patreonSettings.refreshToken = $0.isEmpty ? nil : $0 }
+                        ),
+                        isSecure: true
+                    )
+                    AppInputField(
+                        title: "Campaign ID (optional)",
+                        placeholder: "Enter Campaign ID",
+                        text: Binding(
+                            get: { viewModel.patreonSettings.campaignId ?? "" },
+                            set: { viewModel.patreonSettings.campaignId = $0.isEmpty ? nil : $0 }
+                        )
+                    )
                     Button("Save Patreon Credentials") {
                         do {
                             try viewModel.savePatreon()
@@ -156,11 +189,53 @@ private struct SettingsContent: View {
             AppCard {
                 AppVStack(spacing: .medium, alignment: .leading) {
                     AppText("ComfyUI", style: .headline)
-                    AppText("Server URL", style: .caption)
-                    TextField("http://127.0.0.1:8188", text: $viewModel.comfyUISettings.serverURL)
-                    Stepper("Timeout: \(viewModel.comfyUISettings.timeout)s", value: $viewModel.comfyUISettings.timeout, in: 30...900, step: 30)
+                    AppInputField(
+                        title: "Server URL",
+                        placeholder: "http://127.0.0.1:8188",
+                        text: $viewModel.comfyUISettings.serverURL
+                    )
+                    Stepper(
+                        "Timeout: \(viewModel.comfyUISettings.timeout)s",
+                        value: $viewModel.comfyUISettings.timeout,
+                        in: 30...900,
+                        step: 30
+                    )
                     Button("Save ComfyUI Settings") {
                         viewModel.saveComfyUI()
+                    }
+                    .appButtonStyle(.bordered)
+                }
+            }
+
+            AppCard {
+                AppVStack(spacing: .medium, alignment: .leading) {
+                    AppText("AI Chat", style: .headline)
+                    AppInputField(
+                        title: "LM Studio URL",
+                        placeholder: "http://localhost:1234/v1",
+                        text: $viewModel.aiSettings.baseURL
+                    )
+                    AppInputField(
+                        title: "Model",
+                        placeholder: "model",
+                        text: $viewModel.aiSettings.model
+                    )
+                    AppInputField(
+                        title: "Temperature",
+                        placeholder: "0.7",
+                        text: Binding(
+                            get: { String(format: "%.1f", viewModel.aiSettings.temperature) },
+                            set: { viewModel.aiSettings.temperature = Double($0) ?? 0.7 }
+                        )
+                    )
+                    Stepper(
+                        "Max Tokens: \(viewModel.aiSettings.maxTokens)",
+                        value: $viewModel.aiSettings.maxTokens,
+                        in: 1024...16384,
+                        step: 1024
+                    )
+                    Button("Save AI Settings") {
+                        viewModel.saveAI()
                     }
                     .appButtonStyle(.bordered)
                 }

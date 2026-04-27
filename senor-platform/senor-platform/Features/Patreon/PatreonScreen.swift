@@ -189,7 +189,14 @@ struct PatreonScreen: View {
                         .lineLimit(3)
                 }
 
-                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: AppTheme.Spacing.medium) {
+                LazyVGrid(
+                    columns: [
+                        GridItem(.flexible()),
+                        GridItem(.flexible()),
+                        GridItem(.flexible())
+                    ],
+                    spacing: AppTheme.Spacing.medium
+                ) {
                     AppMetricCard(
                         title: "Patrons",
                         value: "\(campaign.attributes.patronCount ?? 0)",
@@ -275,7 +282,12 @@ struct PatreonScreen: View {
         }
         .overlay(
             RoundedRectangle(cornerRadius: AppTheme.CornerRadius.card)
-                .stroke(router.selectedPostID == post.id ? AppTheme.ColorToken.accent : Color.clear, lineWidth: 2)
+                .stroke(
+                    router.selectedPostID == post.id
+                        ? AppTheme.ColorToken.accent
+                        : AppTheme.ColorToken.clear,
+                    lineWidth: 2
+                )
         )
         .onTapGesture {
             router.selectedPostID = post.id
@@ -315,13 +327,19 @@ struct PatreonScreen: View {
                 }
 
                 if let lifetime = member.attributes?.lifetimeSupportCents {
-                    AppText("Lifetime: \(formatCents(lifetime))", style: .caption, color: AppTheme.ColorToken.textSecondary)
+                    let centsText = formatCents(lifetime)
+                    AppText("Lifetime: \(centsText)", style: .caption, color: AppTheme.ColorToken.textSecondary)
                 }
             }
         }
         .overlay(
             RoundedRectangle(cornerRadius: AppTheme.CornerRadius.card)
-                .stroke(router.selectedMemberID == member.id ? AppTheme.ColorToken.accent : Color.clear, lineWidth: 2)
+                .stroke(
+                    router.selectedMemberID == member.id
+                        ? AppTheme.ColorToken.accent
+                        : AppTheme.ColorToken.clear,
+                    lineWidth: 2
+                )
         )
         .onTapGesture {
             router.selectedMemberID = member.id
@@ -329,7 +347,11 @@ struct PatreonScreen: View {
         }
     }
 
-    private func errorCard(_ error: PatreonError, title: String = "Error", retryAction: @escaping () -> Void) -> some View {
+    private func errorCard(
+        _ error: PatreonError,
+        title: String = "Error",
+        retryAction: @escaping () -> Void
+    ) -> some View {
         AppCard {
             AppVStack(spacing: .medium, alignment: .center) {
                 Image(systemName: "exclamationmark.triangle.fill")

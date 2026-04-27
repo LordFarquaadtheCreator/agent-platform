@@ -1,7 +1,7 @@
 import SwiftUI
 
 // MARK: - AppText
-// Text with tokenized font and color. Replaces raw .font(...) and .foregroundStyle(...).
+// Text with tokenized font and color. Replaces raw Font modifiers and foregroundStyle.
 
 enum AppTextStyle {
     case largeTitle

@@ -57,7 +57,6 @@ opt_in_rules:
   - xct_specific_matcher
 
 disabled_rules:
-  - line_length
   - large_tuple
 
 line_length:
@@ -103,8 +102,6 @@ function_parameter_count:
 nesting:
   type_level:
     warning: 2
-  statement_level:
-    warning: 5
 
 identifier_name:
   min_length:
@@ -145,16 +142,12 @@ type_name:
 # All visual values must use AppTheme tokens or SharedUI components.
 
 custom_rules:
-  # Prevent raw .font() modifiers outside Core/SharedUI
+  # Prevent raw .font() modifiers
   forbidden_font_modifier:
     name: "Forbidden Font Modifier"
     regex: "\\.font\\(\\."
-    message: "Use AppText or AppTheme.Typography instead of raw .font() in feature code"
+    message: "Use AppText or AppTheme.Typography instead of raw .font()"
     severity: error
-    included:
-      - "senor-platform/Features/**/*.swift"
-      - "senor-platform/AppCore/**/*.swift"
-      - "senor-platform/Views/**/*.swift"
 
   # Prevent raw foregroundStyle with system colors
   forbidden_foreground_style_literal:
@@ -162,10 +155,6 @@ custom_rules:
     regex: "\\.foregroundStyle\\(\\.[a-z]+\\)"
     message: "Use AppTheme.ColorToken or AppText instead of raw foregroundStyle"
     severity: error
-    included:
-      - "senor-platform/Features/**/*.swift"
-      - "senor-platform/AppCore/**/*.swift"
-      - "senor-platform/Views/**/*.swift"
 
   # Prevent raw .foregroundColor()
   forbidden_foreground_color:
@@ -173,10 +162,6 @@ custom_rules:
     regex: "\\.foregroundColor\\(\\."
     message: "Use AppTheme.ColorToken or AppText instead of raw .foregroundColor()"
     severity: error
-    included:
-      - "senor-platform/Features/**/*.swift"
-      - "senor-platform/AppCore/**/*.swift"
-      - "senor-platform/Views/**/*.swift"
 
   # Prevent raw padding with numeric literals
   forbidden_raw_padding:
@@ -184,21 +169,13 @@ custom_rules:
     regex: "\\.padding\\([0-9.]+\\)"
     message: "Use AppTheme.Spacing instead of raw padding values"
     severity: error
-    included:
-      - "senor-platform/Features/**/*.swift"
-      - "senor-platform/AppCore/**/*.swift"
-      - "senor-platform/Views/**/*.swift"
 
-  # Prevent raw cornerRadius
+  # Prevent raw cornerRadius with numeric literals
   forbidden_raw_corner_radius:
     name: "Forbidden Raw CornerRadius"
-    regex: "\\.cornerRadius\\("
+    regex: "\\.cornerRadius\\([0-9.]+\\)"
     message: "Use AppTheme.CornerRadius or AppSurface/AppCard instead of raw .cornerRadius()"
     severity: error
-    included:
-      - "senor-platform/Features/**/*.swift"
-      - "senor-platform/AppCore/**/*.swift"
-      - "senor-platform/Views/**/*.swift"
 
   # Prevent raw shadow with color parameter
   forbidden_raw_shadow:
@@ -206,10 +183,6 @@ custom_rules:
     regex: "\\.shadow\\(color:"
     message: "Use AppTheme.Shadow or AppSurface instead of raw .shadow()"
     severity: error
-    included:
-      - "senor-platform/Features/**/*.swift"
-      - "senor-platform/AppCore/**/*.swift"
-      - "senor-platform/Views/**/*.swift"
 
   # Prevent raw tint with color literals
   forbidden_raw_tint:
@@ -217,21 +190,13 @@ custom_rules:
     regex: "\\.tint\\(\\."
     message: "Use AppTheme.ColorToken or appButtonStyle instead of raw .tint()"
     severity: error
-    included:
-      - "senor-platform/Features/**/*.swift"
-      - "senor-platform/AppCore/**/*.swift"
-      - "senor-platform/Views/**/*.swift"
 
-  # Prevent raw Color literals
+  # Prevent raw Color literals (semantic colors like primary/secondary/accentColor allowed)
   forbidden_raw_color:
     name: "Forbidden Raw Color"
-    regex: "Color\\.[a-z]+"
+    regex: "Color\\.(blue|red|green|orange|yellow|purple|pink|brown|cyan|indigo|mint|teal|black|white|gray|clear)"
     message: "Use AppTheme.ColorToken instead of raw Color literals"
     severity: error
-    included:
-      - "senor-platform/Features/**/*.swift"
-      - "senor-platform/AppCore/**/*.swift"
-      - "senor-platform/Views/**/*.swift"
 
   # Prevent raw background with color
   forbidden_raw_background:
@@ -239,18 +204,12 @@ custom_rules:
     regex: "\\.background\\(Color"
     message: "Use AppSurface or AppTheme.ColorToken instead of raw .background()"
     severity: error
-    included:
-      - "senor-platform/Features/**/*.swift"
-      - "senor-platform/AppCore/**/*.swift"
-      - "senor-platform/Views/**/*.swift"
 
-  # Require AppText caption labels above TextField and SecureField in Settings views
+  # Require AppText caption labels above TextField and SecureField
   unlabeled_input_field:
     name: "Unlabeled Input Field"
     regex: "(?m)^\\s*(TextField|SecureField)\\("
     message: "Add an AppText(\"Label\", style: .caption) line above this input field"
     severity: warning
-    included:
-      - "senor-platform/Features/**/Settings*.swift"
 
 reporter: "xcode"

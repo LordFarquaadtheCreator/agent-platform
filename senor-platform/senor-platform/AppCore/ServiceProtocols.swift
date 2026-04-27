@@ -19,8 +19,17 @@ public protocol CacheServiceProtocol: Sendable {
 
 /// Protocol for content versioning operations - enables mocking in tests
 public protocol ContentVersioningServiceProtocol: Sendable {
-    func editContent(contentId: String, newContentJson: String, changeReason: String?, editedBy: String) async throws -> GeneratedContentRecord
-    func restoreVersion(contentId: String, targetVersion: Int, changeReason: String?) async throws -> GeneratedContentRecord
+    func editContent(
+        contentId: String,
+        newContentJson: String,
+        changeReason: String?,
+        editedBy: String
+    ) async throws -> GeneratedContentRecord
+    func restoreVersion(
+        contentId: String,
+        targetVersion: Int,
+        changeReason: String?
+    ) async throws -> GeneratedContentRecord
 }
 
 /// Protocol for approval operations - enables mocking in tests
@@ -55,6 +64,45 @@ public protocol SettingsServiceProtocol: Sendable {
     func clearAllSettings() async throws
 }
 
+// MARK: - Integration Service Protocols
+
+/// Protocol for DeviantArt operations - enables mocking in tests
+public protocol DeviantArtServiceProtocol: Sendable {
+    func stashSubmit(
+        filename: String,
+        title: String?,
+        artistComments: String?,
+        tags: [String]?,
+        originalUrl: String?
+    ) async throws -> DeviantArtClient.StashItem
+    func stashPublish(
+        stashId: String,
+        title: String,
+        category: String?,
+        isMature: Bool,
+        matureLevel: String?,
+        allowsComments: Bool,
+        galleryIds: [String]?,
+        licenseOptions: [String: String]?
+    ) async throws -> DeviantArtClient.StashPublishResponse
+    func getDeviation(deviationId: String) async throws -> DeviantArtClient.Deviation
+}
+
+/// Protocol for Patreon operations - enables mocking in tests
+public protocol PatreonServiceProtocol: Sendable {
+    func createPost(
+        campaignId: String,
+        title: String,
+        content: String,
+        isPaid: Bool?,
+        isPublic: Bool?,
+        tiers: [String]?,
+        publishAt: Date?
+    ) async throws -> PatreonClient.Post
+    func getPublicURL(for postId: String) async throws -> String
+    func getPost(postId: String) async throws -> PatreonClient.Post
+}
+
 // MARK: - Protocol Conformance Extensions
 
 extension AgentNamingService: AgentNamingServiceProtocol {}
@@ -62,3 +110,61 @@ extension CacheService: CacheServiceProtocol {}
 extension ContentVersioningService: ContentVersioningServiceProtocol {}
 extension ApprovalService: ApprovalServiceProtocol {}
 extension SettingsService: SettingsServiceProtocol {}
+extension DeviantArtClient: DeviantArtServiceProtocol {}
+extension PatreonClient: PatreonServiceProtocol, @unchecked Sendable {}
+
+// MARK: - AgentKit Client Protocol Conformances
+
+extension DeviantArtClient: AKDeviantArtClient {
+    public func stashSubmit(filename: String, title: String, tags: [String]?) async throws -> AKStashItem {
+        let item = try await stashSubmit(
+            filename: filename,
+            title: title,
+            artistComments: nil,
+            tags: tags,
+            originalUrl: nil
+        )
+        return AKStashItem(itemid: item.itemid, title: item.title)
+    }
+
+    public func stashPublish(
+        stashId: String,
+        title: String,
+        category: String?,
+        isMature: Bool
+    ) async throws -> AKPublishResult {
+        let result = try await stashPublish(
+            stashId: stashId,
+            title: title,
+            category: category,
+            isMature: isMature,
+            matureLevel: nil,
+            allowsComments: true,
+            galleryIds: nil,
+            licenseOptions: nil
+        )
+        return AKPublishResult(deviationid: result.deviationid, url: result.url)
+    }
+}
+
+extension PatreonClient: AKPatreonClient {
+    public func createPost(
+        campaignId: String,
+        title: String,
+        content: String,
+        isPaid: Bool,
+        isPublic: Bool,
+        tiers: [String]?
+    ) async throws -> AKPost {
+        let post = try await createPost(
+            campaignId: campaignId,
+            title: title,
+            content: content,
+            isPaid: isPaid,
+            isPublic: isPublic,
+            tiers: tiers,
+            publishAt: nil
+        )
+        return AKPost(id: post.id)
+    }
+}

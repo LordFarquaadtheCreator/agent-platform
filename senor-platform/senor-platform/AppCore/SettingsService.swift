@@ -17,6 +17,10 @@ public final class SettingsService {
         static let launchAtLogin = "general.launchAtLogin"
         static let showNotifications = "general.showNotifications"
         static let logLevel = "general.logLevel"
+        static let aiBaseURL = "ai.baseURL"
+        static let aiModel = "ai.model"
+        static let aiTemperature = "ai.temperature"
+        static let aiMaxTokens = "ai.maxTokens"
     }
 
     // MARK: - Task Settings
@@ -210,6 +214,39 @@ public final class SettingsService {
         )
     }
 
+    // MARK: - AI Settings
+
+    public struct AISettings: Codable, Sendable {
+        public var baseURL: String
+        public var model: String
+        public var temperature: Double
+        public var maxTokens: Int
+
+        public init(baseURL: String = "http://localhost:1234/v1", model: String = "model", temperature: Double = 0.7, maxTokens: Int = 4096) {
+            self.baseURL = baseURL
+            self.model = model
+            self.temperature = temperature
+            self.maxTokens = maxTokens
+        }
+    }
+
+    public func saveAISettings(_ settings: AISettings) {
+        defaults.set(settings.baseURL, forKey: Keys.aiBaseURL)
+        defaults.set(settings.model, forKey: Keys.aiModel)
+        defaults.set(settings.temperature, forKey: Keys.aiTemperature)
+        defaults.set(settings.maxTokens, forKey: Keys.aiMaxTokens)
+        logger.info("Saved AI settings")
+    }
+
+    public func loadAISettings() -> AISettings {
+        AISettings(
+            baseURL: defaults.string(forKey: Keys.aiBaseURL) ?? "http://localhost:1234/v1",
+            model: defaults.string(forKey: Keys.aiModel) ?? "model",
+            temperature: defaults.object(forKey: Keys.aiTemperature) as? Double ?? 0.7,
+            maxTokens: defaults.integer(forKey: Keys.aiMaxTokens) != 0 ? defaults.integer(forKey: Keys.aiMaxTokens) : 4096
+        )
+    }
+
     // MARK: - Clear Settings
 
     public func clearAllSettings() async throws {
@@ -217,7 +254,8 @@ public final class SettingsService {
             Keys.deviantArtTokenExpiry,
             Keys.patreonCampaignId, Keys.patreonTokenExpiry,
             Keys.comfyUIServerURL, Keys.comfyUITimeout,
-            Keys.launchAtLogin, Keys.showNotifications, Keys.logLevel
+            Keys.launchAtLogin, Keys.showNotifications, Keys.logLevel,
+            Keys.aiBaseURL, Keys.aiModel, Keys.aiTemperature, Keys.aiMaxTokens
         ]
 
         for key in keys {

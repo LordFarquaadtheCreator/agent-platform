@@ -20,7 +20,13 @@ public final class HTTPClient {
         public let retryDelay: TimeInterval
         public let defaultHeaders: [String: String]
 
-        public init(baseURL: URL, timeout: TimeInterval = 30, maxRetries: Int = 3, retryDelay: TimeInterval = 1.0, defaultHeaders: [String: String] = [:]) {
+        public init(
+            baseURL: URL,
+            timeout: TimeInterval = 30,
+            maxRetries: Int = 3,
+            retryDelay: TimeInterval = 1.0,
+            defaultHeaders: [String: String] = [:]
+        ) {
             self.baseURL = baseURL
             self.timeout = timeout
             self.maxRetries = maxRetries
@@ -36,7 +42,12 @@ public final class HTTPClient {
         public let expiresAt: Date?
         public let tokenType: String
 
-        nonisolated public init(accessToken: String, refreshToken: String? = nil, expiresAt: Date? = nil, tokenType: String = "Bearer") {
+        nonisolated public init(
+            accessToken: String,
+            refreshToken: String? = nil,
+            expiresAt: Date? = nil,
+            tokenType: String = "Bearer"
+        ) {
             self.accessToken = accessToken
             self.refreshToken = refreshToken
             self.expiresAt = expiresAt
@@ -175,7 +186,14 @@ public final class HTTPClient {
         body: Encodable? = nil,
         decodeAs type: T.Type
     ) async throws -> APIResponse<T> {
-        try await request(method: method, path: path, queryItems: queryItems, body: body, authToken: nil, decodeAs: type)
+        try await request(
+            method: method,
+            path: path,
+            queryItems: queryItems,
+            body: body,
+            authToken: nil,
+            decodeAs: type
+        )
     }
 
     /// Build URL with path and query items
@@ -187,7 +205,8 @@ public final class HTTPClient {
         }
 
         guard var components = URLComponents(url: url, resolvingAgainstBaseURL: true) else {
-            throw AppError.invalidConfiguration("Could not parse URL components: \(path)")
+            let message = "Could not parse URL components: \(path)"
+            throw AppError.invalidConfiguration(message)
         }
 
         if let queryItems = queryItems, !queryItems.isEmpty {
@@ -197,7 +216,10 @@ public final class HTTPClient {
             allowedCharacters.remove(charactersIn: "[]")
             let queryString = queryItems.map { item in
                 let name = item.name.addingPercentEncoding(withAllowedCharacters: allowedCharacters) ?? item.name
-                let value = item.value?.addingPercentEncoding(withAllowedCharacters: allowedCharacters) ?? item.value ?? ""
+                let value = item.value?
+                    .addingPercentEncoding(withAllowedCharacters: allowedCharacters)
+                    ?? item.value
+                    ?? ""
                 return "\(name)=\(value)"
             }.joined(separator: "&")
             components.percentEncodedQuery = queryString

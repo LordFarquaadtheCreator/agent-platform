@@ -7,7 +7,7 @@ struct PatreonComposeView: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var viewModel: PatreonViewModel
     let post: PatreonPost? // nil for new post
-    
+
     @State private var title: String = ""
     @State private var content: String = ""
     @State private var isPaid = true
@@ -15,16 +15,16 @@ struct PatreonComposeView: View {
     @State private var selectedTiers: Set<String> = []
     @State private var mediaURLs: [URL] = []
     @State private var isSaving = false
-    
+
     private var isEditing: Bool { post != nil }
-    
+
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: AppTheme.Spacing.large) {
                     titleSection
                     contentSection
-					
+
 					HStack(alignment: .top) {
 						visibilitySection
 							.frame(maxHeight: .infinity, alignment: .top)
@@ -76,62 +76,74 @@ struct PatreonComposeView: View {
             set: { ToastState.shared.message = $0 }
         ))
     }
-    
+
     private var titleSection: some View {
-        AIHelperField(
+        AppInputField(
             title: "Post Title",
             placeholder: "Enter post title",
             text: $title
         )
     }
-    
+
     private var contentSection: some View {
         VStack(alignment: .leading, spacing: AppTheme.Spacing.medium) {
-            AIHelperField(
+            AppInputField(
                 title: "Content",
                 placeholder: "Enter post content...",
                 text: $content,
                 isMultiline: true,
                 height: 150
             )
-            
+
             MediaPicker(
                 title: "Media",
                 selectedURLs: $mediaURLs
             )
         }
     }
-    
+
     private var visibilitySection: some View {
         AppSurface(style: .card) {
             VStack(alignment: .leading, spacing: AppTheme.Spacing.medium) {
                 AppText("Visibility", style: .headline)
-                
+
                 Picker("Visibility", selection: $isPublic) {
                     Text("Patrons Only").tag(false)
                     Text("Public").tag(true)
                 }
                 .pickerStyle(.segmented)
-                
+
                 if !isPublic {
                     Toggle("Paid Post", isOn: $isPaid)
-                    
+
                     if isPaid {
-                        AppText("Paid posts are only visible to paying patrons", style: .caption, color: AppTheme.ColorToken.textSecondary)
+                        AppText(
+                            "Paid posts are only visible to paying patrons",
+                            style: .caption,
+                            color: AppTheme.ColorToken.textSecondary
+                        )
                     } else {
-                        AppText("Free posts are visible to all patrons (including free tier)", style: .caption, color: AppTheme.ColorToken.textSecondary)
+                        AppText(
+                            "Free posts are visible to all patrons (including free tier)",
+                            style: .caption,
+                            color: AppTheme.ColorToken.textSecondary
+                        )
                     }
                 }
             }
         }
     }
-    
+
     private var tierSection: some View {
         AppSurface(style: .card) {
             VStack(alignment: .leading, spacing: AppTheme.Spacing.medium) {
 				AppText("Tiers", style: .headline)
 
-                AppText("Select which tiers can see this post", style: .caption, color: AppTheme.ColorToken.textSecondary)
+                AppText(
+                    "Select which tiers can see this post",
+                    style: .caption,
+                    color: AppTheme.ColorToken.textSecondary
+                )
 
                 if viewModel.tiers.isEmpty {
                     AppText("No tiers loaded", style: .body, color: AppTheme.ColorToken.textSecondary)
@@ -154,11 +166,11 @@ struct PatreonComposeView: View {
             }
         }
     }
-    
+
     private var canSave: Bool {
         !title.isEmpty && !content.isEmpty
     }
-    
+
     private func savePost() {
         isSaving = true
         Task {
@@ -200,7 +212,7 @@ private struct TierCheckbox: View {
     let tier: PatreonTier
     let isSelected: Bool
     let action: () -> Void
-    
+
     var body: some View {
         Button {
             action()
@@ -208,18 +220,19 @@ private struct TierCheckbox: View {
             HStack {
                 Image(systemName: isSelected ? "checkmark.square.fill" : "square")
                     .foregroundStyle(isSelected ? AppTheme.ColorToken.accent : AppTheme.ColorToken.textSecondary)
-                
+
                 VStack(alignment: .leading, spacing: 2) {
                     AppText(tier.attributes.title, style: .body)
                     if let cents = tier.attributes.amountCents {
-                        AppText(String(format: "$%.2f/month", Double(cents) / 100), style: .caption, color: AppTheme.ColorToken.textSecondary)
+                        let price = String(format: "$%.2f/month", Double(cents) / 100)
+                        AppText(price, style: .caption, color: AppTheme.ColorToken.textSecondary)
                     }
                 }
-                
+
                 Spacer()
             }
             .padding(AppTheme.Spacing.small)
-            .background(isSelected ? AppTheme.ColorToken.accent.opacity(0.1) : Color.clear)
+            .background(isSelected ? AppTheme.ColorToken.accent.opacity(0.1) : AppTheme.ColorToken.clear)
             .clipShape(RoundedRectangle(cornerRadius: AppTheme.CornerRadius.small))
         }
         .buttonStyle(.plain)

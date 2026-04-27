@@ -5,6 +5,7 @@ public struct ContentThumbnail: View {
     let url: URL?
     let size: CGFloat
     let cornerRadius: CGFloat
+    @Environment(\.privacyMode) private var isPrivacyMode
 
     public init(url: URL?, size: CGFloat = 60, cornerRadius: CGFloat = 10) {
         self.url = url
@@ -25,6 +26,7 @@ public struct ContentThumbnail: View {
                         image
                             .resizable()
                             .aspectRatio(contentMode: .fill)
+                            .blur(radius: isPrivacyMode ? 20 : 0)
 
                     case .failure:
                         placeholder

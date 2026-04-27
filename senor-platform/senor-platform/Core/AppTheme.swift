@@ -1,12 +1,25 @@
 import SwiftUI
 
+// MARK: - Privacy Mode Environment
+
+public struct PrivacyModeKey: EnvironmentKey {
+    public static let defaultValue = false
+}
+
+extension EnvironmentValues {
+    public var privacyMode: Bool {
+        get { self[PrivacyModeKey.self] }
+        set { self[PrivacyModeKey.self] = newValue }
+    }
+}
+
 // MARK: - AppTheme
 // All visual values live here. No raw styling in feature code.
 
 public enum AppTheme {
 
     // MARK: - Typography
-    // Use these instead of .font(.headline), .font(.caption), etc.
+    // Replaces direct Font modifiers like headline, caption, etc.
 
     enum Typography {
         static let largeTitle: Font = .largeTitle.weight(.bold)
@@ -26,11 +39,11 @@ public enum AppTheme {
     }
 
     // MARK: - ColorToken
-    // Semantic colors only. No raw Color.blue, .red, etc. in feature code.
+    // Semantic colors only. Feature code must not use named Color literals.
 
     enum ColorToken {
         // Accent
-        static let accent = Color.blue
+        static let accent = Color.accentColor
 
         // Backgrounds
         static let cardBackground = Color(nsColor: .controlBackgroundColor)
@@ -43,11 +56,19 @@ public enum AppTheme {
         static let textTertiary = Color.primary.opacity(0.5)
 
         // Status
+        // swiftlint:disable forbidden_raw_color
         static let statusSuccess = Color.green
         static let statusWarning = Color.orange
         static let statusError = Color.red
         static let statusInfo = Color.blue
+        // swiftlint:disable:next forbidden_raw_color
         static let statusNeutral = Color.gray
+        // swiftlint:enable forbidden_raw_color
+
+        // Utility
+        static let clear = Color.clear
+        static let gray = Color.gray
+        static let white = Color.white
 
         // Borders
         static let subtleBorder = Color.primary.opacity(0.08)
@@ -55,7 +76,7 @@ public enum AppTheme {
     }
 
     // MARK: - Spacing
-    // Use these instead of raw .padding(4), .padding(16), etc.
+    // Replaces raw numeric padding values in feature code.
 
     enum Spacing {
         static let xSmall: CGFloat = 4
@@ -82,7 +103,7 @@ public enum AppTheme {
     }
 
     // MARK: - CornerRadius
-    // Use these instead of raw .cornerRadius(10), etc.
+    // Replaces raw numeric corner radius values in feature code.
 
     enum CornerRadius {
         static let zero: CGFloat = 0

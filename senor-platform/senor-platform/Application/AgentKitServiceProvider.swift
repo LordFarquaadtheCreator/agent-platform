@@ -6,8 +6,6 @@ public struct AppToolServiceProvider: ToolServiceProvider {
     private let fileManagerProvider: @Sendable () -> any ToolFileManager
     private let commandExecutorProvider: @Sendable () -> any CommandExecutor
     private let configResolver: @Sendable (String) async throws -> String?
-    private let deviantArtClientProvider: @Sendable () async throws -> AKDeviantArtClient?
-    private let patreonClientProvider: @Sendable () async throws -> AKPatreonClient?
 
     nonisolated public init(
         httpClientProvider: (@Sendable () -> any ToolHTTPClient)? = nil,
@@ -15,20 +13,12 @@ public struct AppToolServiceProvider: ToolServiceProvider {
         commandExecutorProvider: (@Sendable () -> any CommandExecutor)? = nil,
         configResolver: @escaping @Sendable (String) async throws -> String? = { key in
             ProcessInfo.processInfo.environment[key]
-        },
-        deviantArtClientProvider: @escaping @Sendable () async throws -> AKDeviantArtClient? = {
-            nil
-        },
-        patreonClientProvider: @escaping @Sendable () async throws -> AKPatreonClient? = {
-            nil
         }
     ) {
         self.httpClientProvider = httpClientProvider ?? { DefaultToolHTTPClient() }
         self.fileManagerProvider = fileManagerProvider ?? { DefaultToolFileManager() }
         self.commandExecutorProvider = commandExecutorProvider ?? { RealCommandExecutor() }
         self.configResolver = configResolver
-        self.deviantArtClientProvider = deviantArtClientProvider
-        self.patreonClientProvider = patreonClientProvider
     }
 
     public func getHTTPClient() async throws -> any ToolHTTPClient {
@@ -48,10 +38,10 @@ public struct AppToolServiceProvider: ToolServiceProvider {
     }
 
     public func getDeviantArtClient() async throws -> AKDeviantArtClient? {
-        try await deviantArtClientProvider()
+        await sharedContainer.resolveOptional(DeviantArtServiceProtocol.self) as? AKDeviantArtClient
     }
 
     public func getPatreonClient() async throws -> AKPatreonClient? {
-        try await patreonClientProvider()
+        await sharedContainer.resolveOptional(PatreonServiceProtocol.self) as? AKPatreonClient
     }
 }

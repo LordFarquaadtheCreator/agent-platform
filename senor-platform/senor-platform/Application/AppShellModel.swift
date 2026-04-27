@@ -159,6 +159,7 @@ public final class SettingsViewModel: ObservableObject {
     @Published public var deviantArtSettings: SettingsService.DeviantArtSettings
     @Published public var patreonSettings: SettingsService.PatreonSettings
     @Published public var comfyUISettings: SettingsService.ComfyUISettings
+    @Published public var aiSettings: SettingsService.AISettings
     @Published public var taskScriptPath: String
 
     private let settingsService: SettingsService
@@ -169,6 +170,7 @@ public final class SettingsViewModel: ObservableObject {
         self.deviantArtSettings = settingsService.loadDeviantArtSettings()
         self.patreonSettings = settingsService.loadPatreonSettings()
         self.comfyUISettings = settingsService.loadComfyUISettings()
+        self.aiSettings = settingsService.loadAISettings()
         self.taskScriptPath = settingsService.taskScriptPath()
     }
 
@@ -177,6 +179,7 @@ public final class SettingsViewModel: ObservableObject {
         deviantArtSettings = settingsService.loadDeviantArtSettings()
         patreonSettings = settingsService.loadPatreonSettings()
         comfyUISettings = settingsService.loadComfyUISettings()
+        aiSettings = settingsService.loadAISettings()
         taskScriptPath = settingsService.taskScriptPath()
     }
 
@@ -186,6 +189,10 @@ public final class SettingsViewModel: ObservableObject {
 
     func saveComfyUI() {
         settingsService.saveComfyUISettings(comfyUISettings)
+    }
+
+    func saveAI() {
+        settingsService.saveAISettings(aiSettings)
     }
 
     func saveTaskScriptPath() {
@@ -285,6 +292,7 @@ public final class AppShellModel: ObservableObject {
     @Published public var errorMessage: String?
     @Published public var toastMessage: String?
     @Published public private(set) var isInitializing = true
+    @Published public var privacyMode = false
 
     private let bootstrap: AppBootstrap
     private let logger = AppLogger.ui

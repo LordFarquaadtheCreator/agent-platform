@@ -58,6 +58,8 @@ struct ContentInspectorCard: View {
         }
         .disabled(isProcessing)
         .alert("Reject Content", isPresented: $showRejectDialog) {
+            // Alert title serves as the field label
+            // swiftlint:disable:next unlabeled_input_field
             TextField("Reason", text: $rejectReason)
             Button("Cancel", role: .cancel) {}
             Button("Reject", role: .destructive) {
@@ -82,7 +84,8 @@ struct ContentInspectorCard: View {
         isProcessing = true
         defer { isProcessing = false }
         do {
-            try await approvalsViewModel.reject(contentId: content.id, reason: rejectReason.isEmpty ? nil : rejectReason)
+            let reason = rejectReason.isEmpty ? nil : rejectReason
+            try await approvalsViewModel.reject(contentId: content.id, reason: reason)
             rejectReason = ""
         } catch {
             appState.errorMessage = error.localizedDescription

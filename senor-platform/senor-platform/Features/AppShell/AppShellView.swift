@@ -5,6 +5,7 @@ struct AppShellView: View {
     @ObservedObject var workspace: WorkspaceModel
     @State private var showSidebar = true
     @State private var showInspector = true
+    @State private var showAIChat = false
     @State private var inspectorWidth: CGFloat = AppTheme.Layout.detailIdealWidth
 
     // MARK: - Registries
@@ -33,7 +34,11 @@ struct AppShellView: View {
         HStack(spacing: 0) {
             if showSidebar {
                 AppSidebarView(router: router, approvalsViewModel: workspace.approvalsViewModel)
-                    .frame(minWidth: AppTheme.Layout.sidebarIdealWidth, idealWidth: AppTheme.Layout.sidebarIdealWidth, maxWidth: AppTheme.Layout.sidebarIdealWidth)
+                    .frame(
+                        minWidth: AppTheme.Layout.sidebarIdealWidth,
+                        idealWidth: AppTheme.Layout.sidebarIdealWidth,
+                        maxWidth: AppTheme.Layout.sidebarIdealWidth
+                    )
             }
 
             contentRegistry.view(for: router.selectedSection, using: workspace, router: router, appState: appState)
@@ -42,8 +47,18 @@ struct AppShellView: View {
             if showInspector {
                 ResizeHandle(width: $inspectorWidth, minWidth: AppTheme.Layout.detailMinWidth)
 
-                inspectorRegistry.view(for: router.selectedSection, using: workspace, router: router, appState: appState)
-                    .frame(width: inspectorWidth)
+                if showAIChat {
+                    AIChatPanel(workspace: workspace, router: router, appState: appState)
+                        .frame(width: inspectorWidth)
+                } else {
+                    inspectorRegistry.view(
+                    for: router.selectedSection,
+                    using: workspace,
+                    router: router,
+                    appState: appState
+                )
+                        .frame(width: inspectorWidth)
+                }
             }
         }
         .toolbar {
@@ -67,6 +82,16 @@ struct AppShellView: View {
                 }
 
                 Button {
+                    showAIChat.toggle()
+                } label: {
+                    Label(
+                        showAIChat ? "Show Inspector" : "AI Chat",
+                        systemImage: showAIChat ? "sidebar.right" : "sparkles"
+                    )
+                }
+                .foregroundStyle(showAIChat ? AppTheme.ColorToken.accent : AppTheme.ColorToken.textPrimary)
+
+                Button {
                     appState.present(.newAgent)
                 } label: {
                     Label("New Agent", systemImage: AppTheme.Icon.add)
@@ -88,6 +113,15 @@ struct AppShellView: View {
                     Task { await appState.refreshAll() }
                 } label: {
                     Label("Refresh", systemImage: AppTheme.Icon.refresh)
+                }
+
+                Button {
+                    appState.privacyMode.toggle()
+                } label: {
+                    Label(
+                        appState.privacyMode ? "Disable Privacy Mode" : "Enable Privacy Mode",
+                        systemImage: appState.privacyMode ? "eye.slash.fill" : "eye"
+                    )
                 }
             }
         }
@@ -113,7 +147,10 @@ private struct AppSidebarView: View {
                             AppText(section.title, style: .body)
                             Spacer()
                             if section == .approvals && !approvalsViewModel.approvals.isEmpty {
-                                AppStatusPill(title: "\(approvalsViewModel.approvals.count)", color: AppTheme.ColorToken.statusError)
+                                AppStatusPill(
+                                    title: "\(approvalsViewModel.approvals.count)",
+                                    color: AppTheme.ColorToken.statusError
+                                )
                             }
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -124,7 +161,7 @@ private struct AppSidebarView: View {
                     .background(
                         section == router.selectedSection
                             ? AppTheme.ColorToken.accent.opacity(0.15)
-                            : Color.clear
+                            : AppTheme.ColorToken.clear
                     )
                     .cornerRadius(AppTheme.CornerRadius.small)
                     .contentShape(Rectangle())
@@ -149,7 +186,7 @@ private struct ResizeHandle: View {
 
     var body: some View {
         Rectangle()
-            .fill(Color.clear)
+            .fill(AppTheme.ColorToken.clear)
             .frame(width: 8)
             .contentShape(Rectangle())
             .onHover { hovering in
@@ -175,9 +212,46 @@ private struct ResizeHandle: View {
             )
             .overlay(
                 Rectangle()
-                    .fill(Color.gray.opacity(0.3))
+                    .fill(AppTheme.ColorToken.gray.opacity(0.3))
                     .frame(width: 1)
             )
+    }
+}
+
+// MARK: - AI Chat Panel
+
+private struct AIChatPanel: View {
+    @ObservedObject var workspace: WorkspaceModel
+    @ObservedObject var router: AppRouter
+    @EnvironmentObject var appState: AppShellModel
+
+    @State private var viewModel: AIChatViewModel?
+
+    var body: some View {
+        if let viewModel = viewModel {
+            AIChatView(viewModel: viewModel)
+        } else {
+            ProgressView("Loading AI Chat...")
+        }
+    }
+
+    init(workspace: WorkspaceModel, router: AppRouter, appState: AppShellModel) {
+        self.workspace = workspace
+        self.router = router
+        self._appState = EnvironmentObject(appState)
+
+        // Initialize viewModel with dependencies
+        guard let dependencies = workspace.dependencies else {
+            return
+        }
+
+        self._viewModel = State(initialValue: AIChatViewModel(
+            aiClient: dependencies.aiClient,
+            contextExtractor: dependencies.contextExtractor,
+            chatHistoryStore: dependencies.chatHistoryStore,
+            workspace: workspace,
+            router: router
+        ))
     }
 }
 

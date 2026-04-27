@@ -14,7 +14,7 @@ Quick navigation for the current application structure.
 
 | Area | Key Files |
 | --- | --- |
-| Application | [`AppBootstrap.swift`](senor-platform/Application/AppBootstrap.swift:1), [`AppDependencies.swift`](senor-platform/Application/AppDependencies.swift:1), [`AppRouter.swift`](senor-platform/Application/AppRouter.swift:1), [`AppShellModel.swift`](senor-platform/Application/AppShellModel.swift:1), [`AppUseCases.swift`](senor-platform/Application/AppUseCases.swift:1), [`AppMappers.swift`](senor-platform/Application/AppMappers.swift:1) |
+| Application | [`AppBootstrap.swift`](senor-platform/Application/AppBootstrap.swift:1), [`AppDependencies.swift`](senor-platform/Application/AppDependencies.swift:1), [`AppRouter.swift`](senor-platform/Application/AppRouter.swift:1), [`AppShellModel.swift`](senor-platform/Application/AppShellModel.swift:1), [`AppUseCases.swift`](senor-platform/Application/AppUseCases.swift:1), [`AppMappers.swift`](senor-platform/Application/AppMappers.swift:1), [`ContextExtractor.swift`](senor-platform/Application/ContextExtractor.swift:1) |
 | Domain | [`AppModels.swift`](senor-platform/Domain/AppModels.swift:1) |
 | Core | [`AppTheme.swift`](senor-platform/Core/AppTheme.swift:1) |
 | Shared UI | [`AppComponents.swift`](senor-platform/SharedUI/AppComponents.swift:1) |
@@ -30,15 +30,17 @@ Quick navigation for the current application structure.
 | Content | [`ContentFeature.swift`](senor-platform/Features/Content/ContentFeature.swift:1) |
 | Approvals | [`ApprovalsFeature.swift`](senor-platform/Features/Approvals/ApprovalsFeature.swift:1) |
 | Settings | [`SettingsFeature.swift`](senor-platform/Features/Settings/SettingsFeature.swift:1) |
+| AI Chat | [`AIChatView.swift`](senor-platform/Features/AIChat/AIChatView.swift:1), [`AIChatViewModel.swift`](senor-platform/Features/AIChat/AIChatViewModel.swift:1) |
 
 ## Infrastructure
 
 | Area | Key Files |
 | --- | --- |
-| Data layer | [`DatabaseManager.swift`](senor-platform/DataLayer/DatabaseManager.swift:1), [`Records.swift`](senor-platform/DataLayer/Records.swift:1), [`RepositoryProtocols.swift`](senor-platform/DataLayer/RepositoryProtocols.swift:1), [`RepositoryImplementations.swift`](senor-platform/DataLayer/RepositoryImplementations.swift:1) |
+| Data layer | [`DatabaseManager.swift`](senor-platform/DataLayer/DatabaseManager.swift:1), [`Records.swift`](senor-platform/DataLayer/Records.swift:1), [`RepositoryProtocols.swift`](senor-platform/DataLayer/RepositoryProtocols.swift:1), [`RepositoryImplementations.swift`](senor-platform/DataLayer/RepositoryImplementations.swift:1), [`PatreonClient.swift`](senor-platform/Integrations/PatreonClient.swift:1) |
 | Task engine | [`TaskExecutionPipeline.swift`](senor-platform/TaskEngine/TaskExecutionPipeline.swift:1), [`ApprovalService.swift`](senor-platform/TaskEngine/ApprovalService.swift:1), [`PublicationService.swift`](senor-platform/TaskEngine/PublicationService.swift:1), [`ContentVersioningService.swift`](senor-platform/TaskEngine/ContentVersioningService.swift:1) |
 | Scheduler | [`SchedulerEngine.swift`](senor-platform/SchedulerCore/SchedulerEngine.swift:1), [`ScheduleSpec.swift`](senor-platform/SchedulerCore/ScheduleSpec.swift:1) |
-| Integrations | [`HTTPClient.swift`](senor-platform/Integrations/HTTPClient.swift:1), [`DeviantArtClient.swift`](senor-platform/Integrations/DeviantArtClient.swift:1), [`PatreonClient.swift`](senor-platform/Integrations/PatreonClient.swift:1) |
+| Integrations | [`HTTPClient.swift`](senor-platform/Integrations/HTTPClient.swift:1), [`DeviantArtClient.swift`](senor-platform/Integrations/DeviantArtClient.swift:1) |
+| AI Service | [`AIClient.swift`](senor-platform/Infrastructure/AIService/AIClient.swift:1), [`AIModels.swift`](senor-platform/Infrastructure/AIService/AIModels.swift:1) |
 | Worker runtime | [`WorkerProcessManager.swift`](senor-platform/WorkerRuntime/WorkerProcessManager.swift:1) |
 | Agent tools | [`ToolProtocols.swift`](senor-platform/AgentTools/ToolProtocols.swift:1), [`AgentRunner.swift`](senor-platform/AgentTools/AgentRunner.swift:1), [`PublishingTools.swift`](senor-platform/AgentTools/PublishingTools.swift:1) |
 

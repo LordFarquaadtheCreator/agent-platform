@@ -434,7 +434,14 @@ public struct AKPublishResult: Codable, Sendable {
 
 /// Patreon client interface (implemented by the main app)
 public protocol AKPatreonClient: Sendable {
-    func createPost(campaignId: String, title: String, content: String, isPaid: Bool, isPublic: Bool, tiers: [String]?) async throws -> AKPost
+    func createPost(
+        campaignId: String,
+        title: String,
+        content: String,
+        isPaid: Bool,
+        isPublic: Bool,
+        tiers: [String]?
+    ) async throws -> AKPost
     func getPublicURL(for postId: String) async throws -> String
 }
 

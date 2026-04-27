@@ -44,7 +44,11 @@ struct DeviantArtScreen: View {
                     .padding(.trailing, AppTheme.Spacing.small)
             }
             if let lastUpdated = viewModel.lastUpdated {
-                AppText(RelativeDateFormatter.format(lastUpdated), style: .caption2, color: AppTheme.ColorToken.textSecondary)
+                AppText(
+                    RelativeDateFormatter.format(lastUpdated),
+                    style: .caption2,
+                    color: AppTheme.ColorToken.textSecondary
+                )
                     .padding(.trailing, AppTheme.Spacing.small)
             }
 
@@ -138,6 +142,7 @@ private struct ProfileCard: View {
 
 private struct AvatarView: View {
     let urlString: String?
+    @Environment(\.privacyMode) private var isPrivacyMode
 
     var body: some View {
         Group {
@@ -151,6 +156,7 @@ private struct AvatarView: View {
 
                     case .success(let image):
                         image.resizable().aspectRatio(contentMode: .fill)
+                            .blur(radius: isPrivacyMode ? 20 : 0)
 
                     case .failure:
                         placeholder
@@ -226,7 +232,11 @@ private struct DeviationCard: View {
                         StatsRow(stats: stats)
                     }
                     if let published = deviation.publishedTime {
-                        AppText(RelativeDateFormatter.format(unixTime: published), style: .caption2, color: AppTheme.ColorToken.textSecondary)
+                        AppText(
+                            RelativeDateFormatter.format(unixTime: published),
+                            style: .caption2,
+                            color: AppTheme.ColorToken.textSecondary
+                        )
                     }
                 }
                 .padding(.horizontal, AppTheme.Spacing.small)
@@ -235,7 +245,7 @@ private struct DeviationCard: View {
         }
         .overlay(
             RoundedRectangle(cornerRadius: AppTheme.CornerRadius.card)
-                .stroke(isSelected ? AppTheme.ColorToken.accent : Color.clear, lineWidth: 2)
+                .stroke(isSelected ? AppTheme.ColorToken.accent : AppTheme.ColorToken.clear, lineWidth: 2)
         )
     }
 }
@@ -258,6 +268,7 @@ private struct ImageSection: View {
 
 private struct DeviationImage: View {
     let deviation: DeviantArtClient.Deviation
+    @Environment(\.privacyMode) private var isPrivacyMode
 
     var body: some View {
         Group {
@@ -269,6 +280,7 @@ private struct DeviationImage: View {
 
                     case .success(let image):
                         image.resizable().aspectRatio(contentMode: .fill)
+                            .blur(radius: isPrivacyMode ? 20 : 0)
 
                     case .failure:
                         placeholder
@@ -378,9 +390,17 @@ private struct StashStatusRow: View {
 
         VStack(alignment: .leading, spacing: 2) {
             HStack {
-                AppText("\(items.count) items", style: .caption, color: AppTheme.ColorToken.textSecondary)
+                AppText(
+                    "\(items.count) items",
+                    style: .caption,
+                    color: AppTheme.ColorToken.textSecondary
+                )
                 if unpublishedCount > 0 {
-                    AppText("· \(unpublishedCount) unpublished", style: .caption, color: AppTheme.ColorToken.statusWarning)
+                    AppText(
+                        "· \(unpublishedCount) unpublished",
+                        style: .caption,
+                        color: AppTheme.ColorToken.statusWarning
+                    )
                 }
                 if publishedCount > 0 {
                     AppText("· \(publishedCount) published", style: .caption, color: AppTheme.ColorToken.statusSuccess)
@@ -445,12 +465,14 @@ private struct ThumbnailGrid: View {
     }
 
     private func stashThumbnail(_ item: DeviantArtClient.StashItem) -> some View {
+        @Environment(\.privacyMode) var isPrivacyMode
         Group {
             if let thumbURL = item.previewURL {
                 AsyncImage(url: thumbURL) { phase in
                     switch phase {
                     case .success(let image):
                         image.resizable().aspectRatio(contentMode: .fill)
+                            .blur(radius: isPrivacyMode ? 20 : 0)
 
                     default:
                         AppTheme.ColorToken.statusNeutral.opacity(0.3)

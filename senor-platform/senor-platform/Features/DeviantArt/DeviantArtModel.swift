@@ -321,7 +321,11 @@ public final class DeviantArtViewModel: ObservableObject {
         return PKCE(verifier: verifier, challenge: challenge)
     }
 
-    private func buildAuthURL(settings: SettingsService.DeviantArtSettings, state: String, codeChallenge: String) -> URL? {
+    private func buildAuthURL(
+        settings: SettingsService.DeviantArtSettings,
+        state: String,
+        codeChallenge: String
+    ) -> URL? {
         var components = URLComponents(string: "https://www.deviantart.com/oauth2/authorize")
         components?.queryItems = [
             URLQueryItem(name: "response_type", value: "code"),
@@ -356,7 +360,10 @@ public final class DeviantArtViewModel: ObservableObject {
             "code_verifier": codeVerifier
         ]
 
-        let bodyString = body.map { "\($0.key)=\($0.value.addingPercentEncoding(withAllowedCharacters: .urlQueryValueAllowed) ?? $0.value)" }.joined(separator: "&")
+        let bodyString = body.map { key, value in
+            let encoded = value.addingPercentEncoding(withAllowedCharacters: .urlQueryValueAllowed) ?? value
+            return "\(key)=\(encoded)"
+        }.joined(separator: "&")
         request.httpBody = bodyString.data(using: .utf8)
 
         do {
@@ -485,6 +492,7 @@ extension DeviantArtClient.Deviation {
     static var preview: DeviantArtClient.Deviation {
         DeviantArtClient.Deviation(
             deviationid: "1",
+            // swiftlint:disable:next line_length
             url: "https://mwi.westpoint.edu/wp-content/uploads/2016/04/3264149-42-iron-man-iron-man-hd-8-free-spot-free-download-1.jpg",
             title: "Sample Artwork",
             category: "Digital Art",

@@ -83,7 +83,9 @@ public struct PathValidator: Sendable {
 
     public init(sandboxRoot: URL, limits: ToolLimits = .default) {
         self.sandboxRoot = sandboxRoot.standardizedFileURL.resolvingSymlinksInPath()
-        self.homeDirectory = FileManager.default.homeDirectoryForCurrentUser.standardizedFileURL.resolvingSymlinksInPath()
+        self.homeDirectory = FileManager.default.homeDirectoryForCurrentUser
+            .standardizedFileURL
+            .resolvingSymlinksInPath()
         self.limits = limits
     }
 
@@ -185,7 +187,8 @@ public struct PathValidator: Sendable {
                                      resolvedTarget.path == sandboxRoot.path
 
                     if !isInSandbox {
-                        return .rejected("Symlink escapes working directory sandbox: \(pathStr) → \(resolvedTarget.path)")
+                        let message = "Symlink escapes working directory sandbox: \(pathStr) → \(resolvedTarget.path)"
+                        return .rejected(message)
                     }
                     currentURL = resolvedTarget
                     continue
@@ -242,12 +245,16 @@ public struct CommandValidator: Sendable {
     public init() {}
 
     /// Validate a shell command for safe execution
-    public func validate(_ command: String, allowUnsafe: Bool = false) -> Result<ParsedCommand, CommandValidationError> {
+    public func validate(
+        _ command: String,
+        allowUnsafe: Bool = false
+    ) -> Result<ParsedCommand, CommandValidationError> {
         let trimmed = command.trimmingCharacters(in: .whitespaces)
 
         // Check for dangerous characters
         if let badChar = trimmed.first(where: { dangerousChars.contains($0) }) {
-            return .failure(CommandValidationError("Command contains unsafe character: '\(badChar)'. Shell metacharacters are not allowed."))
+            let message = "Command contains unsafe character: '\(badChar)'. Shell metacharacters are not allowed."
+            return .failure(CommandValidationError(message))
         }
 
         // Parse command (simple space separation)
@@ -265,7 +272,8 @@ public struct CommandValidator: Sendable {
 
         // If not in safe list and not allowing unsafe, reject
         if !safeCommands.contains(executable) && !allowUnsafe {
-            return .failure(CommandValidationError("Command '\(executable)' is not in the allowed list. Enable unsafe mode to allow arbitrary commands."))
+            let msg = "Command '\(executable)' is not in the allowed list. Enable unsafe mode to allow arbitrary commands."
+            return .failure(CommandValidationError(msg))
         }
 
         let args = parts.dropFirst().map { String($0) }

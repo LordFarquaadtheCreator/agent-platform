@@ -14,7 +14,8 @@ struct ContentContentProvider: MainContentProvider {
 struct ContentInspectorProvider: InspectorContentProvider {
     let section: AppSection = .content
     func content(using workspace: WorkspaceModel, router: AppRouter, appState: AppShellModel) -> AnyView {
-        guard let content = workspace.contentViewModel.contentItems.first(where: { $0.id == router.selectedContentID }) else {
+        let content = workspace.contentViewModel.contentItems.first { $0.id == router.selectedContentID }
+        guard let content else {
             return AnyView(AppEmptyState(
                 title: "Nothing Selected",
                 systemImage: AppTheme.Icon.sidebar,

@@ -240,7 +240,10 @@ public final class WorkerProcessManager {
         let cutoffDate = Date().addingTimeInterval(-7 * 24 * 60 * 60) // 7 days ago
 
         do {
-            let files = try fileManager.contentsOfDirectory(at: logsDirectory, includingPropertiesForKeys: [.creationDateKey])
+            let files = try fileManager.contentsOfDirectory(
+                at: logsDirectory,
+                includingPropertiesForKeys: [.creationDateKey]
+            )
             for file in files {
                 if let attrs = try? fileManager.attributesOfItem(atPath: file.path),
                    let date = attrs[.creationDate] as? Date,

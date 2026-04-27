@@ -9,24 +9,25 @@ public final actor PublicationService {
     private let settingsService: SettingsService
     private let logger = AppLogger.general
 
-    /// DeviantArt client (injected) - nonisolated(unsafe) because clients are thread-safe actors
-    nonisolated(unsafe) public var deviantArtClient: DeviantArtClient?
-
-    /// Patreon client (injected) - nonisolated(unsafe) because clients are thread-safe actors
-    nonisolated(unsafe) public var patreonClient: PatreonClient?
+    private let deviantArtClient: DeviantArtServiceProtocol?
+    private let patreonClient: PatreonServiceProtocol?
 
     public init(
         approvalQueueRepository: ApprovalQueueRepository,
         publicationRepository: PublicationTargetRepository,
         contentRepository: GeneratedContentRepository,
         cacheService: CacheService,
-        settingsService: SettingsService
+        settingsService: SettingsService,
+        deviantArtClient: DeviantArtServiceProtocol? = nil,
+        patreonClient: PatreonServiceProtocol? = nil
     ) {
         self.approvalQueueRepository = approvalQueueRepository
         self.publicationRepository = publicationRepository
         self.contentRepository = contentRepository
         self.cacheService = cacheService
         self.settingsService = settingsService
+        self.deviantArtClient = deviantArtClient
+        self.patreonClient = patreonClient
     }
 
     // MARK: - Publication Execution
@@ -68,9 +69,11 @@ public final actor PublicationService {
             // In practice, the generated content would include file paths
             let stashTitle = title ?? content.title
             let stashItem = try await client.stashSubmit(
-                filename: "\(contentId).png", // Placeholder
+                filename: "\(contentId).png",
                 title: stashTitle,
-                tags: tags
+                artistComments: nil,
+                tags: tags,
+                originalUrl: nil
             )
 
             // Step 2: Publish from stash
@@ -78,7 +81,11 @@ public final actor PublicationService {
                 stashId: stashItem.itemid,
                 title: stashTitle,
                 category: category,
-                isMature: isMature
+                isMature: isMature,
+                matureLevel: nil,
+                allowsComments: true,
+                galleryIds: nil,
+                licenseOptions: nil
             )
 
             // Update target with success
@@ -155,7 +162,8 @@ public final actor PublicationService {
                 content: description,
                 isPaid: isPaid,
                 isPublic: isPublic,
-                tiers: tiers
+                tiers: tiers,
+                publishAt: nil
             )
 
             // Get public URL

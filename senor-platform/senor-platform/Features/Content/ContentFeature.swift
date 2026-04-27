@@ -20,6 +20,7 @@ struct ContentScreen: View {
 
             AppDivider()
 
+            AppText("Search", style: .caption)
             TextField("Search content", text: $searchText)
                 .textFieldStyle(.roundedBorder)
                 .padding(.horizontal, AppTheme.Spacing.screenPadding)
@@ -98,15 +99,22 @@ struct ContentJSONEditorSheet: View {
                 ProgressView("Loading...")
                 Spacer()
             } else {
-                TextEditor(text: $jsonText)
-                    .font(AppTheme.Typography.monospace)
-                    .padding(AppTheme.Spacing.medium)
+                AppInputField(
+                    title: "",
+                    placeholder: "",
+                    text: $jsonText,
+                    isMultiline: true,
+                    height: 400
+                )
+                .padding(AppTheme.Spacing.medium)
             }
         }
         .task {
             await load()
         }
         .alert("Save Changes", isPresented: $showSaveDialog) {
+            // Alert title "Save Changes" serves as the field label
+            // swiftlint:disable:next unlabeled_input_field
             TextField("Change reason", text: $changeReason)
             Button("Cancel", role: .cancel) {}
             Button("Save") {

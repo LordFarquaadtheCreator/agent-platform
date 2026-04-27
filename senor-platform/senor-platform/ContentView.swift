@@ -46,6 +46,7 @@ struct ContentView: View {
             AppText(appState.errorMessage ?? "", style: .body)
         }
         .toast(message: $appState.toastMessage)
+        .environment(\.privacyMode, appState.privacyMode)
         .onOpenURL { url in
             guard url.scheme == "senorplatform" else { return }
             guard url.host == "oauth" else { return }

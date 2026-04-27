@@ -80,7 +80,11 @@ struct TaskFormSheet: View {
         NavigationStack {
             Form {
                 Section("Details") {
-                    TextField("Task Name", text: $taskName)
+                    AppInputField(
+                        title: "Task Name",
+                        placeholder: "Enter task name",
+                        text: $taskName
+                    )
 
                     Picker("Task Type", selection: $taskTypeID) {
                         Text("Select Type").tag("")
@@ -98,9 +102,13 @@ struct TaskFormSheet: View {
                 }
 
                 Section("Metadata") {
-                    TextEditor(text: $metadataJSON)
-                        .frame(minHeight: 140)
-                        .font(AppTheme.Typography.monospace)
+                    AppInputField(
+                        title: "Metadata",
+                        placeholder: "Enter metadata JSON",
+                        text: $metadataJSON,
+                        isMultiline: true,
+                        height: 140
+                    )
                 }
 
                 Section("Scheduling") {

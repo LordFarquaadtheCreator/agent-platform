@@ -61,6 +61,8 @@ struct ApprovalsScreen: View {
             }
         }
         .alert("Reject Selected", isPresented: $showRejectDialog) {
+            // Alert title serves as the field label
+            // swiftlint:disable:next unlabeled_input_field
             TextField("Reason", text: $rejectReason)
             Button("Cancel", role: .cancel) {}
             Button("Reject", role: .destructive) {

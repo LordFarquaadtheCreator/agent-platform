@@ -6,7 +6,10 @@ public enum JSONUtils {
     public static func format(_ json: String) -> String? {
         guard let data = json.data(using: .utf8),
               let json = try? JSONSerialization.jsonObject(with: data),
-              let formattedData = try? JSONSerialization.data(withJSONObject: json, options: [.prettyPrinted, .sortedKeys]) else {
+              let formattedData = try? JSONSerialization.data(
+                withJSONObject: json,
+                options: [.prettyPrinted, .sortedKeys]
+            ) else {
             return nil
         }
         return String(data: formattedData, encoding: .utf8)

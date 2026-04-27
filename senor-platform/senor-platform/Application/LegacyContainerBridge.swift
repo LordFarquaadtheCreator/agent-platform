@@ -20,8 +20,8 @@ struct LegacyContainerSnapshot {
     let workerManager: WorkerProcessManager
     let taskPipeline: TaskExecutionPipeline
     let scheduler: SchedulerEngine
-    let deviantArtClient: DeviantArtClient?
-    let patreonClient: PatreonClient?
+    let deviantArtClient: DeviantArtServiceProtocol?
+    let patreonClient: PatreonServiceProtocol?
 }
 
 @MainActor
@@ -47,11 +47,11 @@ struct LegacyContainerBridge {
         await sharedContainer.register(SchedulerEngine.self, instance: snapshot.scheduler)
 
         if let deviantArtClient = snapshot.deviantArtClient {
-            await sharedContainer.register(DeviantArtClient.self, instance: deviantArtClient)
+            await sharedContainer.register(DeviantArtServiceProtocol.self, instance: deviantArtClient)
         }
 
         if let patreonClient = snapshot.patreonClient {
-            await sharedContainer.register(PatreonClient.self, instance: patreonClient)
+            await sharedContainer.register(PatreonServiceProtocol.self, instance: patreonClient)
         }
     }
 }

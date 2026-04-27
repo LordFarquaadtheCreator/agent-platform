@@ -28,4 +28,9 @@ public struct AppDependencies {
     public let publishContentUseCase: PublishContentUseCase
     public let editContentUseCase: EditContentUseCase
     public let loadContentEditorUseCase: LoadContentEditorUseCase
+
+    // AI Chat dependencies
+    public let aiClient: AIClient
+    public let contextExtractor: ContextExtractor
+    public let chatHistoryStore: ChatHistoryStore
 }

@@ -7,7 +7,9 @@ import CoreGraphics
 /// Tool for composing images from components (images, color blocks, text)
 public struct ImageComposerTool: AgentTool {
     public static let toolName = "image_composer"
-    public static let toolDescription = "Compose images by combining multiple elements: images, color blocks, text, and shapes"
+    public static let toolDescription = """
+        Compose images by combining multiple elements: images, color blocks, text, and shapes
+        """
 
     public static let inputSchema: ToolInputSchema = ToolInputSchema(
         properties: [
@@ -85,10 +87,12 @@ public struct ImageComposerTool: AgentTool {
 
         // Draw background
         if let backgroundColor = canvasDict["background_color"] as? String {
+            // swiftlint:disable:next forbidden_raw_color
             let color = parseColor(backgroundColor) ?? NSColor.white
             color.setFill()
             NSRect(origin: .zero, size: canvasSize).fill()
         } else {
+            // swiftlint:disable:next forbidden_raw_color
             NSColor.clear.setFill()
             NSRect(origin: .zero, size: canvasSize).fill()
         }
@@ -241,7 +245,8 @@ public struct ImageComposerTool: AgentTool {
             return
         }
 
-        let color = parseColor(colorString) ?? NSColor.black
+        // swiftlint:disable:next forbidden_raw_color
+            let color = parseColor(colorString) ?? NSColor.black
 
         let width = (layer["width"] as? CGFloat) ?? rect.width
         let height = (layer["height"] as? CGFloat) ?? rect.height
@@ -265,8 +270,10 @@ public struct ImageComposerTool: AgentTool {
 
         let color: NSColor
         if let colorString = layer["color"] as? String {
+            // swiftlint:disable:next forbidden_raw_color
             color = parseColor(colorString) ?? NSColor.black
         } else {
+            // swiftlint:disable:next forbidden_raw_color
             color = NSColor.black
         }
         let fontSize = (layer["font_size"] as? CGFloat) ?? 24.0

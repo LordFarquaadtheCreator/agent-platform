@@ -184,9 +184,10 @@ public final actor TaskSchemaValidator {
                 String(describing: enumValue) == String(describing: value)
             }
             if !isValid {
+                let allowed = enumValues.map(String.init(describing:)).joined(separator: ", ")
                 errors.append(.init(
                     field: name,
-                    message: "Value must be one of: \(enumValues.map { String(describing: $0) }.joined(separator: ", "))",
+                    message: "Value must be one of: \(allowed)",
                     jsonPointer: pointer
                 ))
             }

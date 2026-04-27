@@ -74,11 +74,11 @@ public struct PatreonTier: Identifiable, Codable, Sendable {
     public let id: String
     public let type: String
     public let attributes: TierAttributes
-    
+
     public struct TierAttributes: Codable, Sendable {
         public let title: String
         public let amountCents: Int?
-        
+
         enum CodingKeys: String, CodingKey {
             case title
             case amountCents = "amount_cents"
@@ -167,7 +167,8 @@ public final class PatreonViewModel: ObservableObject {
 
     func load() async {
         guard !hasLoaded && !isLoadingProfile else {
-            AppLogger.api.debug("Skipping duplicate load - hasLoaded=\(hasLoaded), isLoadingProfile=\(isLoadingProfile)")
+            let skipMsg = "Skipping duplicate load - hasLoaded=\(hasLoaded), isLoadingProfile=\(isLoadingProfile)"
+            AppLogger.api.debug(skipMsg)
             return
         }
         hasLoaded = true
@@ -229,8 +230,10 @@ public final class PatreonViewModel: ObservableObject {
             return
         }
 
-        AppLogger.api.debug("Posts: campaign.id=\(campaign?.id ?? "nil"), settings.campaignId=\(settings?.campaignId ?? "nil")")
-        AppLogger.api.debug("Posts: campaign.id=\(campaign?.id ?? "nil"), settings.campaignId=\(settings?.campaignId ?? "nil")")
+        let campaignID = campaign?.id ?? "nil"
+        let settingsID = settings?.campaignId ?? "nil"
+        let postsMsg = "Posts: campaign.id=\(campaignID), settings.campaignId=\(settingsID)"
+        AppLogger.api.debug(postsMsg)
         guard let campaignId = campaign?.id ?? settings?.campaignId else {
             postsError = .unknown("No campaign selected")
             return
@@ -285,7 +288,10 @@ public final class PatreonViewModel: ObservableObject {
             return
         }
 
-        AppLogger.api.debug("Members: campaign.id=\(campaign?.id ?? "nil"), settings.campaignId=\(settings?.campaignId ?? "nil")")
+        let campaignID = campaign?.id ?? "nil"
+        let settingsID = settings?.campaignId ?? "nil"
+        let membersMsg = "Members: campaign.id=\(campaignID), settings.campaignId=\(settingsID)"
+        AppLogger.api.debug(membersMsg)
         guard let campaignId = campaign?.id ?? settings?.campaignId else {
             membersError = .unknown("No campaign selected")
             return

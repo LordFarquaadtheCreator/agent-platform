@@ -210,6 +210,18 @@ public final class DatabaseManager: LifecycleAware, Sendable {
             try db.create(index: "idx_cache_platform_key_expires", on: "remote_post_cache", columns: ["platform", "cache_key", "expires_at"])
         }
 
+        // Migration 002: AI Chat History
+        migrator.registerMigration("002_ai_chat_history") { db in
+            try db.create(table: "chat_history") { t in
+                t.autoIncrementedPrimaryKey("id")
+                t.column("section", .text).notNull()
+                t.column("messages_json", .text).notNull()
+                t.column("created_at", .datetime).notNull()
+                t.column("updated_at", .datetime).notNull()
+            }
+            try db.create(index: "idx_chat_history_section", on: "chat_history", columns: ["section"])
+        }
+
         return migrator
     }
 }

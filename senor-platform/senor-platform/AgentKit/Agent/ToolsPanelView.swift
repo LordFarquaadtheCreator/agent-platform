@@ -1,5 +1,6 @@
 import SwiftUI
 
+
 struct ToolsPanelView: View {
     let tools: [any AgentTool]
 
@@ -17,15 +18,16 @@ struct ToolsPanelView: View {
                 }, label: {
                     HStack {
                         Image(systemName: expandedIndices.contains(index) ? "chevron.down" : "chevron.right")
-                            .foregroundColor(.accentColor)
+                            .foregroundStyle(AppTheme.ColorToken.accent)
                         Text(type(of: tools[index]).toolName)
-                            .foregroundColor(.primary)
+                            .foregroundStyle(AppTheme.ColorToken.textPrimary)
                         Spacer()
                     }
                 })
                 .buttonStyle(PlainButtonStyle())
                 if expandedIndices.contains(index) {
-                    let json = JSONEncoderHelper.encodeToJSONString(tools[index]) ?? "{\n  \"error\": \"Unable to encode tool\"\n}"
+                    let json = JSONEncoderHelper.encodeToJSONString(tools[index])
+                    ?? "{\"error\": \"Unable to encode tool\"}"
                     MarkdownView(jsonMarkdown: JSONEncoderHelper.jsonCodeBlock(json))
                         .padding(.leading, 24)
                 }
@@ -46,9 +48,9 @@ private struct MarkdownView: View {
         // Using Text with Markdown rendering for JSON display
         // This requires iOS 15+, macOS 12+ or later
         Text(.init(jsonMarkdown))
-            .font(.system(.body, design: .monospaced))
-            .padding(4)
-            .background(.secondary.opacity(0.1))
-            .cornerRadius(6)
+            .font(AppTheme.Typography.monospace)
+            .padding(AppTheme.Spacing.xSmall)
+            .background(AppTheme.ColorToken.sectionBackground)
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.CornerRadius.small))
     }
 }

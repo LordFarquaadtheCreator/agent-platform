@@ -35,8 +35,12 @@ public final class DeviantArtClient {
         static let deviations = "\(base)/deviations"
         static let galleryAll = "\(base)/gallery/all"
         static let userProfile = "\(base)/user/profile"
-        static func deviationContent(deviationId: String) -> String { "\(base)/deviation/content?deviationid=\(deviationId)" }
-        static func deviationMetadata(deviationId: String) -> String { "\(base)/deviation/metadata?deviationids[]=\(deviationId)" }
+        static func deviationContent(deviationId: String) -> String {
+            "\(base)/deviation/content?deviationid=\(deviationId)"
+        }
+        static func deviationMetadata(deviationId: String) -> String {
+            "\(base)/deviation/metadata?deviationids[]=\(deviationId)"
+        }
     }
 
     // MARK: - DTOs (from DeviantArtDTOs)
@@ -79,7 +83,10 @@ public final class DeviantArtClient {
     // MARK: - OAuth
 
     /// Generate authorization URL for OAuth flow
-    public func authorizationURL(scopes: [String] = ["browse", "publish", "stash"], state: String = UUID().uuidString) async throws -> URL {
+    public func authorizationURL(
+        scopes: [String] = ["browse", "publish", "stash"],
+        state: String = UUID().uuidString
+    ) async throws -> URL {
         try await oauthHelper.authorizationURL(scopes: scopes, state: state)
     }
 

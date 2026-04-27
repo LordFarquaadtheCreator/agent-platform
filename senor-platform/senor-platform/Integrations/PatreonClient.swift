@@ -42,7 +42,7 @@ public struct PatreonCampaignsResponse: Codable {
     public let meta: PatreonPaginationMeta?
 }
 
-public struct PatreonPost: Codable, Identifiable {
+public struct PatreonPost: Codable, Identifiable, Sendable {
     public let id: String
     public let type: String
     public let attributes: PatreonPostAttributes

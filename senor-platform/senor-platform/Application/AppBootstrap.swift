@@ -12,9 +12,10 @@ public final class AppBootstrap {
 
         let dbManager = try await setupDatabase()
         let repos = createRepositories(dbManager: dbManager)
-        let services = createServices(repos: repos)
-        let integrations = try await setupIntegrations(settingsService: services.settings)
-        let runtime = try await setupTaskRuntime(repos: repos, services: services, integrations: integrations)
+        let settings = SettingsService()
+        let integrations = try await setupIntegrations(settingsService: settings)
+        let services = createServices(repos: repos, integrations: integrations)
+        let runtime = try await setupTaskRuntime(repos: repos, services: services)
 
         await registerWithLegacyBridge(repos: repos, services: services, runtime: runtime, integrations: integrations)
 
@@ -63,7 +64,7 @@ public final class AppBootstrap {
         let publication: PublicationService
     }
 
-    private func createServices(repos: Repositories) -> Services {
+    private func createServices(repos: Repositories, integrations: Integrations) -> Services {
         let settings = SettingsService()
         let cache = CacheService(cacheRepository: repos.cache)
         let versioning = ContentVersioningService(contentRepository: repos.content)
@@ -77,7 +78,9 @@ public final class AppBootstrap {
             publicationRepository: repos.publication,
             contentRepository: repos.content,
             cacheService: cache,
-            settingsService: settings
+            settingsService: settings,
+            deviantArtClient: integrations.deviantArt,
+            patreonClient: integrations.patreon
         )
         return Services(settings: settings, cache: cache, versioning: versioning, approval: approval, publication: publication)
     }
@@ -100,10 +103,7 @@ public final class AppBootstrap {
         let scheduler: SchedulerEngine
     }
 
-    private func setupTaskRuntime(repos: Repositories, services: Services, integrations: Integrations) async throws -> RuntimeComponents {
-        services.publication.deviantArtClient = integrations.deviantArt
-        services.publication.patreonClient = integrations.patreon
-
+    private func setupTaskRuntime(repos: Repositories, services: Services) async throws -> RuntimeComponents {
         let workerManager = try WorkerProcessManager()
         try await workerManager.startup()
 
@@ -168,6 +168,11 @@ public final class AppBootstrap {
             publicationRepository: repos.publication
         )
 
+        // AI Chat dependencies
+        let aiClient = AIClient()
+        let contextExtractor = ContextExtractor()
+        let chatHistoryStore = ChatHistoryStore(databaseManager: repos.dbManager)
+
         return AppDependencies(
             agentRepository: repos.agent,
             taskRepository: repos.task,
@@ -204,7 +209,10 @@ public final class AppBootstrap {
             loadContentEditorUseCase: LoadContentEditorUseCase(
                 contentRepository: repos.content,
                 versioningService: services.versioning
-            )
+            ),
+            aiClient: aiClient,
+            contextExtractor: contextExtractor,
+            chatHistoryStore: chatHistoryStore
         )
     }
 

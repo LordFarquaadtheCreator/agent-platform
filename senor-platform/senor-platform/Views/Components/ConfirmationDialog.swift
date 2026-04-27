@@ -148,11 +148,7 @@ public extension View {
         Button("Show Delete Dialog") { showDelete = true }
         Button("Show Reset Dialog") { showReset = true }
     }
-    .deleteConfirmation(isPresented: $showDelete, itemName: "Agent") {
-        print("Deleted")
-    }
-    .resetConfirmation(isPresented: $showReset, itemName: "Settings") {
-        print("Reset")
-    }
+    .deleteConfirmation(isPresented: $showDelete, itemName: "Agent") {}
+    .resetConfirmation(isPresented: $showReset, itemName: "Settings") {}
     .appScreenPadding()
 }

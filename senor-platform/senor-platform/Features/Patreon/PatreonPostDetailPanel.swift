@@ -23,7 +23,8 @@ struct PatreonPostDetailPanel: View {
                     }
 
                     if let published = post.attributes.publishedAt {
-                        AppText("Published \(formatDate(published))", style: .caption, color: AppTheme.ColorToken.textSecondary)
+                        let dateString = formatDate(published)
+                        AppText("Published \(dateString)", style: .caption, color: AppTheme.ColorToken.textSecondary)
                     }
                 }
 
@@ -45,7 +46,7 @@ struct PatreonPostDetailPanel: View {
                         .frame(maxWidth: .infinity)
                         .padding()
                         .background(AppTheme.ColorToken.accent)
-                        .foregroundColor(.white)
+                        .foregroundStyle(AppTheme.ColorToken.white)
                         .clipShape(RoundedRectangle(cornerRadius: AppTheme.CornerRadius.control))
                     }
                     .buttonStyle(.plain)

@@ -33,13 +33,14 @@ The old global container still exists as a temporary compatibility shim, but onl
 | --- | --- | --- |
 | Core | `senor-platform/Core/` | Design tokens and shared app primitives |
 | Domain | `senor-platform/Domain/` | App sections, dashboard snapshots, feature-facing models, request/draft types |
-| Application | `senor-platform/Application/` | Bootstrap, dependency graph, router, shell model, use cases, record-to-domain mappers |
-| Features | `senor-platform/Features/` | App shell, dashboard, agents, tasks, content, approvals, settings |
+| Application | `senor-platform/Application/` | Bootstrap, dependency graph, router, shell model, use cases, record-to-domain mappers, context extraction |
+| Features | `senor-platform/Features/` | App shell, dashboard, agents, tasks, content, approvals, settings, AI chat |
 | Shared UI | `senor-platform/SharedUI/` | Cards, section headers, pills, empty states, shared visual components |
-| Data Layer | `senor-platform/DataLayer/` | GRDB records, repositories, database startup and migrations |
+| Data Layer | `senor-platform/DataLayer/` | GRDB records, repositories, database startup and migrations, chat history |
 | Task Engine | `senor-platform/TaskEngine/` | Approval, publication, content versioning, task execution orchestration |
 | Scheduler | `senor-platform/SchedulerCore/` | Schedule DSL, cron compilation, polling scheduler |
 | Integrations | `senor-platform/Integrations/` | HTTP, DeviantArt, Patreon, OAuth support |
+| Infrastructure | `senor-platform/Infrastructure/` | AI service (LM Studio client) |
 | Worker Runtime | `senor-platform/WorkerRuntime/` | External worker process lifecycle |
 | Agent Tools | `senor-platform/AgentTools/` | Tool contracts and worker-facing tool implementations |
 
@@ -81,6 +82,8 @@ Use this checklist before merging changes:
 - Shared UI components contain styling only, not data access
 - Repository records do not cross into SwiftUI features
 - Any temporary legacy-container registration stays inside bootstrap or provider adapters
+- AI chat context extraction uses sliding window (15 messages max)
+- AI chat history persists per-section in SQLite
 
 ## Current Transitional Notes
 

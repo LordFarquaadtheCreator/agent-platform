@@ -5,6 +5,7 @@ struct DeviationDetailPanel: View {
     let deviation: DeviantArtClient.Deviation
     @ObservedObject var viewModel: DeviantArtViewModel
     @EnvironmentObject private var appState: AppShellModel
+    @Environment(\.privacyMode) private var isPrivacyMode
 
     var body: some View {
         ScrollView {
@@ -27,14 +28,18 @@ struct DeviationDetailPanel: View {
 
     private var fullImageSection: some View {
         Group {
-            if let fullURL = deviation.content?.src.flatMap({ URL(string: $0) })
-                ?? deviation.thumbs?.max(by: { max($0.width, $0.height) < max($1.width, $1.height) }).flatMap({ URL(string: $0.src) }) {
+            let contentURL = deviation.content?.src.flatMap { URL(string: $0) }
+            let thumbURL = deviation.thumbs?.max {
+                max($0.width, $0.height) < max($1.width, $1.height)
+            }.flatMap { URL(string: $0.src) }
+            if let fullURL = contentURL ?? thumbURL {
                 AsyncImage(url: fullURL) { phase in
                     switch phase {
                     case .success(let image):
                         image
                             .resizable()
                             .aspectRatio(contentMode: .fit)
+                            .blur(radius: isPrivacyMode ? 20 : 0)
                             .clipShape(RoundedRectangle(cornerRadius: AppTheme.CornerRadius.card))
 
                     case .failure:
@@ -90,11 +95,12 @@ struct DeviationDetailPanel: View {
                         Label("\(downloads)", systemImage: "arrow.down.circle")
                     }
                 }
-                .foregroundColor(AppTheme.ColorToken.textSecondary)
+                .foregroundStyle(AppTheme.ColorToken.textSecondary)
             }
 
             if let published = deviation.publishedTime {
-                AppText("Published \(RelativeDateFormatter.format(unixTime: published))", style: .caption, color: AppTheme.ColorToken.textSecondary)
+                let dateText = RelativeDateFormatter.format(unixTime: published)
+                AppText("Published \(dateText)", style: .caption, color: AppTheme.ColorToken.textSecondary)
             }
         }
     }
@@ -137,7 +143,7 @@ struct DeviationDetailPanel: View {
                let comments = stats.comments, comments > 0 {
                 VStack(alignment: .leading, spacing: AppTheme.Spacing.small) {
                     AppText("Comments", style: .title3)
-                    AppText("\(comments) comments available on DeviantArt", style: .body, color: AppTheme.ColorToken.textSecondary)
+                    AppText("\(comments) comments available", style: .body, color: AppTheme.ColorToken.textSecondary)
                 }
             }
         }
@@ -158,7 +164,7 @@ struct DeviationDetailPanel: View {
                     .frame(maxWidth: .infinity)
                     .padding()
                     .background(AppTheme.ColorToken.accent)
-                    .foregroundColor(.white)
+                    .foregroundStyle(AppTheme.ColorToken.white)
                     .clipShape(RoundedRectangle(cornerRadius: AppTheme.CornerRadius.control))
                 }
                 .buttonStyle(.plain)

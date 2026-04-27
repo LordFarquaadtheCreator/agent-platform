@@ -86,7 +86,9 @@ public struct Deviation: Codable, Identifiable, Sendable {
     public var id: String { deviationid }
 
     public var previewURL: URL? {
-        if let mediumThumb = thumbs?.first(where: { $0.quality == .medium }) ?? thumbs?.first(where: { $0.quality == .small }) {
+        let mediumThumb = thumbs?.first { $0.quality == .medium }
+            ?? thumbs?.first { $0.quality == .small }
+        if let mediumThumb {
             return URL(string: mediumThumb.src)
         }
         if let contentSrc = content?.src {

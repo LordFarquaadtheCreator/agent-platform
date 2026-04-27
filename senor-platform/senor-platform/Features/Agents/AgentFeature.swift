@@ -36,7 +36,11 @@ struct AgentsScreen: View {
                             AppIcon(AppTheme.Icon.agent, size: .medium, color: AppTheme.ColorToken.accent)
                             AppVStack(spacing: .tight, alignment: .leading) {
                                 AppText(agent.displayName, style: .headline)
-                                AppText(agent.status.displayName, style: .caption, color: AppTheme.ColorToken.textSecondary)
+                                AppText(
+                                    agent.status.displayName,
+                                    style: .caption,
+                                    color: AppTheme.ColorToken.textSecondary
+                                )
                             }
                             Spacer()
                             AppStatusPill(
@@ -68,17 +72,34 @@ struct AgentFormSheet: View {
         NavigationStack {
             Form {
                 Section("Details") {
-                    TextField("Display Name", text: $displayName)
-                    TextField("Description", text: $description, axis: .vertical)
-                        .lineLimit(2...4)
+                    AppInputField(
+                        title: "Display Name",
+                        placeholder: "Enter display name",
+                        text: $displayName
+                    )
+                    AppInputField(
+                        title: "Description",
+                        placeholder: "Enter description",
+                        text: $description,
+                        isMultiline: true,
+                        height: 80
+                    )
                     Toggle("Active", isOn: $isActive)
                 }
 
                 Section("Runtime") {
-                    TextField("Worker Script Path", text: $workerScriptPath)
-                    TextEditor(text: $configJSON)
-                        .frame(minHeight: 120)
-                        .font(AppTheme.Typography.monospace)
+                    AppInputField(
+                        title: "Worker Script Path",
+                        placeholder: "Enter script path",
+                        text: $workerScriptPath
+                    )
+                    AppInputField(
+                        title: "Config JSON",
+                        placeholder: "Enter configuration JSON",
+                        text: $configJSON,
+                        isMultiline: true,
+                        height: 120
+                    )
                 }
             }
             .navigationTitle("New Agent")
