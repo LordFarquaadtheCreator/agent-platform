@@ -298,7 +298,7 @@ struct PatreonScreen: View {
         AppCard {
             AppVStack(spacing: .medium, alignment: .center) {
                 Image(systemName: "exclamationmark.triangle.fill")
-                    .font(.title2)
+                    .font(AppTheme.Typography.title2)
                     .foregroundStyle(AppTheme.ColorToken.statusError)
 
                 AppText(title, style: .headline)
@@ -319,7 +319,7 @@ struct PatreonScreen: View {
         AppCard {
             AppVStack(spacing: .medium, alignment: .center) {
                 Image(systemName: "doc.plaintext")
-                    .font(.title2)
+                    .font(AppTheme.Typography.title2)
                     .foregroundStyle(AppTheme.ColorToken.textSecondary)
 
                 AppText(title, style: .headline)
@@ -335,53 +335,15 @@ struct PatreonScreen: View {
     }
 
     private func formatCents(_ cents: Int?) -> String {
-        guard let cents = cents else { return "-" }
-        let dollars = Double(cents) / 100.0
-        return String(format: "$%.2f", dollars)
+        PatreonFormatters.formatCents(cents)
     }
 
     private func formatDate(_ isoString: String) -> String {
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        guard let date = formatter.date(from: isoString) else {
-            // Try without fractional seconds
-            let fallbackFormatter = ISO8601DateFormatter()
-            fallbackFormatter.formatOptions = [.withInternetDateTime]
-            guard let fallbackDate = fallbackFormatter.date(from: isoString) else { return isoString }
-            let displayFormatter = DateFormatter()
-            displayFormatter.dateStyle = .medium
-            displayFormatter.timeStyle = .none
-            return displayFormatter.string(from: fallbackDate)
-        }
-
-        let displayFormatter = DateFormatter()
-        displayFormatter.dateStyle = .medium
-        displayFormatter.timeStyle = .none
-        return displayFormatter.string(from: date)
-    }
-
-    private func stripHTML(_ html: String) -> String {
-        html.replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression)
-                  .replacingOccurrences(of: "&quot;", with: "\"")
-                  .replacingOccurrences(of: "&amp;", with: "&")
-                  .replacingOccurrences(of: "&lt;", with: "<")
-                  .replacingOccurrences(of: "&gt;", with: ">")
+        PatreonFormatters.formatDate(isoString)
     }
 
     private func statusColor(for status: String) -> Color {
-        switch status.lowercased() {
-        case "active_patron":
-            return AppTheme.ColorToken.statusSuccess
-
-        case "declined_patron":
-            return AppTheme.ColorToken.statusError
-
-        case "former_patron":
-            return AppTheme.ColorToken.textSecondary
-
-        default:
-            return AppTheme.ColorToken.statusInfo
-        }
+        PatreonFormatters.statusColor(for: status)
     }
 }
 

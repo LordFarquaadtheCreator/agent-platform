@@ -23,11 +23,11 @@ struct PatreonMemberDetailPanel: View {
                     }
 
                     if let lifetime = member.attributes?.lifetimeSupportCents {
-                        LabeledContent("Lifetime Support", value: formatCents(lifetime))
+                        LabeledContent("Lifetime Support", value: PatreonFormatters.formatCents(lifetime))
                     }
 
                     if let currentlyEntitled = member.attributes?.currentlyEntitledAmountCents {
-                        LabeledContent("Current Pledge", value: formatCents(currentlyEntitled))
+                        LabeledContent("Current Pledge", value: PatreonFormatters.formatCents(currentlyEntitled))
                     }
 
                     if let lastChargeStatus = member.attributes?.lastChargeStatus {
@@ -41,22 +41,7 @@ struct PatreonMemberDetailPanel: View {
         .background(AppTheme.ColorToken.chromeBackground)
     }
 
-    private func formatCents(_ cents: Int?) -> String {
-        guard let cents = cents else { return "-" }
-        let dollars = Double(cents) / 100.0
-        return String(format: "$%.2f", dollars)
-    }
-
     private func statusColor(for status: String) -> Color {
-        switch status.lowercased() {
-        case "active_patron":
-            return AppTheme.ColorToken.statusSuccess
-        case "declined_patron":
-            return AppTheme.ColorToken.statusError
-        case "former_patron":
-            return AppTheme.ColorToken.textSecondary
-        default:
-            return AppTheme.ColorToken.statusInfo
-        }
+        PatreonFormatters.statusColor(for: status)
     }
 }

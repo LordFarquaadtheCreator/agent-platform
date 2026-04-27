@@ -58,20 +58,6 @@ struct PatreonPostDetailPanel: View {
     }
 
     private func formatDate(_ isoString: String) -> String {
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        guard let date = formatter.date(from: isoString) else {
-            let fallbackFormatter = ISO8601DateFormatter()
-            fallbackFormatter.formatOptions = [.withInternetDateTime]
-            guard let fallbackDate = fallbackFormatter.date(from: isoString) else { return isoString }
-            let displayFormatter = DateFormatter()
-            displayFormatter.dateStyle = .medium
-            displayFormatter.timeStyle = .none
-            return displayFormatter.string(from: fallbackDate)
-        }
-        let displayFormatter = DateFormatter()
-        displayFormatter.dateStyle = .medium
-        displayFormatter.timeStyle = .none
-        return displayFormatter.string(from: date)
+        PatreonFormatters.formatDate(isoString)
     }
 }
