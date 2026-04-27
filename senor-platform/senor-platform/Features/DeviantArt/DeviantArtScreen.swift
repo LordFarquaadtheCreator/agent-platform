@@ -268,14 +268,14 @@ private struct StatusRow: View {
         HStack {
             Image(systemName: "checkmark.circle.fill")
                 .foregroundColor(AppTheme.ColorToken.statusSuccess)
-                .font(AppTheme.Typography.font(AppTheme.Typography.caption))
-            AppText("Published", style: .font(AppTheme.Typography.caption))
+                .font(AppTheme.Typography.caption)
+            AppText("Published", style: .caption)
                 .foregroundColor(AppTheme.ColorToken.statusSuccess)
             Spacer()
             if deviation.allowsComments == true {
                 Image(systemName: "bubble.right.fill")
                     .foregroundColor(AppTheme.ColorToken.statusInfo)
-                    .font(AppTheme.Typography.font(AppTheme.Typography.caption2))
+                    .font(AppTheme.Typography.caption2)
             }
         }
     }
@@ -291,7 +291,7 @@ private struct StatsRow: View {
             StatItem(icon: "bubble.right", value: stats.comments ?? 0)
             StatItem(icon: "arrow.down.circle", value: stats.downloads ?? 0)
         }
-        .font(AppTheme.Typography.font(AppTheme.Typography.caption))
+        .font(AppTheme.Typography.caption)
         .foregroundColor(AppTheme.ColorToken.textSecondary)
     }
 }
@@ -310,8 +310,8 @@ private struct StashStackCard: View {
                 HStack {
                     Image(systemName: "archivebox.fill")
                         .foregroundColor(AppTheme.ColorToken.statusWarning)
-                        .font(AppTheme.Typography.font(AppTheme.Typography.caption))
-                    AppText("Sta.sh Stack", style: .font(AppTheme.Typography.caption))
+                        .font(AppTheme.Typography.caption)
+                    AppText("Sta.sh Stack", style: .caption)
                         .foregroundColor(AppTheme.ColorToken.statusWarning)
                     Spacer()
                 }

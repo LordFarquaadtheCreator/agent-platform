@@ -37,8 +37,8 @@ struct PatreonScreen: View {
     // MARK: - Header
 
     private var header: some View {
-        VStack(alignment: .leading, spacing: AppTheme.Spacing.small) {
-            HStack {
+        AppVStack(spacing: .small, alignment: .leading) {
+            AppHStack(spacing: .medium) {
                 AppSectionHeader(
                     title: "Patreon",
                     detail: viewModel.identity?.data.attributes.fullName ?? viewModel.identity?.data.attributes.vanity
