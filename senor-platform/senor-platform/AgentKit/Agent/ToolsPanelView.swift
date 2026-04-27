@@ -1,12 +1,5 @@
 import SwiftUI
 
-#if canImport(AgentToolModule)
-#else
-protocol AgentTool {
-    var name: String { get }
-}
-#endif
-
 struct ToolsPanelView: View {
     let tools: [any AgentTool]
 
@@ -21,27 +14,32 @@ struct ToolsPanelView: View {
                     } else {
                         expandedIndices.insert(index)
                     }
-                }) {
+                }, label: {
                     HStack {
                         Image(systemName: expandedIndices.contains(index) ? "chevron.down" : "chevron.right")
                             .foregroundColor(.accentColor)
-                        Text(tools[index].name)
+                        Text(type(of: tools[index]).toolName)
                             .foregroundColor(.primary)
                         Spacer()
                     }
-                }
+                })
                 .buttonStyle(PlainButtonStyle())
                 if expandedIndices.contains(index) {
-                    MarkdownView(jsonMarkdown: ToolJSONEncoder.jsonMarkdown(from: tools[index]))
+                    let json = JSONEncoderHelper.encodeToJSONString(tools[index]) ?? "{\n  \"error\": \"Unable to encode tool\"\n}"
+                    MarkdownView(jsonMarkdown: JSONEncoderHelper.jsonCodeBlock(json))
                         .padding(.leading, 24)
                 }
             }
         }
-        .listStyle(InsetGroupedListStyle())
+#if os(macOS)
+        .listStyle(.plain)
+#else
+        .listStyle(.insetGrouped)
+#endif
     }
 }
 
-fileprivate struct MarkdownView: View {
+private struct MarkdownView: View {
     let jsonMarkdown: String
 
     var body: some View {
@@ -50,39 +48,7 @@ fileprivate struct MarkdownView: View {
         Text(.init(jsonMarkdown))
             .font(.system(.body, design: .monospaced))
             .padding(4)
-            .background(Color(UIColor.secondarySystemBackground))
+            .background(.secondary.opacity(0.1))
             .cornerRadius(6)
-    }
-}
-
-fileprivate struct ToolJSONEncoder {
-    /// Produces a JSON string encoded as Markdown code block for display.
-    static func jsonMarkdown(from tool: any AgentTool) -> String {
-        guard let data = try? JSONEncoder().encode(AnyEncodable(tool)),
-              let jsonString = String(data: data, encoding: .utf8)
-        else {
-            return "```json\n{ \"error\": \"Unable to encode tool\" }\n```"
-        }
-        return "```json\n\(jsonString)\n```"
-    }
-
-    /// A type-erased Encodable wrapper to encode any AgentTool.
-    private struct AnyEncodable: Encodable {
-        private let encodeFunc: (Encoder) throws -> Void
-
-        init(_ value: any AgentTool) {
-            if let encodable = value as? Encodable {
-                encodeFunc = encodable.encode
-            } else {
-                encodeFunc = { encoder in
-                    var container = encoder.singleValueContainer()
-                    try container.encode(value.name)
-                }
-            }
-        }
-
-        func encode(to encoder: Encoder) throws {
-            try encodeFunc(encoder)
-        }
     }
 }

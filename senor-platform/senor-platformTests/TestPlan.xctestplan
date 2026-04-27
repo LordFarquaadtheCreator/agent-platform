@@ -2,17 +2,31 @@
   "configurations" : [
     {
       "id" : "553E9FD1-B3FC-4409-9BEA-1A1D5B8B1EDD",
-      "name" : "Configuration 1",
+      "name" : "Default",
       "options" : {
 
       }
     }
   ],
   "defaultOptions" : {
+    "language" : "en",
     "testTimeoutsEnabled" : true
   },
   "testTargets" : [
-
+    {
+      "target" : {
+        "containerPath" : "container:senor-platform.xcodeproj",
+        "identifier" : "10BBE7012F85C5BE00407568",
+        "name" : "senor-platformTests"
+      }
+    },
+    {
+      "target" : {
+        "containerPath" : "container:senor-platform.xcodeproj",
+        "identifier" : "10BBE70B2F85C5BE00407568",
+        "name" : "senor-platformUITests"
+      }
+    }
   ],
   "version" : 1
 }

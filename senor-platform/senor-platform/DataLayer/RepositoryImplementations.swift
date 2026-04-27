@@ -13,7 +13,7 @@ public final class AgentRepositoryImpl: AgentRepository {
 
     public func create(agent: AgentRecord) async throws -> AgentRecord {
         try await dbManager.asyncWrite { db in
-            var agent = agent
+            let agent = agent
             try agent.insert(db)
             return agent
         }
@@ -29,7 +29,7 @@ public final class AgentRepositoryImpl: AgentRepository {
     }
 
     public func delete(id: String) async throws {
-        try await dbManager.asyncWrite { db in
+        _ = try await dbManager.asyncWrite { db in
             try AgentRecord.deleteOne(db, key: id)
         }
     }
@@ -84,7 +84,7 @@ public final class TaskRepositoryImpl: TaskRepository {
 
     public func create(task: TaskRecord) async throws -> TaskRecord {
         try await dbManager.asyncWrite { db in
-            var task = task
+            let task = task
             try task.insert(db)
             return task
         }
@@ -100,7 +100,7 @@ public final class TaskRepositoryImpl: TaskRepository {
     }
 
     public func delete(id: String) async throws {
-        try await dbManager.asyncWrite { db in
+        _ = try await dbManager.asyncWrite { db in
             try TaskRecord.deleteOne(db, key: id)
         }
     }
@@ -148,7 +148,7 @@ public final class TaskScheduleRepositoryImpl: TaskScheduleRepository {
 
     public func create(schedule: TaskScheduleRecord) async throws -> TaskScheduleRecord {
         try await dbManager.asyncWrite { db in
-            var schedule = schedule
+            let schedule = schedule
             try schedule.insert(db)
             return schedule
         }
@@ -164,7 +164,7 @@ public final class TaskScheduleRepositoryImpl: TaskScheduleRepository {
     }
 
     public func delete(id: String) async throws {
-        try await dbManager.asyncWrite { db in
+        _ = try await dbManager.asyncWrite { db in
             try TaskScheduleRecord.deleteOne(db, key: id)
         }
     }
@@ -213,7 +213,7 @@ public final class TaskRunRepositoryImpl: TaskRunRepository {
 
     public func create(run: TaskRunRecord) async throws -> TaskRunRecord {
         try await dbManager.asyncWrite { db in
-            var run = run
+            let run = run
             try run.insert(db)
             return run
         }
@@ -221,7 +221,7 @@ public final class TaskRunRepositoryImpl: TaskRunRepository {
 
     public func update(run: TaskRunRecord) async throws -> TaskRunRecord {
         try await dbManager.asyncWrite { db in
-            var run = run
+            let run = run
             try run.update(db)
             return run
         }
@@ -290,7 +290,7 @@ public final class GeneratedContentRepositoryImpl: GeneratedContentRepository {
 
     public func create(content: GeneratedContentRecord) async throws -> GeneratedContentRecord {
         try await dbManager.asyncWrite { db in
-            var content = content
+            let content = content
             try content.insert(db)
             return content
         }
@@ -342,7 +342,7 @@ public final class GeneratedContentRepositoryImpl: GeneratedContentRepository {
 
     public func createVersion(version: GeneratedContentVersionRecord) async throws -> GeneratedContentVersionRecord {
         try await dbManager.asyncWrite { db in
-            var version = version
+            let version = version
             try version.insert(db)
             return version
         }
@@ -377,7 +377,7 @@ public final class ApprovalQueueRepositoryImpl: ApprovalQueueRepository {
 
     public func create(entry: ApprovalQueueRecord) async throws -> ApprovalQueueRecord {
         try await dbManager.asyncWrite { db in
-            var entry = entry
+            let entry = entry
             try entry.insert(db)
             return entry
         }
@@ -439,7 +439,7 @@ public final class PublicationTargetRepositoryImpl: PublicationTargetRepository 
 
     public func create(target: PublicationTargetRecord) async throws -> PublicationTargetRecord {
         try await dbManager.asyncWrite { db in
-            var target = target
+            let target = target
             try target.insert(db)
             return target
         }
@@ -499,7 +499,7 @@ public final class RemotePostCacheRepositoryImpl: RemotePostCacheRepository {
 
     public func create(entry: RemotePostCacheRecord) async throws -> RemotePostCacheRecord {
         try await dbManager.asyncWrite { db in
-            var entry = entry
+            let entry = entry
             try entry.insert(db)
             return entry
         }
@@ -507,7 +507,7 @@ public final class RemotePostCacheRepositoryImpl: RemotePostCacheRepository {
 
     public func update(entry: RemotePostCacheRecord) async throws -> RemotePostCacheRecord {
         try await dbManager.asyncWrite { db in
-            var entry = entry
+            let entry = entry
             try entry.update(db)
             return entry
         }
@@ -531,7 +531,7 @@ public final class RemotePostCacheRepositoryImpl: RemotePostCacheRepository {
     }
 
     public func deleteExpired(before: Date) async throws {
-        try await dbManager.asyncWrite { db in
+        _ = try await dbManager.asyncWrite { db in
             try RemotePostCacheRecord
                 .filter(Column("expires_at") < before)
                 .deleteAll(db)
@@ -539,7 +539,7 @@ public final class RemotePostCacheRepositoryImpl: RemotePostCacheRepository {
     }
 
     public func delete(platform: String, cacheKey: String) async throws {
-        try await dbManager.asyncWrite { db in
+        _ = try await dbManager.asyncWrite { db in
             try RemotePostCacheRecord
                 .filter(Column("platform") == platform)
                 .filter(Column("cache_key") == cacheKey)
@@ -558,7 +558,7 @@ public final class TaskTypeRepositoryImpl: TaskTypeRepository {
 
     public func create(taskType: TaskTypeRecord) async throws -> TaskTypeRecord {
         try await dbManager.asyncWrite { db in
-            var taskType = taskType
+            let taskType = taskType
             try taskType.insert(db)
             return taskType
         }
@@ -566,14 +566,14 @@ public final class TaskTypeRepositoryImpl: TaskTypeRepository {
 
     public func update(taskType: TaskTypeRecord) async throws -> TaskTypeRecord {
         try await dbManager.asyncWrite { db in
-            var taskType = taskType
+            let taskType = taskType
             try taskType.update(db)
             return taskType
         }
     }
 
     public func delete(id: String) async throws {
-        try await dbManager.asyncWrite { db in
+        _ = try await dbManager.asyncWrite { db in
             try TaskTypeRecord.deleteOne(db, key: id)
         }
     }

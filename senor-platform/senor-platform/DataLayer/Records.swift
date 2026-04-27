@@ -39,16 +39,15 @@ public struct AgentRecord: Codable, FetchableRecord, PersistableRecord, Sendable
 
 /// Agent runtime status
 public enum AgentRuntimeStatus: String, Codable, CaseIterable, Sendable {
-    case idle = "idle"
-    case running = "running"
-    case paused = "paused"
-    case error = "error"
+    case idle
+    case running
+    case paused
+    case error
 
     public var displayName: String {
         rawValue.capitalized
     }
 }
-
 
 // MARK: - Task Type Record
 /// Task type database record - conforms to Sendable because all properties are value types
@@ -80,7 +79,6 @@ public struct TaskTypeRecord: Codable, FetchableRecord, PersistableRecord, Senda
         self.createdAt = createdAt
     }
 }
-
 
 // MARK: - Task Record
 /// Task database record - conforms to Sendable because all properties are value types
@@ -121,7 +119,6 @@ public struct TaskRecord: Codable, FetchableRecord, PersistableRecord, Sendable 
         self.updatedAt = updatedAt
     }
 }
-
 
 // MARK: - Task Schedule Record
 /// Task schedule database record - conforms to Sendable because all properties are value types
@@ -165,7 +162,6 @@ public struct TaskScheduleRecord: Codable, FetchableRecord, PersistableRecord, S
         self.updatedAt = updatedAt
     }
 }
-
 
 // MARK: - Task Run Record
 /// Task run database record - conforms to Sendable because all properties are value types
@@ -219,7 +215,6 @@ public struct TaskRunRecord: Codable, FetchableRecord, PersistableRecord, Sendab
     }
 }
 
-
 // MARK: - Generated Content Record
 /// Generated content database record - conforms to Sendable because all properties are value types
 public struct GeneratedContentRecord: Codable, FetchableRecord, PersistableRecord, Sendable {
@@ -257,7 +252,6 @@ public struct GeneratedContentRecord: Codable, FetchableRecord, PersistableRecor
     }
 }
 
-
 // MARK: - Generated Content Version Record
 /// Content version database record - conforms to Sendable because all properties are value types
 public struct GeneratedContentVersionRecord: Codable, FetchableRecord, PersistableRecord, Sendable {
@@ -291,7 +285,6 @@ public struct GeneratedContentVersionRecord: Codable, FetchableRecord, Persistab
         self.createdAt = createdAt
     }
 }
-
 
 // MARK: - Approval Queue Record
 /// Approval queue database record - conforms to Sendable because all properties are value types
@@ -429,4 +422,3 @@ public struct RemotePostCacheRecord: Codable, FetchableRecord, PersistableRecord
         self.expiresAt = expiresAt
     }
 }
-

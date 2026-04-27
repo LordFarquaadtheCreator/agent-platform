@@ -212,7 +212,5 @@ public final class DatabaseManager: LifecycleAware, Sendable {
 
         return migrator
     }
-
 }
 #endif
-

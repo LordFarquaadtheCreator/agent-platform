@@ -31,6 +31,12 @@ public final actor DependencyContainer {
         services[key] = AnySendableBox(LazyService(factory: factory))
     }
 
+    /// Register a throwing factory that creates the service on first resolve
+    public func register<T: Sendable>(_ type: T.Type, factory: @Sendable @escaping () async throws -> T) {
+        let key = String(reflecting: type)
+        services[key] = AnySendableBox(ThrowingLazyService(factory: factory))
+    }
+
     /// Register a lifecycle-aware service
     public func register<T: LifecycleAware & Sendable>(_ type: T.Type, instance: T) {
         let key = String(reflecting: type)
@@ -49,6 +55,13 @@ public final actor DependencyContainer {
         // Check if it's a lazy service
         if let lazy = box.value as? LazyService<T> {
             let instance = await lazy.factory()
+            services[key] = AnySendableBox(instance)
+            return instance
+        }
+
+        // Check if it's a throwing lazy service
+        if let lazy = box.value as? ThrowingLazyService<T> {
+            let instance = try await lazy.factory()
             services[key] = AnySendableBox(instance)
             return instance
         }
@@ -72,6 +85,16 @@ public final actor DependencyContainer {
             let instance = await lazy.factory()
             services[key] = AnySendableBox(instance)
             return instance
+        }
+
+        if let lazy = box.value as? ThrowingLazyService<T> {
+            do {
+                let instance = try await lazy.factory()
+                services[key] = AnySendableBox(instance)
+                return instance
+            } catch {
+                return nil
+            }
         }
 
         return box.value as? T
@@ -102,17 +125,22 @@ public final actor DependencyContainer {
 }
 
 /// Box to store any Sendable type
-private struct AnySendableBox: @unchecked Sendable {
-    let value: Any
+nonisolated private struct AnySendableBox: @unchecked Sendable {
+    nonisolated(unsafe) let value: Any
 
-    init<T: Sendable>(_ value: T) {
+    nonisolated init<T: Sendable>(_ value: T) {
         self.value = value
     }
 }
 
 /// Wrapper for lazy service initialization
-private struct LazyService<T: Sendable>: Sendable {
+nonisolated private struct LazyService<T: Sendable>: Sendable {
     let factory: @Sendable () async -> T
+}
+
+/// Wrapper for throwing lazy service initialization
+nonisolated private struct ThrowingLazyService<T: Sendable>: Sendable {
+    let factory: @Sendable () async throws -> T
 }
 
 /// Global shared container (for convenience, but prefer injection)
@@ -121,17 +149,13 @@ public let sharedContainer = DependencyContainer()
 // MARK: - MainActor Resolution Helpers
 
 public extension DependencyContainer {
-    /// Async resolve that crashes if service not found (safe for MainActor)
-    func resolveOrCrash<T: Sendable>(_ type: T.Type) async -> T {
-        do {
-            return try await resolve(type)
-        } catch {
-            fatalError("Failed to resolve service: \(String(reflecting: type)) - \(error)")
-        }
+    /// Async resolve that throws if service not found
+    func resolveOrThrow<T: Sendable>(_ type: T.Type) async throws -> T {
+        try await resolve(type)
     }
-    
+
     /// Async optional resolve (safe for MainActor)
     func resolveSyncOptional<T: Sendable>(_ type: T.Type) async -> T? {
-        return await resolveOptional(type)
+        await resolveOptional(type)
     }
 }

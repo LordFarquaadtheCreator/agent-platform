@@ -1,7 +1,7 @@
 import Foundation
 
 /// Validates task metadata against JSON Schema definitions
-public final actor TaskSchemaValidator: Sendable {
+public final actor TaskSchemaValidator {
     private let logger = AppLogger.taskEngine
 
     /// Cache for compiled regular expressions - protected by actor isolation
@@ -28,15 +28,12 @@ public final actor TaskSchemaValidator: Sendable {
 
         do {
             // Check required fields
-            if let required = schema["required"] as? [String] {
-                for field in required {
-                    if metadata[field] == nil {
-                        return .failure(.schemaValidationFailed(
-                            "task",
-                            [.init(field: field, message: "Required field is missing", jsonPointer: "/\(field)")]
-                        ))
-                    }
-                }
+            if let required = schema["required"] as? [String],
+               let missingField = required.first(where: { metadata[$0] == nil }) {
+                return .failure(.schemaValidationFailed(
+                    "task",
+                    [.init(field: missingField, message: "Required field is missing", jsonPointer: "/\(missingField)")]
+                ))
             }
 
             // Check property types and constraints
@@ -83,14 +80,12 @@ public final actor TaskSchemaValidator: Sendable {
 
         // Check required fields
         if let required = schema["required"] as? [String] {
-            for field in required {
-                if metadata[field] == nil {
-                    errors.append(.init(
-                        field: field,
-                        message: "Required field is missing",
-                        jsonPointer: "/\(field)"
-                    ))
-                }
+            for field in required where metadata[field] == nil {
+                errors.append(.init(
+                    field: field,
+                    message: "Required field is missing",
+                    jsonPointer: "/\(field)"
+                ))
             }
         }
 
@@ -251,18 +246,25 @@ public final actor TaskSchemaValidator: Sendable {
         switch expectedType {
         case "string":
             return value is String
+
         case "integer":
             return value is Int
+
         case "number":
             return value is NSNumber || value is Double || value is Int
+
         case "boolean":
             return value is Bool
+
         case "array":
             return value is [Any]
+
         case "object":
             return value is [String: Any]
+
         case "null":
             return value is NSNull || (value as? String) == nil
+
         default:
             return true
         }
@@ -290,16 +292,22 @@ public final actor TaskSchemaValidator: Sendable {
         switch value {
         case is String:
             return "string"
+
         case is Int:
             return "integer"
+
         case is Double, is Float:
             return "number"
+
         case is Bool:
             return "boolean"
+
         case is [Any]:
             return "array"
+
         case is [String: Any]:
             return "object"
+
         default:
             return "null"
         }

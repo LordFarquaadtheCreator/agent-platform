@@ -41,7 +41,7 @@ public enum JSONUtils {
 
     /// Extract string value from JSON dictionary
     public static func extractString(from dict: [String: Any], key: String) -> String? {
-        return dict[key] as? String
+        dict[key] as? String
     }
 
     /// Extract nested string value using key path

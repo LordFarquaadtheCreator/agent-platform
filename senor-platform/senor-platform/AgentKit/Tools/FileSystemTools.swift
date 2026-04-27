@@ -3,19 +3,30 @@ import Foundation
 // MARK: - Constants
 
 private enum Encoding: String {
-    case utf8 = "utf8"
-    case base64 = "base64"
+    case utf8
+    case base64
 }
 
 private enum FileMode: String {
-    case overwrite = "overwrite"
-    case append = "append"
+    case overwrite
+    case append
 }
 
 // MARK: - Helpers
 
 private func encodeJSON<T: Encodable>(_ value: T) throws -> String {
-    String(decoding: try JSONEncoder().encode(value), as: UTF8.self)
+    let data = try JSONEncoder().encode(value)
+    guard let json = String(data: data, encoding: .utf8) else {
+        throw ToolError.invalidInput("Failed to encode JSON")
+    }
+    return json
+}
+
+private func fileAttributeTypeString(from attributes: [FileAttributeKey: Any]) -> String? {
+    if let type = attributes[.type] as? FileAttributeType {
+        return type.rawValue
+    }
+    return attributes[.type] as? String
 }
 
 // MARK: - File Operations
@@ -23,10 +34,10 @@ private func encodeJSON<T: Encodable>(_ value: T) throws -> String {
 public struct ReadFileTool: AgentTool {
     public init() {}
 
-    public nonisolated static let toolName = "read_file"
-    public nonisolated static let toolDescription = "Read the contents of a file as text or base64"
+    nonisolated public static let toolName = "read_file"
+    nonisolated public static let toolDescription = "Read the contents of a file as text or base64"
 
-    public nonisolated static var inputSchema: ToolInputSchema {
+    nonisolated public static var inputSchema: ToolInputSchema {
         ToolInputSchema(
             properties: [
                 "path": PropertySchema(type: "string", description: "Absolute path to the file"),
@@ -36,7 +47,7 @@ public struct ReadFileTool: AgentTool {
         )
     }
 
-    public nonisolated static var outputSchema: ToolOutputSchema {
+    nonisolated public static var outputSchema: ToolOutputSchema {
         ToolOutputSchema(
             properties: [
                 "content": PropertySchema(type: "string", description: "File content"),
@@ -50,14 +61,16 @@ public struct ReadFileTool: AgentTool {
         let params = try JSONDecoder().decode(Input.self, from: Data(input.utf8))
         let url = try context.validatePathForRead(params.path)
 
+        // Use injected file manager for all operations
+        let fm = await context.serviceProvider.getFileManager()
+
         // Check file size before reading
-        let fm = FileManager.default
-        if let attrs = try? fm.attributesOfItem(atPath: url.path),
+        if let attrs = try? await fm.attributesOfItem(atPath: url.path),
            let size = attrs[.size] as? Int {
             try context.checkReadSize(size)
         }
 
-        let data = try await context.serviceProvider.getFileManager().read(from: url)
+        let data = try await fm.read(from: url)
         let encoding = params.encoding ?? "utf8"
 
         let content: String
@@ -88,10 +101,10 @@ public struct ReadFileTool: AgentTool {
 public struct CreateFileTool: AgentTool {
     public init() {}
 
-    public nonisolated static let toolName = "create_file"
-    public nonisolated static let toolDescription = "Create a new file with the given content"
+    nonisolated public static let toolName = "create_file"
+    nonisolated public static let toolDescription = "Create a new file with the given content"
 
-    public nonisolated static var inputSchema: ToolInputSchema {
+    nonisolated public static var inputSchema: ToolInputSchema {
         ToolInputSchema(
             properties: [
                 "path": PropertySchema(type: "string", description: "Absolute path for the new file"),
@@ -102,7 +115,7 @@ public struct CreateFileTool: AgentTool {
         )
     }
 
-    public nonisolated static var outputSchema: ToolOutputSchema {
+    nonisolated public static var outputSchema: ToolOutputSchema {
         ToolOutputSchema(
             properties: [
                 "success": PropertySchema(type: "boolean"),
@@ -126,7 +139,8 @@ public struct CreateFileTool: AgentTool {
         }
 
         try context.checkWriteSize(data.count)
-        try await context.serviceProvider.getFileManager().write(data: data, to: url)
+        let fm = await context.serviceProvider.getFileManager()
+        try await fm.write(data: data, to: url)
 
         let output = Output(success: true, path: params.path)
         return try encodeJSON(output)
@@ -147,10 +161,10 @@ public struct CreateFileTool: AgentTool {
 public struct WriteFileTool: AgentTool {
     public init() {}
 
-    public nonisolated static let toolName = "write_file"
-    public nonisolated static let toolDescription = "Write or append content to a file"
+    nonisolated public static let toolName = "write_file"
+    nonisolated public static let toolDescription = "Write or append content to a file"
 
-    public nonisolated static var inputSchema: ToolInputSchema {
+    nonisolated public static var inputSchema: ToolInputSchema {
         ToolInputSchema(
             properties: [
                 "path": PropertySchema(type: "string", description: "Absolute path to the file"),
@@ -162,7 +176,7 @@ public struct WriteFileTool: AgentTool {
         )
     }
 
-    public nonisolated static var outputSchema: ToolOutputSchema {
+    nonisolated public static var outputSchema: ToolOutputSchema {
         ToolOutputSchema(
             properties: [
                 "success": PropertySchema(type: "boolean"),
@@ -174,7 +188,7 @@ public struct WriteFileTool: AgentTool {
     public func execute(input: String, context: ToolExecutionContext) async throws -> String {
         let params = try JSONDecoder().decode(Input.self, from: Data(input.utf8))
         let url = try context.validatePathForWrite(params.path)
-        let fm = context.serviceProvider.getFileManager()
+        let fm = await context.serviceProvider.getFileManager()
 
         let newData: Data
         if params.encoding == "base64" {
@@ -218,10 +232,10 @@ public struct WriteFileTool: AgentTool {
 public struct DeleteFileTool: AgentTool {
     public init() {}
 
-    public nonisolated static let toolName = "delete_file"
-    public nonisolated static let toolDescription = "Delete a file"
+    nonisolated public static let toolName = "delete_file"
+    nonisolated public static let toolDescription = "Delete a file"
 
-    public nonisolated static var inputSchema: ToolInputSchema {
+    nonisolated public static var inputSchema: ToolInputSchema {
         ToolInputSchema(
             properties: [
                 "path": PropertySchema(type: "string", description: "Absolute path to the file")
@@ -230,7 +244,7 @@ public struct DeleteFileTool: AgentTool {
         )
     }
 
-    public nonisolated static var outputSchema: ToolOutputSchema {
+    nonisolated public static var outputSchema: ToolOutputSchema {
         ToolOutputSchema(
             properties: [
                 "success": PropertySchema(type: "boolean"),
@@ -243,7 +257,8 @@ public struct DeleteFileTool: AgentTool {
         let params = try JSONDecoder().decode(Input.self, from: Data(input.utf8))
         let url = try context.validatePathForWrite(params.path)
 
-        try await context.serviceProvider.getFileManager().delete(at: url)
+        let fm = await context.serviceProvider.getFileManager()
+        try await fm.delete(at: url)
 
         let output = Output(success: true, path: params.path)
         return try encodeJSON(output)
@@ -262,10 +277,10 @@ public struct DeleteFileTool: AgentTool {
 public struct MoveFileTool: AgentTool {
     public init() {}
 
-    public nonisolated static let toolName = "move_file"
-    public nonisolated static let toolDescription = "Move or rename a file"
+    nonisolated public static let toolName = "move_file"
+    nonisolated public static let toolDescription = "Move or rename a file"
 
-    public nonisolated static var inputSchema: ToolInputSchema {
+    nonisolated public static var inputSchema: ToolInputSchema {
         ToolInputSchema(
             properties: [
                 "source": PropertySchema(type: "string", description: "Source file path"),
@@ -275,7 +290,7 @@ public struct MoveFileTool: AgentTool {
         )
     }
 
-    public nonisolated static var outputSchema: ToolOutputSchema {
+    nonisolated public static var outputSchema: ToolOutputSchema {
         ToolOutputSchema(
             properties: [
                 "success": PropertySchema(type: "boolean"),
@@ -289,9 +304,8 @@ public struct MoveFileTool: AgentTool {
         let source = try context.validatePathForWrite(params.source)
         let dest = try context.validatePathForWrite(params.destination)
 
-        // Use FileManager for atomic move (handles large files efficiently)
-        let fileManager = FileManager.default
-        try fileManager.moveItem(at: source, to: dest)
+        let fm = await context.serviceProvider.getFileManager()
+        try await fm.move(from: source, to: dest)
 
         let output = Output(success: true, destination: params.destination)
         return try encodeJSON(output)
@@ -311,10 +325,10 @@ public struct MoveFileTool: AgentTool {
 public struct CopyFileTool: AgentTool {
     public init() {}
 
-    public nonisolated static let toolName = "copy_file"
-    public nonisolated static let toolDescription = "Copy a file to a new location"
+    nonisolated public static let toolName = "copy_file"
+    nonisolated public static let toolDescription = "Copy a file to a new location"
 
-    public nonisolated static var inputSchema: ToolInputSchema {
+    nonisolated public static var inputSchema: ToolInputSchema {
         ToolInputSchema(
             properties: [
                 "source": PropertySchema(type: "string", description: "Source file path"),
@@ -324,7 +338,7 @@ public struct CopyFileTool: AgentTool {
         )
     }
 
-    public nonisolated static var outputSchema: ToolOutputSchema {
+    nonisolated public static var outputSchema: ToolOutputSchema {
         ToolOutputSchema(
             properties: [
                 "success": PropertySchema(type: "boolean"),
@@ -338,9 +352,8 @@ public struct CopyFileTool: AgentTool {
         let source = try context.validatePathForRead(params.source)
         let dest = try context.validatePathForWrite(params.destination)
 
-        // Use FileManager for efficient copy (handles large files without loading to memory)
-        let fileManager = FileManager.default
-        try fileManager.copyItem(at: source, to: dest)
+        let fm = await context.serviceProvider.getFileManager()
+        try await fm.copy(from: source, to: dest)
 
         let output = Output(success: true, destination: params.destination)
         return try encodeJSON(output)
@@ -360,10 +373,10 @@ public struct CopyFileTool: AgentTool {
 public struct ReadFileChunkTool: AgentTool {
     public init() {}
 
-    public nonisolated static let toolName = "read_file_chunk"
-    public nonisolated static let toolDescription = "Read a specific byte range from a file"
+    nonisolated public static let toolName = "read_file_chunk"
+    nonisolated public static let toolDescription = "Read a specific byte range from a file"
 
-    public nonisolated static var inputSchema: ToolInputSchema {
+    nonisolated public static var inputSchema: ToolInputSchema {
         ToolInputSchema(
             properties: [
                 "path": PropertySchema(type: "string", description: "Absolute path to the file"),
@@ -375,7 +388,7 @@ public struct ReadFileChunkTool: AgentTool {
         )
     }
 
-    public nonisolated static var outputSchema: ToolOutputSchema {
+    nonisolated public static var outputSchema: ToolOutputSchema {
         ToolOutputSchema(
             properties: [
                 "content": PropertySchema(type: "string"),
@@ -388,6 +401,7 @@ public struct ReadFileChunkTool: AgentTool {
     public func execute(input: String, context: ToolExecutionContext) async throws -> String {
         let params = try JSONDecoder().decode(Input.self, from: Data(input.utf8))
         let url = try context.validatePathForRead(params.path)
+        let fm = await context.serviceProvider.getFileManager()
 
         guard params.offset >= 0, params.length > 0 else {
             throw ToolError.invalidInput("Offset must be non-negative and length must be positive")
@@ -395,20 +409,16 @@ public struct ReadFileChunkTool: AgentTool {
 
         // Check chunk size against limits
         try context.checkReadSize(params.length)
+        let data = try await fm.read(from: url)
+        try context.checkReadSize(data.count)
 
-        // Use FileHandle for seeking to avoid loading entire file
-        let handle = try FileHandle(forReadingFrom: url)
-        defer { try? handle.close() }
-
-        // Seek to offset
-        if #available(macOS 10.15.4, iOS 13.4, watchOS 6.2, tvOS 13.4, *) {
-            try handle.seek(toOffset: UInt64(params.offset))
+        let chunk: Data
+        if params.offset >= data.count {
+            chunk = Data()
         } else {
-            handle.seek(toFileOffset: UInt64(params.offset))
+            let end = min(data.count, params.offset + params.length)
+            chunk = data.subdata(in: params.offset..<end)
         }
-
-        // Read requested length
-        let chunk = handle.readData(ofLength: params.length)
 
         let encoding = params.encoding ?? "utf8"
         let content: String
@@ -444,10 +454,10 @@ public struct ReadFileChunkTool: AgentTool {
 public struct ListDirectoryTool: AgentTool {
     public init() {}
 
-    public nonisolated static let toolName = "list_directory"
-    public nonisolated static let toolDescription = "List files and subdirectories in a directory"
+    nonisolated public static let toolName = "list_directory"
+    nonisolated public static let toolDescription = "List files and subdirectories in a directory"
 
-    public nonisolated static var inputSchema: ToolInputSchema {
+    nonisolated public static var inputSchema: ToolInputSchema {
         ToolInputSchema(
             properties: [
                 "path": PropertySchema(type: "string", description: "Absolute path to directory"),
@@ -457,7 +467,7 @@ public struct ListDirectoryTool: AgentTool {
         )
     }
 
-    public nonisolated static var outputSchema: ToolOutputSchema {
+    nonisolated public static var outputSchema: ToolOutputSchema {
         ToolOutputSchema(
             properties: [
                 "entries": PropertySchema(type: "array", items: PropertySchema(type: "object")),
@@ -469,20 +479,17 @@ public struct ListDirectoryTool: AgentTool {
     public func execute(input: String, context: ToolExecutionContext) async throws -> String {
         let params = try JSONDecoder().decode(Input.self, from: Data(input.utf8))
         let url = try context.validatePathForRead(params.path)
-        let fm = context.serviceProvider.getFileManager()
+        let fm = await context.serviceProvider.getFileManager()
 
         var entries: [Entry] = []
-        let items = try await fm.listDirectory(at: url)
+        let items = params.recursive == true
+            ? try await fm.listDirectoryRecursive(at: url)
+            : try await fm.listDirectory(at: url)
 
         for item in items {
-            // Use FileManager to check if directory without masking errors
-            var isDir: ObjCBool = false
-            FileManager.default.fileExists(atPath: item.path, isDirectory: &isDir)
-            entries.append(Entry(name: item.lastPathComponent, path: item.path, isDirectory: isDir.boolValue))
-
-            if params.recursive == true, isDir.boolValue {
-                // Could recurse here, keeping simple for now
-            }
+            let attrs = try? await fm.attributesOfItem(atPath: item.path)
+            let isDir = fileAttributeTypeString(from: attrs ?? [:]) == FileAttributeType.typeDirectory.rawValue
+            entries.append(Entry(name: item.lastPathComponent, path: item.path, isDirectory: isDir))
         }
 
         let output = Output(entries: entries, totalCount: entries.count)
@@ -509,10 +516,10 @@ public struct ListDirectoryTool: AgentTool {
 public struct CreateDirectoryTool: AgentTool {
     public init() {}
 
-    public nonisolated static let toolName = "create_directory"
-    public nonisolated static let toolDescription = "Create a new directory"
+    nonisolated public static let toolName = "create_directory"
+    nonisolated public static let toolDescription = "Create a new directory"
 
-    public nonisolated static var inputSchema: ToolInputSchema {
+    nonisolated public static var inputSchema: ToolInputSchema {
         ToolInputSchema(
             properties: [
                 "path": PropertySchema(type: "string", description: "Absolute path for new directory"),
@@ -522,7 +529,7 @@ public struct CreateDirectoryTool: AgentTool {
         )
     }
 
-    public nonisolated static var outputSchema: ToolOutputSchema {
+    nonisolated public static var outputSchema: ToolOutputSchema {
         ToolOutputSchema(
             properties: [
                 "success": PropertySchema(type: "boolean"),
@@ -534,7 +541,7 @@ public struct CreateDirectoryTool: AgentTool {
     public func execute(input: String, context: ToolExecutionContext) async throws -> String {
         let params = try JSONDecoder().decode(Input.self, from: Data(input.utf8))
         let url = try context.validatePathForWrite(params.path)
-        let fm = context.serviceProvider.getFileManager()
+        let fm = await context.serviceProvider.getFileManager()
 
         if params.intermediate == false {
             let parent = url.deletingLastPathComponent()
@@ -563,10 +570,10 @@ public struct CreateDirectoryTool: AgentTool {
 public struct DeleteDirectoryTool: AgentTool {
     public init() {}
 
-    public nonisolated static let toolName = "delete_directory"
-    public nonisolated static let toolDescription = "Delete a directory and all its contents"
+    nonisolated public static let toolName = "delete_directory"
+    nonisolated public static let toolDescription = "Delete a directory and all its contents"
 
-    public nonisolated static var inputSchema: ToolInputSchema {
+    nonisolated public static var inputSchema: ToolInputSchema {
         ToolInputSchema(
             properties: [
                 "path": PropertySchema(type: "string", description: "Absolute path to directory")
@@ -575,7 +582,7 @@ public struct DeleteDirectoryTool: AgentTool {
         )
     }
 
-    public nonisolated static var outputSchema: ToolOutputSchema {
+    nonisolated public static var outputSchema: ToolOutputSchema {
         ToolOutputSchema(
             properties: [
                 "success": PropertySchema(type: "boolean"),
@@ -588,7 +595,8 @@ public struct DeleteDirectoryTool: AgentTool {
         let params = try JSONDecoder().decode(Input.self, from: Data(input.utf8))
         let url = try context.validatePathForWrite(params.path)
 
-        try await context.serviceProvider.getFileManager().delete(at: url)
+        let fm = await context.serviceProvider.getFileManager()
+        try await fm.delete(at: url)
 
         let output = Output(success: true, path: params.path)
         return try encodeJSON(output)
@@ -607,10 +615,10 @@ public struct DeleteDirectoryTool: AgentTool {
 public struct SearchFilesTool: AgentTool {
     public init() {}
 
-    public nonisolated static let toolName = "search_files"
-    public nonisolated static let toolDescription = "Search for files matching a pattern"
+    nonisolated public static let toolName = "search_files"
+    nonisolated public static let toolDescription = "Search for files matching a pattern"
 
-    public nonisolated static var inputSchema: ToolInputSchema {
+    nonisolated public static var inputSchema: ToolInputSchema {
         ToolInputSchema(
             properties: [
                 "directory": PropertySchema(type: "string", description: "Directory to search in"),
@@ -621,7 +629,7 @@ public struct SearchFilesTool: AgentTool {
         )
     }
 
-    public nonisolated static var outputSchema: ToolOutputSchema {
+    nonisolated public static var outputSchema: ToolOutputSchema {
         ToolOutputSchema(
             properties: [
                 "matches": PropertySchema(type: "array", items: PropertySchema(type: "string"))
@@ -631,34 +639,21 @@ public struct SearchFilesTool: AgentTool {
 
     public func execute(input: String, context: ToolExecutionContext) async throws -> String {
         let params = try JSONDecoder().decode(Input.self, from: Data(input.utf8))
-        let fm = context.serviceProvider.getFileManager()
+        let fm = await context.serviceProvider.getFileManager()
         let dir = try context.validatePathForRead(params.directory)
 
         var matches: [String] = []
         let limits = ToolLimits.default
 
-        if params.recursive == false {
-            let items = try await fm.listDirectory(at: dir)
-            for item in items {
-                if item.lastPathComponent.matchesPattern(params.pattern) {
-                    matches.append(item.path)
-                    if matches.count >= limits.maxSearchResults {
-                        break
-                    }
-                }
-            }
+        let items: [URL] = if params.recursive == false {
+            try await fm.listDirectory(at: dir)
         } else {
-            let fileManager = FileManager.default
-            let enumerator = fileManager.enumerator(at: dir, includingPropertiesForKeys: nil)
-            while let url = enumerator?.nextObject() as? URL {
-                if url.lastPathComponent.matchesPattern(params.pattern) {
-                    matches.append(url.path)
-                    if matches.count >= limits.maxSearchResults {
-                        break
-                    }
-                }
-            }
+            try await fm.listDirectoryRecursive(at: dir)
         }
+        let matched = items
+            .filter { $0.lastPathComponent.matchesPattern(params.pattern) }
+            .prefix(limits.maxSearchResults)
+        matches.append(contentsOf: matched.map(\.path))
 
         let output = Output(matches: matches)
         return try encodeJSON(output)
@@ -680,10 +675,10 @@ public struct SearchFilesTool: AgentTool {
 public struct PathExistsTool: AgentTool {
     public init() {}
 
-    public nonisolated static let toolName = "path_exists"
-    public nonisolated static let toolDescription = "Check if a path exists and what type it is"
+    nonisolated public static let toolName = "path_exists"
+    nonisolated public static let toolDescription = "Check if a path exists and what type it is"
 
-    public nonisolated static var inputSchema: ToolInputSchema {
+    nonisolated public static var inputSchema: ToolInputSchema {
         ToolInputSchema(
             properties: [
                 "path": PropertySchema(type: "string", description: "Absolute path to check")
@@ -692,7 +687,7 @@ public struct PathExistsTool: AgentTool {
         )
     }
 
-    public nonisolated static var outputSchema: ToolOutputSchema {
+    nonisolated public static var outputSchema: ToolOutputSchema {
         ToolOutputSchema(
             properties: [
                 "exists": PropertySchema(type: "boolean"),
@@ -704,16 +699,15 @@ public struct PathExistsTool: AgentTool {
     public func execute(input: String, context: ToolExecutionContext) async throws -> String {
         let params = try JSONDecoder().decode(Input.self, from: Data(input.utf8))
         let url = try context.validatePathForRead(params.path)
-        let fm = context.serviceProvider.getFileManager()
+        let fm = await context.serviceProvider.getFileManager()
 
         let exists = await fm.exists(at: url)
         var type = "none"
 
         if exists {
-            let fileManager = FileManager.default
-            var isDir: ObjCBool = false
-            if fileManager.fileExists(atPath: url.path, isDirectory: &isDir) {
-                type = isDir.boolValue ? "directory" : "file"
+            let attrs = try? await fm.attributesOfItem(atPath: url.path)
+            if let dirAttr = fileAttributeTypeString(from: attrs ?? [:]) {
+                type = dirAttr == FileAttributeType.typeDirectory.rawValue ? "directory" : "file"
             }
         }
 
@@ -734,10 +728,10 @@ public struct PathExistsTool: AgentTool {
 public struct GetFileInfoTool: AgentTool {
     public init() {}
 
-    public nonisolated static let toolName = "get_file_info"
-    public nonisolated static let toolDescription = "Get metadata about a file (size, modification date)"
+    nonisolated public static let toolName = "get_file_info"
+    nonisolated public static let toolDescription = "Get metadata about a file (size, modification date)"
 
-    public nonisolated static var inputSchema: ToolInputSchema {
+    nonisolated public static var inputSchema: ToolInputSchema {
         ToolInputSchema(
             properties: [
                 "path": PropertySchema(type: "string", description: "Absolute path to the file")
@@ -746,7 +740,7 @@ public struct GetFileInfoTool: AgentTool {
         )
     }
 
-    public nonisolated static var outputSchema: ToolOutputSchema {
+    nonisolated public static var outputSchema: ToolOutputSchema {
         ToolOutputSchema(
             properties: [
                 "size": PropertySchema(type: "integer"),
@@ -760,18 +754,17 @@ public struct GetFileInfoTool: AgentTool {
     public func execute(input: String, context: ToolExecutionContext) async throws -> String {
         let params = try JSONDecoder().decode(Input.self, from: Data(input.utf8))
         let url = try context.validatePathForRead(params.path)
-        let fm = context.serviceProvider.getFileManager()
+        let fm = await context.serviceProvider.getFileManager()
 
         guard await fm.exists(at: url) else {
             throw ToolError.invalidInput("Path does not exist: \(params.path)")
         }
 
-        let fileManager = FileManager.default
-        let attrs = try fileManager.attributesOfItem(atPath: url.path)
+        let attrs = try await fm.attributesOfItem(atPath: url.path)
         let size = attrs[.size] as? Int ?? 0
         let created = (attrs[.creationDate] as? Date)?.ISO8601Format() ?? ""
         let modified = (attrs[.modificationDate] as? Date)?.ISO8601Format() ?? ""
-        let isDir = (attrs[.type] as? FileAttributeType) == .typeDirectory
+        let isDir = fileAttributeTypeString(from: attrs) == FileAttributeType.typeDirectory.rawValue
 
         let output = Output(size: size, created: created, modified: modified, isDirectory: isDir)
         return try encodeJSON(output)
@@ -794,10 +787,10 @@ public struct GetFileInfoTool: AgentTool {
 public struct RunCommandTool: AgentTool {
     public init() {}
 
-    public nonisolated static let toolName = "run_command"
-    public nonisolated static let toolDescription = "Execute a shell command"
+    nonisolated public static let toolName = "run_command"
+    nonisolated public static let toolDescription = "Execute a shell command"
 
-    public nonisolated static var inputSchema: ToolInputSchema {
+    nonisolated public static var inputSchema: ToolInputSchema {
         ToolInputSchema(
             properties: [
                 "command": PropertySchema(type: "string", description: "Command to execute"),
@@ -808,7 +801,7 @@ public struct RunCommandTool: AgentTool {
         )
     }
 
-    public nonisolated static var outputSchema: ToolOutputSchema {
+    nonisolated public static var outputSchema: ToolOutputSchema {
         ToolOutputSchema(
             properties: [
                 "stdout": PropertySchema(type: "string"),
@@ -827,36 +820,12 @@ public struct RunCommandTool: AgentTool {
         let validator = CommandValidator()
         let validation = validator.validate(params.command, allowUnsafe: false)
 
-        let process = Process()
-
+        let cmd: CommandValidator.ParsedCommand
         switch validation {
-        case .success(let cmd):
-            // Safe command - execute directly without shell
-            // Search PATH for executable using 'which'
-            let whichProcess = Process()
-            whichProcess.executableURL = URL(fileURLWithPath: "/usr/bin/which")
-            whichProcess.arguments = [cmd.executable]
-            whichProcess.environment = context.environment
+        case .success(let parsed):
+            cmd = parsed
 
-            let whichPipe = Pipe()
-            whichProcess.standardOutput = whichPipe
-            try whichProcess.run()
-            whichProcess.waitUntilExit()
-
-            guard whichProcess.terminationStatus == 0 else {
-                throw ToolError.invalidInput("Command '\(cmd.executable)' not found in PATH")
-            }
-
-            let whichData = whichPipe.fileHandleForReading.readDataToEndOfFile()
-            guard let executablePath = String(data: whichData, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines),
-                  !executablePath.isEmpty else {
-                throw ToolError.invalidInput("Could not resolve path for '\(cmd.executable)'")
-            }
-
-            process.executableURL = URL(fileURLWithPath: executablePath)
-            process.arguments = cmd.args
         case .failure(let error):
-            // Unsafe command - reject with specific reason
             throw ToolError.invalidInput("Command not allowed: \(error.message)")
         }
 
@@ -867,55 +836,40 @@ public struct RunCommandTool: AgentTool {
         } else {
             cwdURL = context.workingDirectory
         }
-        process.currentDirectoryURL = cwdURL
 
-        let stdout = Pipe()
-        let stderr = Pipe()
-        process.standardOutput = stdout
-        process.standardError = stderr
+        // Use injected command executor
+        let executor = await context.serviceProvider.getCommandExecutor()
 
-        let task = Task {
-            try process.run()
-            process.waitUntilExit()
-            let outData = stdout.fileHandleForReading.readDataToEndOfFile()
-            let errData = stderr.fileHandleForReading.readDataToEndOfFile()
-            // Limit output size
-            let truncatedOut = outData.count > limits.maxCommandOutput ?
-                Data(outData.prefix(limits.maxCommandOutput)) : outData
-            let truncatedErr = errData.count > limits.maxCommandOutput ?
-                Data(errData.prefix(limits.maxCommandOutput)) : errData
-            return (stdout: truncatedOut, stderr: truncatedErr, exitCode: Int(process.terminationStatus))
-        }
+        // Resolve command path
+        let executablePath = try await executor.resolvePath(
+            command: cmd.executable,
+            environment: context.environment,
+            timeout: timeout
+        )
 
-        let result: (stdout: Data, stderr: Data, exitCode: Int)
-        do {
-            result = try await withTimeout(seconds: timeout) {
-                try await task.value
-            }
-        } catch ToolError.timeout {
-            process.terminate()
-            throw ToolError.timeout
-        }
+        // Execute command with timeout handled by executor
+        let result = try await executor.execute(
+            command: executablePath,
+            arguments: cmd.args,
+            workingDirectory: cwdURL,
+            environment: context.environment,
+            timeout: timeout
+        )
+
+        // Limit output size
+        let truncatedOut = result.stdout.count > limits.maxCommandOutput
+            ? String(result.stdout.prefix(limits.maxCommandOutput))
+            : result.stdout
+        let truncatedErr = result.stderr.count > limits.maxCommandOutput
+            ? String(result.stderr.prefix(limits.maxCommandOutput))
+            : result.stderr
 
         let output = Output(
-            stdout: String(decoding: result.stdout, as: UTF8.self),
-            stderr: String(decoding: result.stderr, as: UTF8.self),
+            stdout: truncatedOut,
+            stderr: truncatedErr,
             exitCode: result.exitCode
         )
         return try encodeJSON(output)
-    }
-
-    private func withTimeout<T: Sendable>(seconds: Int, operation: @Sendable @escaping () async throws -> T) async throws -> T {
-        try await withThrowingTaskGroup(of: T.self) { group in
-            group.addTask { try await operation() }
-            group.addTask {
-                try await Task.sleep(nanoseconds: UInt64(seconds) * 1_000_000_000)
-                throw ToolError.timeout
-            }
-            let result = try await group.next()!
-            group.cancelAll()
-            return result
-        }
     }
 
     struct Input: Codable {
@@ -934,10 +888,10 @@ public struct RunCommandTool: AgentTool {
 public struct GetEnvironmentTool: AgentTool {
     public init() {}
 
-    public nonisolated static let toolName = "get_environment"
-    public nonisolated static let toolDescription = "Get environment variables"
+    nonisolated public static let toolName = "get_environment"
+    nonisolated public static let toolDescription = "Get environment variables"
 
-    public nonisolated static var inputSchema: ToolInputSchema {
+    nonisolated public static var inputSchema: ToolInputSchema {
         ToolInputSchema(
             properties: [
                 "key": PropertySchema(type: "string", description: "Specific variable to get (omit for all)")
@@ -945,7 +899,7 @@ public struct GetEnvironmentTool: AgentTool {
         )
     }
 
-    public nonisolated static var outputSchema: ToolOutputSchema {
+    nonisolated public static var outputSchema: ToolOutputSchema {
         ToolOutputSchema(
             properties: [
                 "variables": PropertySchema(type: "object"),
@@ -983,14 +937,14 @@ public struct GetEnvironmentTool: AgentTool {
 public struct GetWorkingDirectoryTool: AgentTool {
     public init() {}
 
-    public nonisolated static let toolName = "get_working_directory"
-    public nonisolated static let toolDescription = "Get the current working directory"
+    nonisolated public static let toolName = "get_working_directory"
+    nonisolated public static let toolDescription = "Get the current working directory"
 
-    public nonisolated static var inputSchema: ToolInputSchema {
+    nonisolated public static var inputSchema: ToolInputSchema {
         ToolInputSchema(properties: [:])
     }
 
-    public nonisolated static var outputSchema: ToolOutputSchema {
+    nonisolated public static var outputSchema: ToolOutputSchema {
         ToolOutputSchema(
             properties: [
                 "path": PropertySchema(type: "string")
@@ -1008,6 +962,75 @@ public struct GetWorkingDirectoryTool: AgentTool {
     }
 }
 
+// MARK: - Command Executor Implementation
+
+struct RealCommandExecutor: CommandExecutor {
+
+    func execute(command: String, arguments: [String], workingDirectory: URL, environment: [String: String], timeout: Int) async throws -> (stdout: String, stderr: String, exitCode: Int) {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: command)
+        process.arguments = arguments
+        process.currentDirectoryURL = workingDirectory
+        process.environment = environment
+
+        let stdoutPipe = Pipe()
+        let stderrPipe = Pipe()
+        process.standardOutput = stdoutPipe
+        process.standardError = stderrPipe
+
+        return try await withTimeout(seconds: timeout) {
+            try process.run()
+            process.waitUntilExit()
+
+            let stdoutData = stdoutPipe.fileHandleForReading.readDataToEndOfFile()
+            let stderrData = stderrPipe.fileHandleForReading.readDataToEndOfFile()
+
+            let stdout = String(data: stdoutData, encoding: .utf8) ?? ""
+            let stderr = String(data: stderrData, encoding: .utf8) ?? ""
+
+            return (stdout, stderr, Int(process.terminationStatus))
+        }
+    }
+
+    func resolvePath(command: String, environment: [String: String], timeout: Int) async throws -> String {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/which")
+        process.arguments = [command]
+        process.environment = environment
+
+        let pipe = Pipe()
+        process.standardOutput = pipe
+        process.standardError = Pipe()
+
+        return try await withTimeout(seconds: timeout) {
+            try process.run()
+            process.waitUntilExit()
+
+            let data = pipe.fileHandleForReading.readDataToEndOfFile()
+            guard let path = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines),
+                  !path.isEmpty else {
+                throw ToolError.invalidInput("Command '\(command)' not found in PATH")
+            }
+            return path
+        }
+    }
+
+    private func withTimeout<T: Sendable>(seconds: Int, operation: @Sendable @escaping () async throws -> T) async throws -> T {
+        try await withThrowingTaskGroup(of: T.self) { group in
+            group.addTask { try await operation() }
+            group.addTask {
+                try await Task.sleep(nanoseconds: UInt64(seconds) * 1_000_000_000)
+                throw ToolError.timeout
+            }
+            guard let result = try await group.next() else {
+                throw ToolError.timeout
+            }
+            group.cancelAll()
+            return result
+        }
+    }
+}
+
 // MARK: - Helpers
 
 extension String {
@@ -1016,6 +1039,6 @@ extension String {
             .replacingOccurrences(of: ".", with: "\\.")
             .replacingOccurrences(of: "*", with: ".*")
             .replacingOccurrences(of: "?", with: ".")
-        return self.range(of: regex, options: .regularExpression) != nil
+        return self.range(of: "^\(regex)$", options: .regularExpression) != nil
     }
 }

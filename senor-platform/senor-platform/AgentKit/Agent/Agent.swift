@@ -1,7 +1,7 @@
 import Foundation
 
 /// Agent protocol for defining agent behavior
-public protocol Agent: Sendable {
+public protocol AKAgent: Sendable {
     var id: UUID { get }
     var name: String { get }
     var tools: [any AgentTool] { get }

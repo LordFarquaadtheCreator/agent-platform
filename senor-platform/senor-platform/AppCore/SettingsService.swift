@@ -2,7 +2,7 @@ import Foundation
 
 /// Service for managing application settings and integration configurations
 @MainActor
-public final class SettingsService: Sendable {
+public final class SettingsService {
     private let defaults = UserDefaults.standard
     private let logger = AppLogger.general
 
@@ -57,17 +57,36 @@ public final class SettingsService: Sendable {
     public struct DeviantArtSettings: Codable, Sendable {
         public var clientId: String
         public var clientSecret: String
+        public var redirectURI: String
         public var accessToken: String?
         public var refreshToken: String?
         public var tokenExpiry: Date?
 
         public var isAuthenticated: Bool {
-            accessToken != nil && tokenExpiry != nil && tokenExpiry! > Date()
+            guard let expiry = tokenExpiry else { return false }
+            return accessToken != nil && expiry > Date()
+        }
+
+        public init(
+            clientId: String = "",
+            clientSecret: String = "",
+            redirectURI: String = "senorplatform://oauth/deviantart",
+            accessToken: String? = nil,
+            refreshToken: String? = nil,
+            tokenExpiry: Date? = nil
+        ) {
+            self.clientId = clientId
+            self.clientSecret = clientSecret
+            self.redirectURI = redirectURI
+            self.accessToken = accessToken
+            self.refreshToken = refreshToken
+            self.tokenExpiry = tokenExpiry
         }
     }
 
+    private static let deviantArtRedirectURIKey = "deviantArt.redirectURI"
+
     public func saveDeviantArtSettings(_ settings: DeviantArtSettings) throws {
-        // Store ALL credentials in Keychain for security, not UserDefaults
         let keychain = Keychain()
         try keychain.save(string: settings.clientId, account: KeychainKeys.deviantArtClientId.rawValue)
         try keychain.save(string: settings.clientSecret, account: KeychainKeys.deviantArtClientSecret.rawValue)
@@ -78,14 +97,17 @@ public final class SettingsService: Sendable {
             try keychain.save(string: refreshToken, key: .deviantArtRefreshToken)
         }
         defaults.set(settings.tokenExpiry, forKey: Keys.deviantArtTokenExpiry)
+        defaults.set(settings.redirectURI, forKey: Self.deviantArtRedirectURIKey)
         logger.info("Saved DeviantArt settings to Keychain")
     }
 
     public func loadDeviantArtSettings() -> DeviantArtSettings {
         let keychain = Keychain()
+        let redirectURI = defaults.string(forKey: Self.deviantArtRedirectURIKey)
         return DeviantArtSettings(
             clientId: keychain.retrieveString(account: KeychainKeys.deviantArtClientId.rawValue) ?? "",
             clientSecret: keychain.retrieveString(account: KeychainKeys.deviantArtClientSecret.rawValue) ?? "",
+            redirectURI: redirectURI ?? "senorplatform://oauth/deviantart",
             accessToken: keychain.retrieveString(key: .deviantArtAccessToken),
             refreshToken: keychain.retrieveString(key: .deviantArtRefreshToken),
             tokenExpiry: defaults.object(forKey: Keys.deviantArtTokenExpiry) as? Date
@@ -100,7 +122,8 @@ public final class SettingsService: Sendable {
         public var tokenExpiry: Date?
 
         public var isAuthenticated: Bool {
-            !accessToken.isEmpty && (tokenExpiry == nil || tokenExpiry! > Date())
+            guard let expiry = tokenExpiry else { return !accessToken.isEmpty }
+            return !accessToken.isEmpty && expiry > Date()
         }
     }
 

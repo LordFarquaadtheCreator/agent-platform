@@ -27,16 +27,22 @@ public enum StatusColor: String, CaseIterable, Sendable {
         switch status.lowercased() {
         case "pending", "scheduled", "queued":
             return .gray
+
         case "running", "active", "publishing", "in_progress":
             return .blue
+
         case "completed", "success", "approved", "published":
             return .green
+
         case "warning", "stale", "retry":
             return .yellow
+
         case "cancelled", "skipped":
             return .orange
+
         case "failed", "error", "rejected":
             return .red
+
         default:
             return .gray
         }

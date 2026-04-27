@@ -86,7 +86,7 @@ public struct DeviantArtPublishTool: AgentTool {
 
         // Verify image exists
         let imageURL = URL(fileURLWithPath: imagePath)
-        let fileManager = context.serviceProvider.getFileManager()
+        let fileManager = await context.serviceProvider.getFileManager()
         guard await fileManager.exists(at: imageURL) else {
             throw ToolError.fileError(NSError(domain: "DeviantArtPublishTool", code: -1, userInfo: [
                 NSLocalizedDescriptionKey: "Image file not found at \(imagePath)"
@@ -113,7 +113,7 @@ public struct DeviantArtPublishTool: AgentTool {
         ))
 
         let filename = imageURL.lastPathComponent
-        let stashItem = try await deviantArtClient.stashSubmit(
+        let stashItem: AKStashItem = try await deviantArtClient.stashSubmit(
             filename: filename,
             title: title,
             tags: tags.isEmpty ? nil : tags
@@ -126,7 +126,7 @@ public struct DeviantArtPublishTool: AgentTool {
             message: "Publishing deviation"
         ))
 
-        let publishResult = try await deviantArtClient.stashPublish(
+        let publishResult: AKPublishResult = try await deviantArtClient.stashPublish(
             stashId: stashItem.itemid,
             title: title,
             category: category,
@@ -158,7 +158,7 @@ public struct DeviantArtPublishTool: AgentTool {
         return String(data: resultData, encoding: .utf8) ?? "{}"
     }
 
-    private func getDeviantArtClient(context: ToolExecutionContext) async throws -> DeviantArtClient? {
+    private func getDeviantArtClient(context: ToolExecutionContext) async throws -> AKDeviantArtClient? {
         try await context.serviceProvider.getDeviantArtClient()
     }
 }
@@ -276,7 +276,7 @@ public struct PatreonPublishTool: AgentTool {
             message: "Creating Patreon post"
         ))
 
-        let post = try await patreonClient.createPost(
+        let post: AKPost = try await patreonClient.createPost(
             campaignId: campaignId,
             title: title,
             content: content,
@@ -308,7 +308,7 @@ public struct PatreonPublishTool: AgentTool {
         return String(data: resultData, encoding: .utf8) ?? "{}"
     }
 
-    private func getPatreonClient(context: ToolExecutionContext) async throws -> PatreonClient? {
+    private func getPatreonClient(context: ToolExecutionContext) async throws -> AKPatreonClient? {
         try await context.serviceProvider.getPatreonClient()
     }
 }

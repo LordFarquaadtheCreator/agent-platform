@@ -6,7 +6,7 @@ public struct ContentThumbnail: View {
     let size: CGFloat
     let cornerRadius: CGFloat
 
-    public init(url: URL?, size: CGFloat = 60, cornerRadius: CGFloat = 8) {
+    public init(url: URL?, size: CGFloat = 60, cornerRadius: CGFloat = 10) {
         self.url = url
         self.size = size
         self.cornerRadius = cornerRadius
@@ -20,12 +20,15 @@ public struct ContentThumbnail: View {
                     case .empty:
                         ProgressView()
                             .frame(width: size, height: size)
+
                     case .success(let image):
                         image
                             .resizable()
                             .aspectRatio(contentMode: .fill)
+
                     case .failure:
                         placeholder
+
                     @unknown default:
                         placeholder
                     }
@@ -40,19 +43,18 @@ public struct ContentThumbnail: View {
 
     private var placeholder: some View {
         RoundedRectangle(cornerRadius: cornerRadius)
-            .fill(Color.gray.opacity(0.2))
+            .fill(AppTheme.ColorToken.textSecondary.opacity(0.2))
             .overlay(
-                Image(systemName: "photo")
-                    .foregroundStyle(.secondary)
+                AppIcon(AppTheme.Icon.content, size: .medium, color: AppTheme.ColorToken.textSecondary)
             )
     }
 }
 
 #Preview {
-    HStack(spacing: 16) {
-        ContentThumbnail(url: nil, size: 60)
+    AppHStack(spacing: .large) {
+        ContentThumbnail(url: nil, size: AppTheme.Layout.thumbnailSize)
         ContentThumbnail(url: nil, size: 80)
         ContentThumbnail(url: nil, size: 100)
     }
-    .padding()
+    .appScreenPadding()
 }

@@ -33,7 +33,7 @@ public struct ConfirmationDialog: ViewModifier {
                     onConfirm()
                 }
             } message: {
-                Text(message)
+                AppText(message, style: .body)
             }
     }
 }
@@ -144,7 +144,7 @@ public extension View {
     @Previewable @State var showDelete = false
     @Previewable @State var showReset = false
 
-    VStack(spacing: 20) {
+    AppVStack(spacing: .large) {
         Button("Show Delete Dialog") { showDelete = true }
         Button("Show Reset Dialog") { showReset = true }
     }
@@ -154,5 +154,5 @@ public extension View {
     .resetConfirmation(isPresented: $showReset, itemName: "Settings") {
         print("Reset")
     }
-    .padding()
+    .appScreenPadding()
 }

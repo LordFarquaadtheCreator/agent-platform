@@ -7,12 +7,18 @@ public final class AgentRunner {
     private let toolRegistry: ToolRegistry
     private let statusReporter: FileStatusReporter
     private let logger: AgentLogger
+    private let serviceProviderFactory: @Sendable () -> any ToolServiceProvider
 
-    public init(commandLineArguments: [String], logger: AgentLogger = DefaultAgentLogger.default) throws {
+    public init(
+        commandLineArguments: [String],
+        logger: AgentLogger = DefaultAgentLogger.default,
+        serviceProviderFactory: @escaping @Sendable () -> any ToolServiceProvider = { AppToolServiceProvider() }
+    ) throws {
         self.arguments = try AgentArguments.parse(commandLineArguments)
         self.toolRegistry = ToolRegistry()
         self.statusReporter = FileStatusReporter(statusFilePath: arguments.statusFilePath)
         self.logger = logger
+        self.serviceProviderFactory = serviceProviderFactory
     }
 
     /// Main execution method
@@ -46,16 +52,15 @@ public final class AgentRunner {
                 taskPrompt: arguments.taskPrompt,
                 availableTools: await toolRegistry.getAllToolSchemas(),
                 workingDirectory: workingDirectory,
-                statusReporter: statusReporter,
-                toolExecutor: { [toolRegistry] toolName, input in
-                    guard let toolType = await toolRegistry.getTool(named: toolName) else {
-                        throw ToolError.serviceUnavailable("Tool '\(toolName)' not found")
-                    }
-                    let tool = toolType.init()
-                    let context = try await self.createToolContext(workingDirectory: workingDirectory)
-                    return try await tool.execute(input: input, context: context)
+                statusReporter: statusReporter
+            ) { [toolRegistry] toolName, input in
+                guard let toolType = await toolRegistry.getTool(named: toolName) else {
+                    throw ToolError.serviceUnavailable("Tool '\(toolName)' not found")
                 }
-            )
+                let tool = toolType.init()
+                let context = try await self.createToolContext(workingDirectory: workingDirectory)
+                return try await tool.execute(input: input, context: context)
+            }
 
             // Execute LLM-driven workflow
             let result = try await executeLLMWorkflow(context: llmContext)
@@ -68,7 +73,6 @@ public final class AgentRunner {
                 progress: 1.0,
                 result: result
             ))
-
         } catch {
             // Report failure
             try? await statusReporter.report(status: AgentStatus(
@@ -104,42 +108,25 @@ public final class AgentRunner {
     }
 
     private func registerTools() async throws {
-        // Register all available tools
-        let availableTools = ["comfyui", "deviantart_publish", "patreon_publish", "image_composer"]
+        let requestedTools = arguments.requestedTools.isEmpty ? AgentKit.toolNames : arguments.requestedTools
+        var registeredCount = 0
 
-        if !arguments.requestedTools.isEmpty {
-            // Only register requested tools that are available
-            for toolName in arguments.requestedTools {
-                guard availableTools.contains(toolName) else {
-                    logger.warning("Unknown tool requested: \(toolName)")
-                    continue
-                }
-                switch toolName {
-                case "comfyui":
-                    await toolRegistry.register(ComfyUITool.self)
-                case "deviantart_publish":
-                    await toolRegistry.register(DeviantArtPublishTool.self)
-                case "patreon_publish":
-                    await toolRegistry.register(PatreonPublishTool.self)
-                case "image_composer":
-                    await toolRegistry.register(ImageComposerTool.self)
-                default:
-                    logger.warning("Unknown tool: \(toolName)")
-                }
+        for toolName in requestedTools {
+            guard let toolType = AgentKit.toolTypesByName[toolName] else {
+                logger.warning("Unknown tool requested: \(toolName)")
+                continue
             }
-            logger.info("Registered \(arguments.requestedTools.count) requested tools")
-        } else {
-            // Register all tools if none specifically requested
-            await toolRegistry.register(ComfyUITool.self)
-            await toolRegistry.register(DeviantArtPublishTool.self)
-            await toolRegistry.register(PatreonPublishTool.self)
-            await toolRegistry.register(ImageComposerTool.self)
+
+            await toolRegistry.register(toolType)
+            registeredCount += 1
         }
+
+        logger.info("Registered \(registeredCount) tools")
     }
 
     private func createToolContext(workingDirectory: URL) async throws -> ToolExecutionContext {
         let executionId = UUID().uuidString
-        let serviceProvider = DefaultToolServiceProvider()
+        let serviceProvider = serviceProviderFactory()
         let statusReporter = DelegatingStatusReporter(fileReporter: statusReporter)
 
         return ToolExecutionContext(
@@ -219,7 +206,11 @@ public final class AgentRunner {
         // Simple keyword matching for now
         var selectedTools: [ToolSelection] = []
 
-        if task.lowercased().contains("comfy") || task.lowercased().contains("generate image") {
+        let normalizedTask = task.lowercased()
+        let availableToolNames = Set(availableTools.map { $0.name })
+
+        if availableToolNames.contains("comfyui"),
+           normalizedTask.contains("comfy") || normalizedTask.contains("generate image") {
             selectedTools.append(ToolSelection(
                 name: "comfyui",
                 input: "{\"workflow_file_path\": \"workflow.json\"}",
@@ -227,7 +218,8 @@ public final class AgentRunner {
             ))
         }
 
-        if task.lowercased().contains("deviantart") || task.lowercased().contains("post") {
+        if availableToolNames.contains("deviantart_publish"),
+           normalizedTask.contains("deviantart") || normalizedTask.contains("post") {
             selectedTools.append(ToolSelection(
                 name: "deviantart_publish",
                 input: "{\"image_path\": \"output.png\", \"title\": \"Generated Art\"}",
@@ -236,12 +228,19 @@ public final class AgentRunner {
         }
 
         if selectedTools.isEmpty {
-            // Default to image composer for composition tasks
-            selectedTools.append(ToolSelection(
-                name: "image_composer",
-                input: "{\"canvas\": {\"width\": 1024, \"height\": 1024}, \"layers\": []}",
-                outputKey: "composed_image"
-            ))
+            if availableToolNames.contains("get_working_directory") {
+                selectedTools.append(ToolSelection(
+                    name: "get_working_directory",
+                    input: "{}",
+                    outputKey: "working_directory"
+                ))
+            } else if availableToolNames.contains("image_composer") {
+                selectedTools.append(ToolSelection(
+                    name: "image_composer",
+                    input: "{\"canvas\": {\"width\": 1024, \"height\": 1024}, \"layers\": []}",
+                    outputKey: "composed_image"
+                ))
+            }
         }
 
         return TaskIntent(tools: selectedTools)
@@ -270,20 +269,25 @@ struct AgentArguments {
             case "--task-id":
                 index += 1
                 taskId = index < args.count ? args[index] : nil
+
             case "--system-prompt":
                 index += 1
                 systemPrompt = index < args.count ? args[index] : nil
+
             case "--task-prompt":
                 index += 1
                 taskPrompt = index < args.count ? args[index] : nil
+
             case "--status-file":
                 index += 1
                 statusFilePath = index < args.count ? args[index] : nil
+
             case "--tools":
                 index += 1
                 if index < args.count {
                     tools = args[index].split(separator: ",").map(String.init)
                 }
+
             default:
                 break
             }
@@ -327,13 +331,13 @@ nonisolated struct AgentStatus: Codable, Sendable {
     let error: String?
 
     enum State: String, Codable {
-        case starting = "starting"
-        case ready = "ready"
-        case running = "running"
-        case waiting = "waiting"
-        case completed = "completed"
-        case failed = "failed"
-        case cancelled = "cancelled"
+        case starting
+        case ready
+        case running
+        case waiting
+        case completed
+        case failed
+        case cancelled
     }
 
     init(
@@ -410,31 +414,8 @@ actor FileStatusReporter {
 
 // MARK: - Service Provider
 
-struct DefaultToolServiceProvider: ToolServiceProvider {
-    func getHTTPClient() async throws -> any ToolHTTPClient {
-        return DefaultToolHTTPClient()
-    }
-
-    func getFileManager() -> any ToolFileManager {
-        return DefaultToolFileManager()
-    }
-
-    func getConfig(key: String) async throws -> String? {
-        return ProcessInfo.processInfo.environment[key]
-    }
-
-    func getDeviantArtClient() async throws -> DeviantArtClient? {
-        // To be implemented by the main app via an extension or subclass
-        return nil
-    }
-
-    func getPatreonClient() async throws -> PatreonClient? {
-        // To be implemented by the main app via an extension or subclass
-        return nil
-    }
-}
-
 struct DefaultToolHTTPClient: ToolHTTPClient {
+
     func get(url: String, headers: [String: String]) async throws -> (data: Data, statusCode: Int) {
         guard let url = URL(string: url) else {
             throw ToolError.invalidInput("Invalid URL: \(url)")
@@ -487,6 +468,8 @@ struct DefaultToolHTTPClient: ToolHTTPClient {
 struct DefaultToolFileManager: ToolFileManager, @unchecked Sendable {
     private let fileManager = FileManager.default
 
+    nonisolated init() {}
+
     func createDirectory(at url: URL) async throws {
         try fileManager.createDirectory(at: url, withIntermediateDirectories: true)
     }
@@ -496,25 +479,58 @@ struct DefaultToolFileManager: ToolFileManager, @unchecked Sendable {
     }
 
     func read(from url: URL) async throws -> Data {
-        return try Data(contentsOf: url)
+        try Data(contentsOf: url)
     }
 
     func exists(at url: URL) async -> Bool {
-        return fileManager.fileExists(atPath: url.path)
+        fileManager.fileExists(atPath: url.path)
     }
 
     func delete(at url: URL) async throws {
         try fileManager.removeItem(at: url)
     }
 
+    func move(from source: URL, to dest: URL) async throws {
+        try fileManager.moveItem(at: source, to: dest)
+    }
+
+    func copy(from source: URL, to dest: URL) async throws {
+        try fileManager.copyItem(at: source, to: dest)
+    }
+
     func listDirectory(at url: URL) async throws -> [URL] {
-        return try fileManager.contentsOfDirectory(at: url, includingPropertiesForKeys: nil)
+        try fileManager.contentsOfDirectory(at: url, includingPropertiesForKeys: nil)
+    }
+
+    func listDirectoryRecursive(at url: URL) async throws -> [URL] {
+        try listDirectoryRecursiveSync(at: url)
     }
 
     func createTempFile(prefix: String, suffix: String) async throws -> URL {
         let tempDir = fileManager.temporaryDirectory
         let filename = "\(prefix)\(UUID().uuidString)\(suffix)"
         return tempDir.appendingPathComponent(filename)
+    }
+
+    func attributesOfItem(atPath path: String) async throws -> [FileAttributeKey: Any] {
+        try fileManager.attributesOfItem(atPath: path)
+    }
+
+    private func listDirectoryRecursiveSync(at url: URL) throws -> [URL] {
+        let children = try fileManager.contentsOfDirectory(
+            at: url,
+            includingPropertiesForKeys: [.isDirectoryKey]
+        )
+        var results: [URL] = []
+
+        for child in children {
+            results.append(child)
+            if (try child.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true {
+                results.append(contentsOf: try listDirectoryRecursiveSync(at: child))
+            }
+        }
+
+        return results
     }
 }
 

@@ -44,7 +44,7 @@ public enum ScheduleSpec: Codable, Sendable {
 }
 
 /// Compiler that converts ScheduleSpec to cron expression and computes next run times
-public final actor ScheduleCompiler: Sendable {
+public final actor ScheduleCompiler {
     private let calendar: Calendar
     private let logger = AppLogger.scheduler
 
@@ -193,7 +193,7 @@ public final actor ScheduleCompiler: Sendable {
         }
 
         // Move to next week starting from the first scheduled day
-        let firstDay = sortedDays.first!
+        guard let firstDay = sortedDays.first else { return nil }
         var components = calendar.dateComponents([.year, .month, .day], from: date)
         components.weekday = firstDay.rawValue + 1
         components.hour = time.hour
@@ -243,7 +243,7 @@ public final actor ScheduleCompiler: Sendable {
         }
 
         // Move to next month starting from the first scheduled day
-        let firstDay = sortedDays.first!
+        guard let firstDay = sortedDays.first else { return nil }
         var components = DateComponents()
         components.year = currentYear
         components.month = currentMonth + 1
@@ -268,6 +268,7 @@ public final actor ScheduleCompiler: Sendable {
         switch number % 100 {
         case 11, 12, 13:
             suffix = "th"
+
         default:
             switch number % 10 {
             case 1: suffix = "st"

@@ -2,9 +2,9 @@ import Foundation
 
 /// Status values for approval workflow
 public enum ApprovalStatus: String, Codable, CaseIterable, Sendable {
-    case pending = "pending"
-    case approved = "approved"
-    case rejected = "rejected"
+    case pending
+    case approved
+    case rejected
 
     public var displayName: String {
         switch self {
@@ -29,11 +29,11 @@ public enum ApprovalStatus: String, Codable, CaseIterable, Sendable {
 
 /// Status values for task execution
 public enum TaskRunStatus: String, Codable, CaseIterable, Sendable {
-    case pending = "pending"
-    case running = "running"
-    case completed = "completed"
-    case failed = "failed"
-    case cancelled = "cancelled"
+    case pending
+    case running
+    case completed
+    case failed
+    case cancelled
 
     public var displayName: String {
         switch self {
@@ -66,11 +66,11 @@ public enum TaskRunStatus: String, Codable, CaseIterable, Sendable {
 
 /// Status values for publication targets
 public enum PublicationState: String, Codable, CaseIterable, Sendable {
-    case pending = "pending"
-    case scheduled = "scheduled"
-    case publishing = "publishing"
-    case published = "published"
-    case failed = "failed"
+    case pending
+    case scheduled
+    case publishing
+    case published
+    case failed
 
     public var displayName: String {
         switch self {
@@ -96,7 +96,7 @@ public enum PublicationState: String, Codable, CaseIterable, Sendable {
 /// Schedule kind values
 public enum ScheduleKind: String, Codable, CaseIterable, Sendable {
     case oneTime = "one_time"
-    case recurring = "recurring"
+    case recurring
 
     public var displayName: String {
         switch self {
@@ -108,10 +108,10 @@ public enum ScheduleKind: String, Codable, CaseIterable, Sendable {
 
 /// Trigger source values
 public enum TriggerSource: String, Codable, CaseIterable, Sendable {
-    case manual = "manual"
-    case scheduled = "scheduled"
-    case api = "api"
-    case retry = "retry"
+    case manual
+    case scheduled
+    case api
+    case retry
 
     public var displayName: String {
         switch self {

@@ -5,38 +5,38 @@ import OSLog
 public struct AppLogger: Sendable {
     private let logger: Logger
 
-    public init(subsystem: String, category: String) {
+    nonisolated public init(subsystem: String, category: String) {
         self.logger = Logger(subsystem: subsystem, category: category)
     }
 
-    public func debug(_ message: String) {
+    nonisolated public func debug(_ message: String) {
         logger.debug("\(message)")
     }
 
-    public func info(_ message: String) {
+    nonisolated public func info(_ message: String) {
         logger.info("\(message)")
     }
 
-    public func warning(_ message: String) {
+    nonisolated public func warning(_ message: String) {
         logger.warning("\(message)")
     }
 
-    public func error(_ message: String) {
+    nonisolated public func error(_ message: String) {
         logger.error("\(message)")
     }
 
-    public func fault(_ message: String) {
+    nonisolated public func fault(_ message: String) {
         logger.fault("\(message)")
     }
 
     /// Log an error with context, redacting sensitive fields
-    public func logError(_ error: Error, context: String, sensitiveFields: [String] = []) {
+    nonisolated public func logError(_ error: Error, context: String, sensitiveFields: [String] = []) {
         let safeContext = redactSensitiveInfo(context, fields: sensitiveFields)
         let errorDescription = redactSensitiveInfo(error.localizedDescription, fields: sensitiveFields)
         logger.error("[\(safeContext)] Error: \(errorDescription)")
     }
 
-    private func redactSensitiveInfo(_ text: String, fields: [String]) -> String {
+    nonisolated private func redactSensitiveInfo(_ text: String, fields: [String]) -> String {
         var result = text
         for field in fields {
             // Simple redaction pattern - in production, use more sophisticated patterns
@@ -58,4 +58,3 @@ public extension AppLogger {
     nonisolated static let taskEngine = AppLogger(subsystem: "com.senorplatform", category: "TaskEngine")
     nonisolated static let general = AppLogger(subsystem: "com.senorplatform", category: "General")
 }
-

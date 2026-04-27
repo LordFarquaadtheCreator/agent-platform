@@ -41,7 +41,7 @@ public struct ToolExecutionContext: Sendable {
     /// Status reporter for incremental updates
     public let statusReporter: ToolStatusReporter
 
-    public init(
+    nonisolated public init(
         executionId: String,
         workingDirectory: URL,
         environment: [String: String],
@@ -62,16 +62,19 @@ public protocol ToolServiceProvider: Sendable {
     func getHTTPClient() async throws -> any ToolHTTPClient
 
     /// Get the file manager for working directory operations
-    func getFileManager() -> any ToolFileManager
+    func getFileManager() async -> any ToolFileManager
+
+    /// Get the command executor for running shell commands
+    func getCommandExecutor() async -> any CommandExecutor
 
     /// Get configuration value
     func getConfig(key: String) async throws -> String?
 
     /// Get the configured DeviantArt client when publishing is available
-    func getDeviantArtClient() async throws -> DeviantArtClient?
+    func getDeviantArtClient() async throws -> AKDeviantArtClient?
 
     /// Get the configured Patreon client when publishing is available
-    func getPatreonClient() async throws -> PatreonClient?
+    func getPatreonClient() async throws -> AKPatreonClient?
 }
 
 /// HTTP client interface for tools
@@ -89,8 +92,29 @@ public protocol ToolFileManager: Sendable {
     func read(from url: URL) async throws -> Data
     func exists(at url: URL) async -> Bool
     func delete(at url: URL) async throws
+    func move(from source: URL, to dest: URL) async throws
+    func copy(from source: URL, to dest: URL) async throws
     func listDirectory(at url: URL) async throws -> [URL]
+    func listDirectoryRecursive(at url: URL) async throws -> [URL]
     func createTempFile(prefix: String, suffix: String) async throws -> URL
+    func attributesOfItem(atPath path: String) async throws -> [FileAttributeKey: Any]
+}
+
+/// Command executor interface for running shell commands
+public protocol CommandExecutor: Sendable {
+    func execute(
+        command: String,
+        arguments: [String],
+        workingDirectory: URL,
+        environment: [String: String],
+        timeout: Int
+    ) async throws -> (stdout: String, stderr: String, exitCode: Int)
+
+    func resolvePath(
+        command: String,
+        environment: [String: String],
+        timeout: Int
+    ) async throws -> String
 }
 
 /// Status reporter for incremental tool updates
@@ -114,15 +138,15 @@ public struct ToolExecutionStatus: Codable, Sendable {
     public let metadata: [String: String]?
 
     public enum State: String, Codable, Sendable {
-        case starting = "starting"
-        case running = "running"
-        case waiting = "waiting"  // Waiting for external input/API
-        case completed = "completed"
-        case failed = "failed"
-        case cancelled = "cancelled"
+        case starting
+        case running
+        case waiting // Waiting for external input/API
+        case completed
+        case failed
+        case cancelled
     }
 
-    public init(
+    nonisolated public init(
         executionId: String,
         state: State,
         message: String? = nil,
@@ -144,7 +168,7 @@ public struct IntermediateResult: Codable, Sendable {
     public let filePath: String?  // Path to temporary file
     public let metadata: [String: String]?
 
-    public init(
+    nonisolated public init(
         type: String,
         data: String? = nil,
         filePath: String? = nil,
@@ -164,7 +188,7 @@ public struct ToolInputSchema: Codable, Sendable {
     public let required: [String]
     public let description: String?
 
-    public init(
+    nonisolated public init(
         type: String = "object",
         properties: [String: PropertySchema],
         required: [String] = [],
@@ -178,31 +202,90 @@ public struct ToolInputSchema: Codable, Sendable {
 }
 
 /// Property schema for input parameters
-public final class PropertySchema: Codable, Sendable {
-    public let type: String
-    public let description: String?
-    public let enumValues: [String]?
-    public let defaultValue: String?
-    public let items: PropertySchema?  // For array types
+public indirect enum PropertySchema: Codable, Sendable {
+    case schema(
+        type: String,
+        description: String?,
+        enumValues: [String]?,
+        defaultValue: String?,
+        items: PropertySchema?
+    )
 
-    public init(
+    public var type: String {
+        switch self {
+        case .schema(let type, _, _, _, _):
+            type
+        }
+    }
+
+    public var description: String? {
+        switch self {
+        case .schema(_, let description, _, _, _):
+            description
+        }
+    }
+
+    public var enumValues: [String]? {
+        switch self {
+        case .schema(_, _, let enumValues, _, _):
+            enumValues
+        }
+    }
+
+    public var defaultValue: String? {
+        switch self {
+        case .schema(_, _, _, let defaultValue, _):
+            defaultValue
+        }
+    }
+
+    public var items: PropertySchema? {
+        switch self {
+        case .schema(_, _, _, _, let items):
+            items
+        }
+    }
+
+    nonisolated public init(
         type: String,
         description: String? = nil,
         enumValues: [String]? = nil,
         defaultValue: String? = nil,
         items: PropertySchema? = nil
     ) {
-        self.type = type
-        self.description = description
-        self.enumValues = enumValues
-        self.defaultValue = defaultValue
-        self.items = items
+        self = .schema(
+            type: type,
+            description: description,
+            enumValues: enumValues,
+            defaultValue: defaultValue,
+            items: items
+        )
     }
 
     enum CodingKeys: String, CodingKey {
         case type, description, items
         case enumValues = "enum"
         case defaultValue = "default"
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self = .schema(
+            type: try container.decode(String.self, forKey: .type),
+            description: try container.decodeIfPresent(String.self, forKey: .description),
+            enumValues: try container.decodeIfPresent([String].self, forKey: .enumValues),
+            defaultValue: try container.decodeIfPresent(String.self, forKey: .defaultValue),
+            items: try container.decodeIfPresent(PropertySchema.self, forKey: .items)
+        )
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(type, forKey: .type)
+        try container.encodeIfPresent(description, forKey: .description)
+        try container.encodeIfPresent(enumValues, forKey: .enumValues)
+        try container.encodeIfPresent(defaultValue, forKey: .defaultValue)
+        try container.encodeIfPresent(items, forKey: .items)
     }
 }
 
@@ -212,7 +295,7 @@ public struct ToolOutputSchema: Codable, Sendable {
     public let properties: [String: PropertySchema]?
     public let description: String?
 
-    public init(
+    nonisolated public init(
         type: String = "object",
         properties: [String: PropertySchema]? = nil,
         description: String? = nil
@@ -239,20 +322,28 @@ public enum ToolError: Error, LocalizedError {
         switch self {
         case .invalidInput(let msg):
             return "Invalid input: \(msg)"
+
         case .executionFailed(let msg):
             return "Execution failed: \(msg)"
+
         case .missingRequiredParameter(let param):
             return "Missing required parameter: \(param)"
+
         case .invalidParameterType(let param, let expected, let got):
             return "Invalid type for parameter '\(param)': expected \(expected), got \(got)"
+
         case .networkError(let error):
             return "Network error: \(error.localizedDescription)"
+
         case .fileError(let error):
             return "File error: \(error.localizedDescription)"
+
         case .serviceUnavailable(let service):
             return "Service unavailable: \(service)"
+
         case .timeout:
             return "Tool execution timed out"
+
         case .cancelled:
             return "Tool execution was cancelled"
         }
@@ -272,17 +363,17 @@ public actor ToolRegistry {
 
     /// Get a tool type by name
     public func getTool(named name: String) -> (any AgentTool.Type)? {
-        return tools[name]
+        tools[name]
     }
 
     /// List all registered tool names
     public func listTools() -> [String] {
-        return Array(tools.keys)
+        Array(tools.keys)
     }
 
     /// Get all tool schemas for LLM context
     public func getAllToolSchemas() -> [ToolDefinition] {
-        return tools.map { name, type in
+        tools.map { name, type in
             ToolDefinition(
                 name: name,
                 description: type.toolDescription,
@@ -299,46 +390,58 @@ public struct ToolDefinition: Codable, Sendable {
     public let description: String
     public let inputSchema: ToolInputSchema
     public let outputSchema: ToolOutputSchema
+
+    nonisolated public init(
+        name: String,
+        description: String,
+        inputSchema: ToolInputSchema,
+        outputSchema: ToolOutputSchema
+    ) {
+        self.name = name
+        self.description = description
+        self.inputSchema = inputSchema
+        self.outputSchema = outputSchema
+    }
 }
 
 // MARK: - Client Protocols (implemented by the main app)
 
 /// DeviantArt client interface (implemented by the main app)
-public protocol DeviantArtClient: Sendable {
-    func stashSubmit(filename: String, title: String, tags: [String]?) async throws -> StashItem
-    func stashPublish(stashId: String, title: String, category: String?, isMature: Bool) async throws -> PublishResult
+public protocol AKDeviantArtClient: Sendable {
+    func stashSubmit(filename: String, title: String, tags: [String]?) async throws -> AKStashItem
+    func stashPublish(stashId: String, title: String, category: String?, isMature: Bool) async throws -> AKPublishResult
 }
 
-public struct StashItem: Codable, Sendable {
+public struct AKStashItem: Codable, Sendable {
     public let itemid: String
     public let title: String
 
-    public init(itemid: String, title: String) {
+    nonisolated public init(itemid: String, title: String) {
         self.itemid = itemid
         self.title = title
     }
 }
 
-public struct PublishResult: Codable, Sendable {
+public struct AKPublishResult: Codable, Sendable {
     public let deviationid: String?
     public let url: String?
 
-    public init(deviationid: String?, url: String?) {
+    nonisolated public init(deviationid: String?, url: String?) {
         self.deviationid = deviationid
         self.url = url
     }
 }
 
 /// Patreon client interface (implemented by the main app)
-public protocol PatreonClient: Sendable {
-    func createPost(campaignId: String, title: String, content: String, isPaid: Bool, isPublic: Bool, tiers: [String]?) async throws -> Post
+public protocol AKPatreonClient: Sendable {
+    func createPost(campaignId: String, title: String, content: String, isPaid: Bool, isPublic: Bool, tiers: [String]?) async throws -> AKPost
     func getPublicURL(for postId: String) async throws -> String
 }
 
-public struct Post: Codable, Sendable {
+public struct AKPost: Codable, Sendable {
     public let id: String
 
-    public init(id: String) {
+    nonisolated public init(id: String) {
         self.id = id
     }
 }

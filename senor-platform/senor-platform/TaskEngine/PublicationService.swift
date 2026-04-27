@@ -1,9 +1,7 @@
 import Foundation
-import DataLayer
-import CacheLayer
 
 /// Service for orchestrating publication to platforms
-public final actor PublicationService: Sendable {
+public final actor PublicationService {
     private let publicationRepository: PublicationTargetRepository
     private let contentRepository: GeneratedContentRepository
     private let cacheService: CacheService
@@ -21,13 +19,13 @@ public final actor PublicationService: Sendable {
         approvalQueueRepository: ApprovalQueueRepository,
         publicationRepository: PublicationTargetRepository,
         contentRepository: GeneratedContentRepository,
-        remotePostCacheRepository: RemotePostCacheRepository,
+        cacheService: CacheService,
         settingsService: SettingsService
     ) {
         self.approvalQueueRepository = approvalQueueRepository
         self.publicationRepository = publicationRepository
         self.contentRepository = contentRepository
-        self.cacheService = CacheService(cacheRepository: remotePostCacheRepository)
+        self.cacheService = cacheService
         self.settingsService = settingsService
     }
 
@@ -101,7 +99,6 @@ public final actor PublicationService: Sendable {
             logger.info("Published to DeviantArt: \(contentId) -> \(publishResult.url ?? "unknown")")
 
             return saved
-
         } catch {
             // Update target with failure
             mutableTarget.state = .failed
@@ -180,7 +177,6 @@ public final actor PublicationService: Sendable {
             logger.info("Published to Patreon: \(contentId) -> \(publicURL)")
 
             return saved
-
         } catch {
             // Update target with failure
             mutableTarget.state = .failed
@@ -225,9 +221,11 @@ public final actor PublicationService: Sendable {
                 switch target.platform {
                 case "deviantart":
                     _ = try await publishToDeviantArt(contentId: target.generatedContentId)
+
                 case "patreon":
                     // Need campaign ID - would be stored in config or passed
                     logger.warning("Scheduled Patreon publish needs campaign ID: \(target.id)")
+
                 default:
                     break
                 }
@@ -269,7 +267,6 @@ public final actor PublicationService: Sendable {
             }
 
             return try await publicationRepository.update(target: mutableTarget)
-
         } catch {
             logger.error("Failed to sync status: \(targetId) - \(error)")
             return target

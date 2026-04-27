@@ -125,11 +125,14 @@ public struct ImageComposerTool: AgentTool {
         switch outputFormat.lowercased() {
         case "png":
             imageData = bitmap.representation(using: .png, properties: [:])
+
         case "jpeg", "jpg":
             let compression = (params["jpeg_quality"] as? CGFloat) ?? 0.9
             imageData = bitmap.representation(using: .jpeg, properties: [.compressionFactor: compression])
+
         case "tiff":
             imageData = bitmap.representation(using: .tiff, properties: [:])
+
         default:
             imageData = bitmap.representation(using: .png, properties: [:])
         }
@@ -205,7 +208,7 @@ public struct ImageComposerTool: AgentTool {
         }
 
         let imageURL = URL(fileURLWithPath: imagePath)
-        let fileManager = context.serviceProvider.getFileManager()
+        let fileManager = await context.serviceProvider.getFileManager()
 
         guard await fileManager.exists(at: imageURL) else {
             throw ToolError.fileError(NSError(domain: "ImageComposerTool", code: -1, userInfo: [
@@ -312,9 +315,11 @@ public struct ImageComposerTool: AgentTool {
         case "horizontal":
             startPoint = NSPoint(x: rect.minX, y: rect.midY)
             endPoint = NSPoint(x: rect.maxX, y: rect.midY)
+
         case "diagonal":
             startPoint = NSPoint(x: rect.minX, y: rect.minY)
             endPoint = NSPoint(x: rect.maxX, y: rect.maxY)
+
         default: // vertical
             startPoint = NSPoint(x: rect.midX, y: rect.minY)
             endPoint = NSPoint(x: rect.midX, y: rect.maxY)
@@ -339,11 +344,13 @@ public struct ImageComposerTool: AgentTool {
                 g = CGFloat((rgb >> 8) & 0xFF) / 255.0
                 b = CGFloat(rgb & 0xFF) / 255.0
                 a = 1.0
+
             case 8:
                 r = CGFloat((rgb >> 24) & 0xFF) / 255.0
                 g = CGFloat((rgb >> 16) & 0xFF) / 255.0
                 b = CGFloat((rgb >> 8) & 0xFF) / 255.0
                 a = CGFloat(rgb & 0xFF) / 255.0
+
             default:
                 return nil
             }

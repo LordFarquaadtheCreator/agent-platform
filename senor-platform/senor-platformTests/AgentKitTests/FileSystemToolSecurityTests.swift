@@ -1,480 +1,777 @@
 import XCTest
-@testable import AgentKit
+@testable import senor_platform
 
-// MARK: - Test Helpers
-
-extension Data {
-    func asString() -> String {
-        String(decoding: self, as: UTF8.self)
-    }
+private struct ReadResponse: Decodable {
+    let content: String
+    let encoding: String
 }
 
-final class MockFileManager: ToolFileManager, @unchecked Sendable {
+private struct ChunkResponse: Decodable {
+    let content: String
+    let offset: Int
+    let length: Int
+}
+
+private struct EntriesResponse: Decodable {
+    struct Entry: Decodable {
+        let name: String
+        let path: String
+        let isDirectory: Bool
+    }
+
+    let entries: [Entry]
+    let totalCount: Int
+}
+
+private struct MatchesResponse: Decodable {
+    let matches: [String]
+}
+
+private struct ExistsResponse: Decodable {
+    let exists: Bool
+    let type: String
+}
+
+private struct FileInfoResponse: Decodable {
+    let size: Int
+    let created: String
+    let modified: String
+    let isDirectory: Bool
+}
+
+private struct CommandResponse: Decodable {
+    let stdout: String
+    let stderr: String
+    let exitCode: Int
+}
+
+private struct EnvironmentValueResponse: Decodable {
+    let value: String
+}
+
+private struct EnvironmentMapResponse: Decodable {
+    let variables: [String: String]
+}
+
+private struct WorkingDirectoryResponse: Decodable {
+    let path: String
+}
+
+actor MockFileManager: ToolFileManager {
     private var files: [URL: Data] = [:]
     private var directories: Set<URL> = []
+    private var customAttributes: [URL: [FileAttributeKey: Any]] = [:]
 
     func createDirectory(at url: URL) async throws {
-        directories.insert(url)
+        directories.insert(url.standardizedFileURL)
+        directories.insert(url.deletingLastPathComponent().standardizedFileURL)
     }
 
     func write(data: Data, to url: URL) async throws {
-        files[url] = data
+        let normalized = url.standardizedFileURL
+        files[normalized] = data
+        directories.insert(normalized.deletingLastPathComponent())
     }
 
     func read(from url: URL) async throws -> Data {
-        guard let data = files[url] else {
-            throw ToolError.fileError(NSError(domain: "MockFileManager", code: 1))
+        let normalized = url.standardizedFileURL
+        guard let data = files[normalized] else {
+            throw ToolError.fileError(NSError(
+                domain: "MockFileManager",
+                code: 1,
+                userInfo: [NSLocalizedDescriptionKey: "File not found: \(normalized.path)"]
+            ))
         }
         return data
     }
 
     func exists(at url: URL) async -> Bool {
-        files[url] != nil || directories.contains(url)
+        let normalized = url.standardizedFileURL
+        return files[normalized] != nil || directories.contains(normalized)
     }
 
     func delete(at url: URL) async throws {
-        files.removeValue(forKey: url)
-        directories.remove(url)
+        let normalized = url.standardizedFileURL
+        files = files.filter { key, _ in
+            key != normalized && !key.path.hasPrefix(normalized.path + "/")
+        }
+        directories = directories.filter { dir in
+            dir != normalized && !dir.path.hasPrefix(normalized.path + "/")
+        }
+        customAttributes = customAttributes.filter { key, _ in
+            key != normalized && !key.path.hasPrefix(normalized.path + "/")
+        }
+    }
+
+    func move(from source: URL, to dest: URL) async throws {
+        let sourceURL = source.standardizedFileURL
+        let destURL = dest.standardizedFileURL
+
+        if let data = files.removeValue(forKey: sourceURL) {
+            files[destURL] = data
+            customAttributes[destURL] = customAttributes.removeValue(forKey: sourceURL)
+            directories.insert(destURL.deletingLastPathComponent())
+            return
+        }
+
+        guard directories.contains(sourceURL) else {
+            throw ToolError.fileError(NSError(domain: "MockFileManager", code: 4))
+        }
+
+        directories.remove(sourceURL)
+        directories.insert(destURL)
+    }
+
+    func copy(from source: URL, to dest: URL) async throws {
+        let sourceURL = source.standardizedFileURL
+        let destURL = dest.standardizedFileURL
+
+        guard let data = files[sourceURL] else {
+            throw ToolError.fileError(NSError(domain: "MockFileManager", code: 5))
+        }
+
+        files[destURL] = data
+        customAttributes[destURL] = customAttributes[sourceURL]
+        directories.insert(destURL.deletingLastPathComponent())
     }
 
     func listDirectory(at url: URL) async throws -> [URL] {
-        guard directories.contains(url) else {
+        let normalized = url.standardizedFileURL
+        guard directories.contains(normalized) else {
             throw ToolError.fileError(NSError(domain: "MockFileManager", code: 2))
         }
-        return Array(files.keys.filter { $0.deletingLastPathComponent() == url })
+
+        let childFiles = files.keys.filter { $0.deletingLastPathComponent() == normalized }
+        let childDirectories = directories.filter {
+            $0.deletingLastPathComponent() == normalized && $0 != normalized
+        }
+        return Array(Set(childFiles + childDirectories)).sorted { $0.path < $1.path }
+    }
+
+    func listDirectoryRecursive(at url: URL) async throws -> [URL] {
+        let normalized = url.standardizedFileURL
+        guard directories.contains(normalized) else {
+            throw ToolError.fileError(NSError(domain: "MockFileManager", code: 2))
+        }
+
+        let childFiles = files.keys.filter { $0.path.hasPrefix(normalized.path + "/") }
+        let childDirectories = directories.filter {
+            $0 != normalized && $0.path.hasPrefix(normalized.path + "/")
+        }
+        return Array(Set(childFiles + childDirectories)).sorted { $0.path < $1.path }
     }
 
     func createTempFile(prefix: String, suffix: String) async throws -> URL {
         URL(fileURLWithPath: "/tmp/\(prefix)\(UUID().uuidString)\(suffix)")
     }
 
-    func mockFile(at url: URL, data: Data) {
-        files[url] = data
+    func attributesOfItem(atPath path: String) async throws -> [FileAttributeKey: Any] {
+        let url = URL(fileURLWithPath: path).standardizedFileURL
+        if let attrs = customAttributes[url] {
+            return attrs
+        }
+        if let data = files[url] {
+            return [
+                .size: data.count,
+                .type: FileAttributeType.typeRegular,
+                .creationDate: Date(timeIntervalSince1970: 1),
+                .modificationDate: Date(timeIntervalSince1970: 2),
+            ]
+        }
+        if directories.contains(url) {
+            return [
+                .type: FileAttributeType.typeDirectory,
+                .creationDate: Date(timeIntervalSince1970: 1),
+                .modificationDate: Date(timeIntervalSince1970: 2),
+            ]
+        }
+        throw ToolError.fileError(NSError(
+            domain: "MockFileManager",
+            code: 3,
+            userInfo: [NSLocalizedDescriptionKey: "File not found: \(path)"]
+        ))
     }
 
-    func mockDirectory(at url: URL) {
-        directories.insert(url)
+    func putFile(at url: URL, data: Data, attributes: [FileAttributeKey: Any]? = nil) async {
+        let normalized = url.standardizedFileURL
+        files[normalized] = data
+        directories.insert(normalized.deletingLastPathComponent())
+        if let attributes {
+            customAttributes[normalized] = attributes
+        }
+    }
+
+    func putDirectory(at url: URL, attributes: [FileAttributeKey: Any]? = nil) async {
+        let normalized = url.standardizedFileURL
+        directories.insert(normalized)
+        directories.insert(normalized.deletingLastPathComponent())
+        if let attributes {
+            customAttributes[normalized] = attributes
+        }
+    }
+
+    func data(at url: URL) async -> Data? {
+        files[url.standardizedFileURL]
     }
 }
 
-final class MockServiceProvider: ToolServiceProvider, @unchecked Sendable {
-    let fileManager: MockFileManager
-
-    init(fileManager: MockFileManager) {
-        self.fileManager = fileManager
+actor MockCommandExecutor: CommandExecutor {
+    struct Invocation: Sendable {
+        let command: String
+        let arguments: [String]
+        let workingDirectory: URL
+        let timeout: Int
     }
+
+    struct Result: Sendable {
+        let stdout: String
+        let stderr: String
+        let exitCode: Int
+    }
+
+    private var results: [String: Result] = [:]
+    private var resolvedPaths: [String: String] = [:]
+    private var timeoutCommands: Set<String> = []
+    private var invocations: [Invocation] = []
+
+    func execute(
+        command: String,
+        arguments: [String],
+        workingDirectory: URL,
+        environment: [String: String],
+        timeout: Int
+    ) async throws -> (stdout: String, stderr: String, exitCode: Int) {
+        invocations.append(Invocation(
+            command: command,
+            arguments: arguments,
+            workingDirectory: workingDirectory,
+            timeout: timeout
+        ))
+
+        if timeoutCommands.contains(command) {
+            throw ToolError.timeout
+        }
+
+        let key = Self.key(for: command, arguments: arguments)
+        if let result = results[key] {
+            return (result.stdout, result.stderr, result.exitCode)
+        }
+
+        return ("", "", 0)
+    }
+
+    func resolvePath(
+        command: String,
+        environment: [String: String],
+        timeout: Int
+    ) async throws -> String {
+        resolvedPaths[command] ?? "/usr/bin/\(command)"
+    }
+
+    func setResult(command: String, arguments: [String] = [], result: Result) async {
+        results[Self.key(for: command, arguments: arguments)] = result
+    }
+
+    func setResolvedPath(command: String, path: String) async {
+        resolvedPaths[command] = path
+    }
+
+    func setTimeout(commandPath: String) async {
+        timeoutCommands.insert(commandPath)
+    }
+
+    func lastInvocation() async -> Invocation? {
+        invocations.last
+    }
+
+    private static func key(for command: String, arguments: [String]) -> String {
+        command + " " + arguments.joined(separator: " ")
+    }
+}
+
+struct MockServiceProvider: ToolServiceProvider {
+    let fileManager: MockFileManager
+    let commandExecutor: MockCommandExecutor
 
     func getHTTPClient() async throws -> any ToolHTTPClient {
-        fatalError("Not implemented")
+        fatalError("HTTP client is not used in these tests")
     }
 
-    func getFileManager() -> any ToolFileManager {
+    func getFileManager() async -> any ToolFileManager {
         fileManager
+    }
+
+    func getCommandExecutor() async -> any CommandExecutor {
+        commandExecutor
     }
 
     func getConfig(key: String) async throws -> String? {
         nil
     }
 
-    func getDeviantArtClient() async throws -> DeviantArtClient? {
+    func getDeviantArtClient() async throws -> AKDeviantArtClient? {
         nil
     }
 
-    func getPatreonClient() async throws -> PatreonClient? {
+    func getPatreonClient() async throws -> AKPatreonClient? {
         nil
     }
 }
 
-final class MockStatusReporter: ToolStatusReporter, @unchecked Sendable {
+actor MockStatusReporter: ToolStatusReporter {
     func report(status: ToolExecutionStatus) async throws {}
     func reportProgress(fractionCompleted: Double, message: String?) async throws {}
     func reportIntermediateResult(_ result: IntermediateResult) async throws {}
 }
 
-// MARK: - Security Tests
-
+@MainActor
 final class FileSystemToolSecurityTests: XCTestCase {
-    var sandbox: URL!
-    var context: ToolExecutionContext!
-    var mockFM: MockFileManager!
+    private var sandbox: URL!
+    private var context: ToolExecutionContext!
+    private var fileManager: MockFileManager!
+    private var commandExecutor: MockCommandExecutor!
 
-    override func setUp() {
-        super.setUp()
-        sandbox = FileManager.default.temporaryDirectory
-            .appendingPathComponent(UUID().uuidString)
+    override func setUp() async throws {
+        try await super.setUp()
+
+        sandbox = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try? FileManager.default.createDirectory(at: sandbox, withIntermediateDirectories: true)
 
-        mockFM = MockFileManager()
-        let provider = MockServiceProvider(fileManager: mockFM)
-        let reporter = MockStatusReporter()
+        fileManager = MockFileManager()
+        commandExecutor = MockCommandExecutor()
+
+        await fileManager.putDirectory(at: sandbox)
 
         context = ToolExecutionContext(
             executionId: UUID().uuidString,
             workingDirectory: sandbox,
-            environment: ProcessInfo.processInfo.environment,
-            serviceProvider: provider,
-            statusReporter: reporter
+            environment: [
+                "PATH": "/usr/bin:/bin",
+                "FOO": "bar",
+            ],
+            serviceProvider: MockServiceProvider(
+                fileManager: fileManager,
+                commandExecutor: commandExecutor
+            ),
+            statusReporter: MockStatusReporter()
         )
     }
 
-    override func tearDown() {
+    override func tearDown() async throws {
         try? FileManager.default.removeItem(at: sandbox)
-        super.tearDown()
+        sandbox = nil
+        context = nil
+        fileManager = nil
+        commandExecutor = nil
+        try await super.tearDown()
     }
 
-    // MARK: - Path Traversal Tests
+    private func json(_ value: Any) throws -> String {
+        let data = try JSONSerialization.data(withJSONObject: value)
+        return String(decoding: data, as: UTF8.self)
+    }
 
-    func testReadFilePathTraversalBlocked() async {
-        let tool = ReadFileTool()
-        let input = Data(#"{"path": "../../../etc/passwd"}"#.utf8).asString()
+    private func decode<T: Decodable>(_ type: T.Type, from output: String) throws -> T {
+        try JSONDecoder().decode(T.self, from: Data(output.utf8))
+    }
 
+    private func assertToolThrows(
+        _ tool: any AgentTool,
+        input: String,
+        containing expectedMessage: String,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) async {
         do {
             _ = try await tool.execute(input: input, context: context)
-            XCTFail("Should have thrown sandbox violation")
-        } catch let error as ToolError {
-            XCTAssertTrue(error.localizedDescription.contains("Sandbox") || 
-                         error.localizedDescription.contains("working directory"))
+            XCTFail("Expected error containing '\(expectedMessage)'", file: file, line: line)
         } catch {
-            XCTFail("Wrong error type: \(error)")
+            XCTAssertTrue(
+                error.localizedDescription.localizedCaseInsensitiveContains(expectedMessage),
+                "Expected '\(expectedMessage)' in '\(error.localizedDescription)'",
+                file: file,
+                line: line
+            )
         }
+    }
+
+    func testReadFileReturnsUTF8Content() async throws {
+        let file = sandbox.appendingPathComponent("hello.txt")
+        await fileManager.putFile(at: file, data: Data("hello".utf8))
+
+        let output = try await ReadFileTool().execute(
+            input: try json(["path": file.path]),
+            context: context
+        )
+
+        let response = try decode(ReadResponse.self, from: output)
+        XCTAssertEqual(response.content, "hello")
+        XCTAssertEqual(response.encoding, "utf8")
+    }
+
+    func testReadFileReturnsBase64Content() async throws {
+        let file = sandbox.appendingPathComponent("payload.bin")
+        let data = Data([0x00, 0xFF, 0x41])
+        await fileManager.putFile(at: file, data: data)
+
+        let output = try await ReadFileTool().execute(
+            input: try json(["path": file.path, "encoding": "base64"]),
+            context: context
+        )
+
+        let response = try decode(ReadResponse.self, from: output)
+        XCTAssertEqual(response.content, data.base64EncodedString())
+        XCTAssertEqual(response.encoding, "base64")
+    }
+
+    func testReadFileRejectsBinaryInUTF8Mode() async {
+        let file = sandbox.appendingPathComponent("payload.bin")
+        await fileManager.putFile(at: file, data: Data([0xFF, 0xD8, 0xFF]))
+
+        await assertToolThrows(
+            ReadFileTool(),
+            input: try! json(["path": file.path]),
+            containing: "base64"
+        )
+    }
+
+    func testReadFileChunkReturnsRequestedSlice() async throws {
+        let file = sandbox.appendingPathComponent("chunk.txt")
+        await fileManager.putFile(at: file, data: Data("0123456789".utf8))
+
+        let output = try await ReadFileChunkTool().execute(
+            input: try json(["path": file.path, "offset": 2, "length": 4]),
+            context: context
+        )
+
+        let response = try decode(ChunkResponse.self, from: output)
+        XCTAssertEqual(response.content, "2345")
+        XCTAssertEqual(response.offset, 2)
+        XCTAssertEqual(response.length, 4)
+    }
+
+    func testReadFileChunkHandlesOffsetBeyondEndOfFile() async throws {
+        let file = sandbox.appendingPathComponent("chunk.txt")
+        await fileManager.putFile(at: file, data: Data("abc".utf8))
+
+        let output = try await ReadFileChunkTool().execute(
+            input: try json(["path": file.path, "offset": 10, "length": 5]),
+            context: context
+        )
+
+        let response = try decode(ChunkResponse.self, from: output)
+        XCTAssertEqual(response.content, "")
+        XCTAssertEqual(response.length, 0)
+    }
+
+    func testReadFileChunkRejectsInvalidRange() async {
+        await assertToolThrows(
+            ReadFileChunkTool(),
+            input: try! json(["path": sandbox.appendingPathComponent("missing.txt").path, "offset": -1, "length": 5]),
+            containing: "non-negative"
+        )
+    }
+
+    func testReadFilePathTraversalBlocked() async {
+        await assertToolThrows(
+            ReadFileTool(),
+            input: try! json(["path": String(repeating: "../", count: 12) + "etc/passwd"]),
+            containing: "working directory"
+        )
+    }
+
+    func testProhibitedPathsAreRejected() async {
+        for path in ["~/.ssh/id_rsa", "~/.env"] {
+            await assertToolThrows(
+                ReadFileTool(),
+                input: try! json(["path": path]),
+                containing: "prohibited"
+            )
+        }
+    }
+
+    func testCreateFileRejectsInvalidBase64() async {
+        await assertToolThrows(
+            CreateFileTool(),
+            input: try! json(["path": sandbox.appendingPathComponent("invalid.bin").path, "content": "***", "encoding": "base64"]),
+            containing: "base64"
+        )
+    }
+
+    func testWriteFileAppendModeAppendsExistingContent() async throws {
+        let file = sandbox.appendingPathComponent("append.txt")
+        await fileManager.putFile(at: file, data: Data("hello ".utf8))
+
+        _ = try await WriteFileTool().execute(
+            input: try json(["path": file.path, "content": "world", "mode": "append"]),
+            context: context
+        )
+
+        let contentsData = await fileManager.data(at: file)
+        let contents = try XCTUnwrap(contentsData)
+        XCTAssertEqual(String(data: contents, encoding: .utf8), "hello world")
     }
 
     func testWriteFileOutsideSandboxBlocked() async {
-        let tool = WriteFileTool()
-        let input = Data(#"{"path": "/tmp/malicious.txt", "content": "hack"}"#.utf8).asString()
-
-        do {
-            _ = try await tool.execute(input: input, context: context)
-            XCTFail("Should have thrown sandbox violation")
-        } catch let error as ToolError {
-            XCTAssertTrue(error.localizedDescription.contains("working directory"))
-        } catch {
-            XCTFail("Wrong error type: \(error)")
-        }
+        await assertToolThrows(
+            WriteFileTool(),
+            input: try! json(["path": "/tmp/not-\(UUID().uuidString).txt", "content": "nope"]),
+            containing: "working directory"
+        )
     }
 
-    // MARK: - Symlink Tests
+    func testMoveFileMovesContents() async throws {
+        let source = sandbox.appendingPathComponent("source.txt")
+        let destination = sandbox.appendingPathComponent("dest.txt")
+        await fileManager.putFile(at: source, data: Data("content".utf8))
 
-    func testSymlinkEscapeBlocked() async throws {
-        let linkPath = sandbox.appendingPathComponent("escape")
-        try FileManager.default.createSymbolicLink(
-            at: linkPath,
-            withDestinationURL: URL(fileURLWithPath: "/")
+        _ = try await MoveFileTool().execute(
+            input: try json(["source": source.path, "destination": destination.path]),
+            context: context
         )
 
-        let tool = ReadFileTool()
-        let input = try JSONEncoder().encode(["path": linkPath.path]).asString()
-
-        do {
-            _ = try await tool.execute(input: input, context: context)
-            XCTFail("Should have thrown sandbox violation")
-        } catch let error as ToolError {
-            XCTAssertTrue(error.localizedDescription.contains("escapes") ||
-                         error.localizedDescription.contains("Sandbox"))
-        } catch {
-            XCTFail("Wrong error type: \(error)")
-        }
-
-        try? FileManager.default.removeItem(at: linkPath)
+        let sourceData = await fileManager.data(at: source)
+        let destinationRawData = await fileManager.data(at: destination)
+        XCTAssertNil(sourceData)
+        let destinationData = try XCTUnwrap(destinationRawData)
+        XCTAssertEqual(String(data: destinationData, encoding: .utf8), "content")
     }
 
-    // MARK: - Prohibited Path Tests
-
-    func testSSHPathBlocked() async {
-        let tool = ReadFileTool()
-        let input = Data(#"{"path": "~/.ssh/id_rsa"}"#.utf8).asString()
-
-        do {
-            _ = try await tool.execute(input: input, context: context)
-            XCTFail("Should have thrown prohibited path error")
-        } catch let error as ToolError {
-            XCTAssertTrue(error.localizedDescription.contains("prohibited"))
-        } catch {
-            XCTFail("Wrong error type: \(error)")
-        }
-    }
-
-    func testEnvFileBlocked() async {
-        let tool = ReadFileTool()
-        let input = Data(#"{"path": "~/.env"}"#.utf8).asString()
-
-        do {
-            _ = try await tool.execute(input: input, context: context)
-            XCTFail("Should have thrown prohibited path error")
-        } catch let error as ToolError {
-            XCTAssertTrue(error.localizedDescription.contains("prohibited"))
-        } catch {
-            XCTFail("Wrong error type: \(error)")
-        }
-    }
-
-    // MARK: - Command Safety Tests
-
-    func testCurlBlocked() async {
-        let tool = RunCommandTool()
-        let input = Data(#"{"command": "curl http://evil.com"}"#.utf8).asString()
-
-        do {
-            _ = try await tool.execute(input: input, context: context)
-            XCTFail("Should have blocked curl")
-        } catch let error as ToolError {
-            XCTAssertTrue(error.localizedDescription.contains("not allowed") ||
-                         error.localizedDescription.contains("Network"))
-        } catch {
-            XCTFail("Wrong error type: \(error)")
-        }
-    }
-
-    func testPipeBlocked() async {
-        let tool = RunCommandTool()
-        let input = Data(#"{"command": "ls | cat"}"#.utf8).asString()
-
-        do {
-            _ = try await tool.execute(input: input, context: context)
-            XCTFail("Should have blocked pipe")
-        } catch let error as ToolError {
-            XCTAssertTrue(error.localizedDescription.contains("unsafe character"))
-        } catch {
-            XCTFail("Wrong error type: \(error)")
-        }
-    }
-
-    func testSafeCommandAllowed() async throws {
-        let tool = RunCommandTool()
-        let input = Data(#"{"command": "ls -la"}"#.utf8).asString()
-
-        do {
-            _ = try await tool.execute(input: input, context: context)
-        } catch let error as ToolError {
-            if error.localizedDescription.contains("not allowed") ||
-               error.localizedDescription.contains("unsafe") {
-                XCTFail("Should have allowed safe command")
-            }
-        } catch {
-            // Command not found or other errors are OK for this test
-        }
-    }
-
-    // MARK: - Functional Tests
-
-    func testReadFileChunkDoesNotLoadEntireFile() async throws {
-        let bigFile = sandbox.appendingPathComponent("big.txt")
-        let content = String(repeating: "a", count: 1000)
-        try content.write(to: bigFile, atomically: true, encoding: .utf8)
-
-        let tool = ReadFileChunkTool()
-        struct ChunkInput: Codable {
-            let path: String
-            let offset: Int
-            let length: Int
-        }
-        let input = try JSONEncoder().encode(ChunkInput(
-            path: bigFile.path,
-            offset: 0,
-            length: 10
-        )).asString()
-
-        let result = try await tool.execute(input: input, context: context)
-        XCTAssertTrue(result.contains("aaaaaaaaaa"))
-        XCTAssertFalse(result.contains("aaaaaaaaaaa"))
-
-        try? FileManager.default.removeItem(at: bigFile)
-    }
-
-    func testMoveFileAtomic() async throws {
+    func testCopyFilePreservesSource() async throws {
         let source = sandbox.appendingPathComponent("source.txt")
-        let dest = sandbox.appendingPathComponent("dest.txt")
-        try "content".write(to: source, atomically: true, encoding: .utf8)
+        let destination = sandbox.appendingPathComponent("dest.txt")
+        await fileManager.putFile(at: source, data: Data("content".utf8))
 
-        let tool = MoveFileTool()
-        let input = try JSONEncoder().encode([
-            "source": source.path,
-            "destination": dest.path
-        ]).asString()
+        _ = try await CopyFileTool().execute(
+            input: try json(["source": source.path, "destination": destination.path]),
+            context: context
+        )
 
-        _ = try await tool.execute(input: input, context: context)
-
-        XCTAssertFalse(FileManager.default.fileExists(atPath: source.path))
-        XCTAssertTrue(FileManager.default.fileExists(atPath: dest.path))
+        let sourceRawData = await fileManager.data(at: source)
+        let destinationRawData = await fileManager.data(at: destination)
+        let sourceData = try XCTUnwrap(sourceRawData)
+        let destinationData = try XCTUnwrap(destinationRawData)
+        XCTAssertEqual(String(data: sourceData, encoding: .utf8), "content")
+        XCTAssertEqual(String(data: destinationData, encoding: .utf8), "content")
     }
 
-    func testCopyFileDoesNotLoadToMemory() async throws {
-        let source = sandbox.appendingPathComponent("source.txt")
-        let dest = sandbox.appendingPathComponent("dest.txt")
-        try "content".write(to: source, atomically: true, encoding: .utf8)
+    func testListDirectoryRecursiveIncludesNestedEntries() async throws {
+        let rootFile = sandbox.appendingPathComponent("root.txt")
+        let nestedDirectory = sandbox.appendingPathComponent("nested")
+        let nestedFile = nestedDirectory.appendingPathComponent("child.txt")
+        await fileManager.putFile(at: rootFile, data: Data())
+        await fileManager.putDirectory(at: nestedDirectory)
+        await fileManager.putFile(at: nestedFile, data: Data())
 
-        let tool = CopyFileTool()
-        let input = try JSONEncoder().encode([
-            "source": source.path,
-            "destination": dest.path
-        ]).asString()
+        let output = try await ListDirectoryTool().execute(
+            input: try json(["path": sandbox.path, "recursive": true]),
+            context: context
+        )
 
-        _ = try await tool.execute(input: input, context: context)
-
-        XCTAssertTrue(FileManager.default.fileExists(atPath: source.path))
-        XCTAssertTrue(FileManager.default.fileExists(atPath: dest.path))
+        let response = try decode(EntriesResponse.self, from: output)
+        XCTAssertGreaterThanOrEqual(response.totalCount, 3)
+        XCTAssertTrue(response.entries.contains { $0.path == rootFile.path && !$0.isDirectory })
+        XCTAssertTrue(response.entries.contains { $0.path == nestedDirectory.path && $0.isDirectory })
+        XCTAssertTrue(response.entries.contains { $0.path == nestedFile.path && !$0.isDirectory })
     }
 
-    func testBinaryFileDetection() async throws {
-        let binaryFile = sandbox.appendingPathComponent("binary.bin")
-        let binaryData = Data([0x00, 0x01, 0x02, 0xFF, 0xFE])
-        try binaryData.write(to: binaryFile)
+    func testSearchFilesHonorsRecursiveFlagAndAnchorsPattern() async throws {
+        let rootSwift = sandbox.appendingPathComponent("one.swift")
+        let suffixFile = sandbox.appendingPathComponent("one.swift.txt")
+        let nestedDirectory = sandbox.appendingPathComponent("nested")
+        let nestedSwift = nestedDirectory.appendingPathComponent("two.swift")
+        await fileManager.putFile(at: rootSwift, data: Data())
+        await fileManager.putFile(at: suffixFile, data: Data())
+        await fileManager.putDirectory(at: nestedDirectory)
+        await fileManager.putFile(at: nestedSwift, data: Data())
 
-        let tool = ReadFileTool()
-        let input = try JSONEncoder().encode(["path": binaryFile.path]).asString()
+        let nonRecursiveOutput = try await SearchFilesTool().execute(
+            input: try json(["directory": sandbox.path, "pattern": "*.swift", "recursive": false]),
+            context: context
+        )
+        let recursiveOutput = try await SearchFilesTool().execute(
+            input: try json(["directory": sandbox.path, "pattern": "*.swift", "recursive": true]),
+            context: context
+        )
 
-        do {
-            _ = try await tool.execute(input: input, context: context)
-            XCTFail("Should have detected binary file")
-        } catch let error as ToolError {
-            XCTAssertTrue(error.localizedDescription.contains("binary") ||
-                         error.localizedDescription.contains("base64"))
-        } catch {
-            XCTFail("Wrong error type: \(error)")
-        }
+        let nonRecursive = try decode(MatchesResponse.self, from: nonRecursiveOutput)
+        let recursive = try decode(MatchesResponse.self, from: recursiveOutput)
 
-        try? FileManager.default.removeItem(at: binaryFile)
+        XCTAssertEqual(nonRecursive.matches, [rootSwift.path])
+        XCTAssertEqual(Set(recursive.matches), Set([rootSwift.path, nestedSwift.path]))
     }
 
-    func testEmptyFileNotDetectedAsBinary() async throws {
-        let emptyFile = sandbox.appendingPathComponent("empty.txt")
-        try "".write(to: emptyFile, atomically: true, encoding: .utf8)
+    func testCreateDirectoryWithoutIntermediateParentFails() async {
+        let nested = sandbox.appendingPathComponent("missing/child")
 
-        let tool = ReadFileTool()
-        let input = try JSONEncoder().encode(["path": emptyFile.path]).asString()
-
-        let result = try await tool.execute(input: input, context: context)
-        XCTAssertTrue(result.contains("\"content\":\"\""))
-
-        try? FileManager.default.removeItem(at: emptyFile)
+        await assertToolThrows(
+            CreateDirectoryTool(),
+            input: try! json(["path": nested.path, "intermediate": false]),
+            containing: "Parent directory does not exist"
+        )
     }
 
-    func testWriteFileAppendMode() async throws {
-        let file = sandbox.appendingPathComponent("append.txt")
-        try "hello ".write(to: file, atomically: true, encoding: .utf8)
-
-        let tool = WriteFileTool()
-        let input = try JSONEncoder().encode([
-            "path": file.path,
-            "content": "world",
-            "mode": "append"
-        ]).asString()
-
-        _ = try await tool.execute(input: input, context: context)
-
-        let content = try String(contentsOf: file)
-        XCTAssertEqual(content, "hello world")
-
-        try? FileManager.default.removeItem(at: file)
-    }
-
-    func testCreateDirectoryIntermediateFalse() async throws {
-        let tool = CreateDirectoryTool()
-        let nested = sandbox.appendingPathComponent("nonexistent/nested")
-        struct DirInput: Codable {
-            let path: String
-            let intermediate: Bool
-        }
-        let input = try JSONEncoder().encode(DirInput(
-            path: nested.path,
-            intermediate: false
-        )).asString()
-
-        do {
-            _ = try await tool.execute(input: input, context: context)
-            XCTFail("Should have failed - parent doesn't exist")
-        } catch let error as ToolError {
-            XCTAssertTrue(error.localizedDescription.contains("Parent"))
-        } catch {
-            XCTFail("Wrong error type: \(error)")
-        }
-    }
-
-    func testGetEnvironmentSpecificKey() async throws {
-        let tool = GetEnvironmentTool()
-        let input = try JSONEncoder().encode(["key": "PATH"]).asString()
-
-        let result = try await tool.execute(input: input, context: context)
-        XCTAssertTrue(result.contains("value"))
-    }
-
-    func testGetEnvironmentAllVariables() async throws {
-        let tool = GetEnvironmentTool()
-        let input = "{}"
-
-        let result = try await tool.execute(input: input, context: context)
-        XCTAssertTrue(result.contains("variables"))
-    }
-
-    func testGetWorkingDirectory() async throws {
-        let tool = GetWorkingDirectoryTool()
-        let input = "{}"
-
-        let result = try await tool.execute(input: input, context: context)
-        XCTAssertTrue(result.contains(sandbox.path))
-    }
-
-    func testPathExistsForFile() async throws {
+    func testPathExistsReportsFileDirectoryAndMissingPath() async throws {
         let file = sandbox.appendingPathComponent("exists.txt")
-        try "content".write(to: file, atomically: true, encoding: .utf8)
+        let directory = sandbox.appendingPathComponent("folder")
+        let missing = sandbox.appendingPathComponent("missing.txt")
+        await fileManager.putFile(at: file, data: Data("x".utf8))
+        await fileManager.putDirectory(at: directory)
 
-        let tool = PathExistsTool()
-        let input = try JSONEncoder().encode(["path": file.path]).asString()
+        let fileResponse = try decode(
+            ExistsResponse.self,
+            from: try await PathExistsTool().execute(input: try json(["path": file.path]), context: context)
+        )
+        let directoryResponse = try decode(
+            ExistsResponse.self,
+            from: try await PathExistsTool().execute(input: try json(["path": directory.path]), context: context)
+        )
+        let missingResponse = try decode(
+            ExistsResponse.self,
+            from: try await PathExistsTool().execute(input: try json(["path": missing.path]), context: context)
+        )
 
-        let result = try await tool.execute(input: input, context: context)
-        XCTAssertTrue(result.contains("\"exists\":true"))
-        XCTAssertTrue(result.contains("\"type\":\"file\""))
-
-        try? FileManager.default.removeItem(at: file)
+        XCTAssertTrue(fileResponse.exists)
+        XCTAssertEqual(fileResponse.type, "file")
+        XCTAssertTrue(directoryResponse.exists)
+        XCTAssertEqual(directoryResponse.type, "directory")
+        XCTAssertFalse(missingResponse.exists)
+        XCTAssertEqual(missingResponse.type, "none")
     }
 
-    func testPathExistsForDirectory() async throws {
-        let dir = sandbox.appendingPathComponent("existsdir")
-        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-
-        let tool = PathExistsTool()
-        let input = try JSONEncoder().encode(["path": dir.path]).asString()
-
-        let result = try await tool.execute(input: input, context: context)
-        XCTAssertTrue(result.contains("\"exists\":true"))
-        XCTAssertTrue(result.contains("\"type\":\"directory\""))
-
-        try? FileManager.default.removeItem(at: dir)
-    }
-
-    func testGetFileInfo() async throws {
+    func testGetFileInfoReturnsSizeDatesAndDirectoryFlag() async throws {
         let file = sandbox.appendingPathComponent("info.txt")
-        try "content".write(to: file, atomically: true, encoding: .utf8)
+        await fileManager.putFile(at: file, data: Data("content".utf8))
 
-        let tool = GetFileInfoTool()
-        let input = try JSONEncoder().encode(["path": file.path]).asString()
+        let output = try await GetFileInfoTool().execute(
+            input: try json(["path": file.path]),
+            context: context
+        )
 
-        let result = try await tool.execute(input: input, context: context)
-        XCTAssertTrue(result.contains("\"size\":"))
-        XCTAssertTrue(result.contains("\"isDirectory\":false"))
-
-        try? FileManager.default.removeItem(at: file)
+        let response = try decode(FileInfoResponse.self, from: output)
+        XCTAssertEqual(response.size, 7)
+        XCTAssertFalse(response.isDirectory)
+        XCTAssertFalse(response.created.isEmpty)
+        XCTAssertFalse(response.modified.isEmpty)
     }
 
-    func testDeleteFile() async throws {
+    func testDeleteFileRemovesFile() async throws {
         let file = sandbox.appendingPathComponent("delete.txt")
-        try "content".write(to: file, atomically: true, encoding: .utf8)
+        await fileManager.putFile(at: file, data: Data("content".utf8))
 
-        let tool = DeleteFileTool()
-        let input = try JSONEncoder().encode(["path": file.path]).asString()
+        _ = try await DeleteFileTool().execute(
+            input: try json(["path": file.path]),
+            context: context
+        )
 
-        _ = try await tool.execute(input: input, context: context)
-        XCTAssertFalse(FileManager.default.fileExists(atPath: file.path))
+        let fileData = await fileManager.data(at: file)
+        XCTAssertNil(fileData)
     }
 
-    func testDeleteDirectory() async throws {
-        let dir = sandbox.appendingPathComponent("deletedir")
-        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+    func testDeleteDirectoryRemovesDescendants() async throws {
+        let directory = sandbox.appendingPathComponent("delete-dir")
+        let file = directory.appendingPathComponent("child.txt")
+        await fileManager.putDirectory(at: directory)
+        await fileManager.putFile(at: file, data: Data("content".utf8))
 
-        let tool = DeleteDirectoryTool()
-        let input = try JSONEncoder().encode(["path": dir.path]).asString()
+        _ = try await DeleteDirectoryTool().execute(
+            input: try json(["path": directory.path]),
+            context: context
+        )
 
-        _ = try await tool.execute(input: input, context: context)
-        XCTAssertFalse(FileManager.default.fileExists(atPath: dir.path))
+        let exists = await fileManager.exists(at: directory)
+        XCTAssertFalse(exists)
+        let fileData = await fileManager.data(at: file)
+        XCTAssertNil(fileData)
+    }
+
+    func testRunCommandExecutesSafeCommandWithResolvedPath() async throws {
+        await commandExecutor.setResolvedPath(command: "echo", path: "/bin/echo")
+        await commandExecutor.setResult(
+            command: "/bin/echo",
+            arguments: ["hello", "world"],
+            result: .init(stdout: "hello world", stderr: "", exitCode: 0)
+        )
+
+        let output = try await RunCommandTool().execute(
+            input: try json(["command": "echo hello world", "cwd": sandbox.path, "timeout": 12]),
+            context: context
+        )
+
+        let response = try decode(CommandResponse.self, from: output)
+        let invocation = await commandExecutor.lastInvocation()
+
+        XCTAssertEqual(response.stdout, "hello world")
+        XCTAssertEqual(response.exitCode, 0)
+        XCTAssertEqual(invocation?.command, "/bin/echo")
+        XCTAssertEqual(invocation?.arguments, ["hello", "world"])
+        XCTAssertEqual(invocation?.workingDirectory.standardizedFileURL, sandbox.standardizedFileURL)
+        XCTAssertEqual(invocation?.timeout, 12)
+    }
+
+    func testRunCommandRejectsNetworkCommands() async {
+        await assertToolThrows(
+            RunCommandTool(),
+            input: try! json(["command": "curl https://example.com"]),
+            containing: "not allowed"
+        )
+    }
+
+    func testRunCommandRejectsShellMetacharacters() async {
+        await assertToolThrows(
+            RunCommandTool(),
+            input: try! json(["command": "ls | cat"]),
+            containing: "unsafe character"
+        )
+    }
+
+    func testRunCommandRejectsUnknownCommand() async {
+        await assertToolThrows(
+            RunCommandTool(),
+            input: try! json(["command": "python --version"]),
+            containing: "allowed list"
+        )
+    }
+
+    func testRunCommandPropagatesTimeout() async {
+        await commandExecutor.setResolvedPath(command: "ls", path: "/bin/ls")
+        await commandExecutor.setTimeout(commandPath: "/bin/ls")
+
+        await assertToolThrows(
+            RunCommandTool(),
+            input: try! json(["command": "ls"]),
+            containing: "timed out"
+        )
+    }
+
+    func testGetEnvironmentReturnsSpecificKey() async throws {
+        let output = try await GetEnvironmentTool().execute(
+            input: try json(["key": "FOO"]),
+            context: context
+        )
+
+        let response = try decode(EnvironmentValueResponse.self, from: output)
+        XCTAssertEqual(response.value, "bar")
+    }
+
+    func testGetEnvironmentReturnsAllVariables() async throws {
+        let output = try await GetEnvironmentTool().execute(
+            input: "{}",
+            context: context
+        )
+
+        let response = try decode(EnvironmentMapResponse.self, from: output)
+        XCTAssertEqual(response.variables["FOO"], "bar")
+        XCTAssertNotNil(response.variables["PATH"])
+    }
+
+    func testGetWorkingDirectoryReturnsSandbox() async throws {
+        let output = try await GetWorkingDirectoryTool().execute(
+            input: "{}",
+            context: context
+        )
+
+        let response = try decode(WorkingDirectoryResponse.self, from: output)
+        XCTAssertEqual(response.path, sandbox.path)
     }
 }

@@ -6,13 +6,12 @@ import Foundation
 public protocol AgentNamingServiceProtocol: Sendable {
     func generateUniqueName() async throws -> AgentNamingService.GeneratedName
     func names(from category: NameCategory) -> [String]
-    func suggestNames(count: Int, category: NameCategory?) async throws -> [AgentNamingService.GeneratedName]
 }
 
 /// Protocol for cache operations - enables mocking in tests
 public protocol CacheServiceProtocol: Sendable {
-    func get(platform: String, cacheKey: String) async throws -> RemotePostCacheRecord?
-    func set(platform: String, cacheKey: String, payload: Encodable, stats: Encodable?, ttl: TimeInterval) async throws
+    func get<T: Codable & Sendable>(platform: String, cacheKey: String, as type: T.Type) async throws -> T?
+    func cache<T: Codable & Sendable>(platform: String, cacheKey: String, data: T, category: CacheCategory) async throws
     func invalidate(platform: String, cacheKey: String) async throws
     func invalidateAll(platform: String) async throws
     func cleanupExpired() async throws
@@ -20,22 +19,14 @@ public protocol CacheServiceProtocol: Sendable {
 
 /// Protocol for content versioning operations - enables mocking in tests
 public protocol ContentVersioningServiceProtocol: Sendable {
-    func createVersion(contentId: String, contentJson: String, changeReason: String?, editedBy: String) async throws -> GeneratedContentVersionRecord
-    func listVersions(contentId: String) async throws -> [GeneratedContentVersionRecord]
-    func getVersion(contentId: String, version: Int) async throws -> GeneratedContentVersionRecord?
     func editContent(contentId: String, newContentJson: String, changeReason: String?, editedBy: String) async throws -> GeneratedContentRecord
-    func revertToVersion(contentId: String, version: Int, changeReason: String?, editedBy: String) async throws -> GeneratedContentRecord
+    func restoreVersion(contentId: String, targetVersion: Int, changeReason: String?) async throws -> GeneratedContentRecord
 }
 
 /// Protocol for approval operations - enables mocking in tests
 public protocol ApprovalServiceProtocol: Sendable {
-    func submitForApproval(contentId: String, batchToken: String?) async throws -> ApprovalQueueRecord
     func approve(contentId: String, approvedBy: String) async throws -> ApprovalQueueRecord
     func reject(contentId: String, reason: String?, rejectedBy: String) async throws -> ApprovalQueueRecord
-    func getStatus(contentId: String) async throws -> ApprovalQueueRecord?
-    func listPending(limit: Int) async throws -> [ApprovalQueueRecord]
-    func batchApprove(contentIds: [String], approvedBy: String) async throws -> [ApprovalQueueRecord]
-    func batchReject(contentIds: [String], reason: String?, rejectedBy: String) async throws -> [ApprovalQueueRecord]
 }
 
 /// Protocol for settings operations - enables mocking in tests

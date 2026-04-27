@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		10BBE7C72F85EF0A00407568 /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = 10BBE7C62F85EF0A00407568 /* GRDB */; };
+		10BDEBB92F8DE63C00AA59F6 /* TestPlan.xctestplan in Resources */ = {isa = PBXBuildFile; fileRef = 10BDEBB82F8DE63C00AA59F6 /* TestPlan.xctestplan */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -31,6 +32,7 @@
 		10BBE6F52F85C5BB00407568 /* senor-platform.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "senor-platform.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		10BBE7022F85C5BE00407568 /* senor-platformTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "senor-platformTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		10BBE70C2F85C5BE00407568 /* senor-platformUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "senor-platformUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		10BDEBB82F8DE63C00AA59F6 /* TestPlan.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; name = TestPlan.xctestplan; path = "senor-platformTests/TestPlan.xctestplan"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -80,6 +82,7 @@
 		10BBE6EC2F85C5BB00407568 = {
 			isa = PBXGroup;
 			children = (
+				10BDEBB82F8DE63C00AA59F6 /* TestPlan.xctestplan */,
 				10BBE6F72F85C5BB00407568 /* senor-platform */,
 				10BBE7052F85C5BE00407568 /* senor-platformTests */,
 				10BBE70F2F85C5BE00407568 /* senor-platformUITests */,
@@ -229,6 +232,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				10BDEBB92F8DE63C00AA59F6 /* TestPlan.xctestplan in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -411,6 +415,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = senor-platform/senor-platform.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
@@ -419,7 +424,8 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
-				GENERATE_INFOPLIST_FILE = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "senor-platform/Info.plist";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -444,6 +450,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
+				CODE_SIGN_ENTITLEMENTS = senor-platform/senor-platform.entitlements;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = N7479DGFCN;
@@ -451,7 +458,8 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
-				GENERATE_INFOPLIST_FILE = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "senor-platform/Info.plist";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",

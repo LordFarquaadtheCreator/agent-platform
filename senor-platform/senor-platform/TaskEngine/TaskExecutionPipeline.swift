@@ -1,8 +1,7 @@
 import Foundation
-import DataLayer
 
 /// Orchestrates the complete task execution pipeline
-public actor TaskExecutionPipeline: Sendable {
+public actor TaskExecutionPipeline {
     private let taskRepository: TaskRepository
     private let taskScheduleRepository: TaskScheduleRepository
     private let taskRunRepository: TaskRunRepository
@@ -78,14 +77,13 @@ public actor TaskExecutionPipeline: Sendable {
             let exit = await workerManager.wait(for: spawnResult.pid)
 
             // 5. Process result
-            let completedRun = try await self.processResult(
+            _ = try await self.processResult(
                 run: runningRun,
                 exit: exit,
                 task: task
             )
 
             logger.info("Task completed: \(task.taskName) (exit: \(exit.exitCode))")
-
         } catch {
             logger.error("Task execution failed: \(error)")
 
@@ -144,7 +142,7 @@ public actor TaskExecutionPipeline: Sendable {
             throw AppError.invalidTaskConfiguration("Task type not found: \(task.taskTypeId)")
         }
 
-        let result = schemaValidator.validate(
+        let result = await schemaValidator.validate(
             metadataJson: task.taskMetadataJson,
             schemaJson: taskType.jsonSchema
         )
@@ -152,6 +150,7 @@ public actor TaskExecutionPipeline: Sendable {
         switch result {
         case .success:
             return
+
         case .failure(let error):
             throw error
         }
@@ -228,7 +227,7 @@ public actor TaskExecutionPipeline: Sendable {
         guard let jsonData = output.data(using: .utf8) else {
             throw AppError.invalidJSON("Worker output could not be converted to data")
         }
-        
+
         let json: [String: Any]
         do {
             json = try JSONSerialization.jsonObject(with: jsonData) as? [String: Any] ?? [:]
@@ -246,7 +245,7 @@ public actor TaskExecutionPipeline: Sendable {
         } catch {
             throw AppError.invalidJSON("Failed to serialize content: \(error.localizedDescription)")
         }
-        
+
         guard let contentString = String(data: contentData, encoding: .utf8) else {
             throw AppError.invalidJSON("Failed to convert content data to string")
         }
@@ -280,4 +279,3 @@ public actor TaskExecutionPipeline: Sendable {
         return savedContent
     }
 }
-

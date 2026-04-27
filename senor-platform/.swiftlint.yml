@@ -1,0 +1,245 @@
+excluded:
+  - senor-platformTests
+  - senor-platformUITests
+  - DerivedData
+  - "*.generated.swift"
+
+included:
+  - senor-platform
+
+opt_in_rules:
+  - array_init
+  - closure_end_indentation
+  - closure_spacing
+  - collection_alignment
+  - contains_over_filter_count
+  - contains_over_filter_is_empty
+  - contains_over_first_not_nil
+  - contains_over_range_nil_comparison
+  - discouraged_none_name
+  - empty_collection_literal
+  - empty_count
+  - empty_string
+  - enum_case_associated_values_count
+  - explicit_init
+  - fallthrough
+  - fatal_error_message
+  - file_name_no_space
+  - first_where
+  - flatmap_over_map_reduce
+  - force_unwrapping
+  - identical_operands
+  - implicit_return
+  - joined_default_parameter
+  - last_where
+  - literal_expression_end_indentation
+  - lower_acl_than_parent
+  - modifier_order
+  - nimble_operator
+  - overridden_super_call
+  - prefer_zero_over_explicit_init
+  - prohibited_super_call
+  - reduce_into
+  - single_test_class
+  - sorted_first_last
+  - static_operator
+  - strong_iboutlet
+  - toggle_bool
+  - trailing_closure
+  - unavailable_function
+  - unneeded_parentheses_in_closure_argument
+  - unused_declaration
+  - vertical_whitespace_between_cases
+  - vertical_whitespace_closing_braces
+  - weak_delegate
+  - xct_specific_matcher
+
+disabled_rules:
+  - line_length
+  - large_tuple
+
+line_length:
+  warning: 120
+  error: 160
+
+indentation:
+  spaces: 4
+
+force_try:
+  severity: error
+
+force_cast:
+  severity: error
+
+force_unwrapping:
+  severity: error
+
+type_body_length:
+  warning: 400
+  error: 600
+
+function_body_length:
+  warning: 110
+  error: 200
+
+file_length:
+  warning: 1200
+  error: 1500
+
+cyclomatic_complexity:
+  warning: 20
+  error: 30
+
+enum_case_associated_values_count:
+  warning: 6
+  error: 8
+
+function_parameter_count:
+  warning: 7
+  error: 10
+
+nesting:
+  type_level:
+    warning: 2
+  statement_level:
+    warning: 5
+
+identifier_name:
+  min_length:
+    warning: 2
+    error: 1
+  excluded:
+    - id
+    - x
+    - y
+    - i
+    - j
+    - n
+    - r
+    - g
+    - b
+    - a
+    - t
+    - db
+    - fm
+    - ok
+    - to
+    - at
+    - on
+    - up
+    - of
+    - by
+  allowed_symbols:
+    - "_"
+
+type_name:
+  excluded:
+    - senor_platformApp
+  allowed_symbols:
+    - "_"
+
+# MARK: - Design System Enforcement Rules
+# These rules prevent manual styling in Feature, AppCore, and Views directories.
+# All visual values must use AppTheme tokens or SharedUI components.
+
+custom_rules:
+  # Prevent raw .font() modifiers outside Core/SharedUI
+  forbidden_font_modifier:
+    name: "Forbidden Font Modifier"
+    regex: "\\.font\\(\\."
+    message: "Use AppText or AppTheme.Typography instead of raw .font() in feature code"
+    severity: error
+    included:
+      - "senor-platform/Features/**/*.swift"
+      - "senor-platform/AppCore/**/*.swift"
+      - "senor-platform/Views/**/*.swift"
+
+  # Prevent raw foregroundStyle with system colors
+  forbidden_foreground_style_literal:
+    name: "Forbidden ForegroundStyle Literal"
+    regex: "\\.foregroundStyle\\(\\.[a-z]+\\)"
+    message: "Use AppTheme.ColorToken or AppText instead of raw foregroundStyle"
+    severity: error
+    included:
+      - "senor-platform/Features/**/*.swift"
+      - "senor-platform/AppCore/**/*.swift"
+      - "senor-platform/Views/**/*.swift"
+
+  # Prevent raw .foregroundColor()
+  forbidden_foreground_color:
+    name: "Forbidden ForegroundColor"
+    regex: "\\.foregroundColor\\(\\."
+    message: "Use AppTheme.ColorToken or AppText instead of raw .foregroundColor()"
+    severity: error
+    included:
+      - "senor-platform/Features/**/*.swift"
+      - "senor-platform/AppCore/**/*.swift"
+      - "senor-platform/Views/**/*.swift"
+
+  # Prevent raw padding with numeric literals
+  forbidden_raw_padding:
+    name: "Forbidden Raw Padding"
+    regex: "\\.padding\\([0-9.]+\\)"
+    message: "Use AppTheme.Spacing instead of raw padding values"
+    severity: error
+    included:
+      - "senor-platform/Features/**/*.swift"
+      - "senor-platform/AppCore/**/*.swift"
+      - "senor-platform/Views/**/*.swift"
+
+  # Prevent raw cornerRadius
+  forbidden_raw_corner_radius:
+    name: "Forbidden Raw CornerRadius"
+    regex: "\\.cornerRadius\\("
+    message: "Use AppTheme.CornerRadius or AppSurface/AppCard instead of raw .cornerRadius()"
+    severity: error
+    included:
+      - "senor-platform/Features/**/*.swift"
+      - "senor-platform/AppCore/**/*.swift"
+      - "senor-platform/Views/**/*.swift"
+
+  # Prevent raw shadow with color parameter
+  forbidden_raw_shadow:
+    name: "Forbidden Raw Shadow"
+    regex: "\\.shadow\\(color:"
+    message: "Use AppTheme.Shadow or AppSurface instead of raw .shadow()"
+    severity: error
+    included:
+      - "senor-platform/Features/**/*.swift"
+      - "senor-platform/AppCore/**/*.swift"
+      - "senor-platform/Views/**/*.swift"
+
+  # Prevent raw tint with color literals
+  forbidden_raw_tint:
+    name: "Forbidden Raw Tint"
+    regex: "\\.tint\\(\\."
+    message: "Use AppTheme.ColorToken or appButtonStyle instead of raw .tint()"
+    severity: error
+    included:
+      - "senor-platform/Features/**/*.swift"
+      - "senor-platform/AppCore/**/*.swift"
+      - "senor-platform/Views/**/*.swift"
+
+  # Prevent raw Color literals
+  forbidden_raw_color:
+    name: "Forbidden Raw Color"
+    regex: "Color\\.[a-z]+"
+    message: "Use AppTheme.ColorToken instead of raw Color literals"
+    severity: error
+    included:
+      - "senor-platform/Features/**/*.swift"
+      - "senor-platform/AppCore/**/*.swift"
+      - "senor-platform/Views/**/*.swift"
+
+  # Prevent raw background with color
+  forbidden_raw_background:
+    name: "Forbidden Raw Background"
+    regex: "\\.background\\(Color"
+    message: "Use AppSurface or AppTheme.ColorToken instead of raw .background()"
+    severity: error
+    included:
+      - "senor-platform/Features/**/*.swift"
+      - "senor-platform/AppCore/**/*.swift"
+      - "senor-platform/Views/**/*.swift"
+
+reporter: "xcode"

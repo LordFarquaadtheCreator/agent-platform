@@ -1,5 +1,4 @@
 import Foundation
-import GRDB
 #if canImport(GRDB)
 @preconcurrency import GRDB
 #endif
@@ -140,7 +139,7 @@ public actor SchedulerEngine {
         }
 
         let compiler = ScheduleCompiler()
-        guard let nextRun = compiler.nextRunTime(from: spec, after: Date()) else {
+        guard let nextRun = await compiler.nextRunTime(from: spec, after: Date()) else {
             // No more runs scheduled
             var updated = schedule
             updated.isActive = false
@@ -222,6 +221,6 @@ public actor SchedulerEngine {
         }
 
         let compiler = ScheduleCompiler()
-        return compiler.nextRunTimes(from: spec, count: count, after: Date())
+        return await compiler.nextRunTimes(from: spec, count: count, after: Date())
     }
 }

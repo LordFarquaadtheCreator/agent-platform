@@ -3,7 +3,7 @@ import Combine
 
 /// Type-safe event bus for internal app communication
 /// Replaces NotificationCenter anti-pattern with reactive streams
-public final actor EventBus: Sendable {
+public final actor EventBus {
     public static let shared = EventBus()
 
     private let refreshSubject = PassthroughSubject<RefreshEvent, Never>()
@@ -92,7 +92,7 @@ public final actor EventBus: Sendable {
         storage.insert(cancellable)
         return cancellable
     }
-    
+
     /// Clean up a specific subscription
     public func removeSubscription(_ cancellable: AnyCancellable) {
         storage.remove(cancellable)

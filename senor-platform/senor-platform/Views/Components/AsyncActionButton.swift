@@ -34,10 +34,10 @@ public struct AsyncActionButton: View {
                 if isLoading {
                     ProgressView()
                         .scaleEffect(0.8)
-                        .frame(width: 16, height: 16)
+                        .frame(width: AppTheme.Layout.iconSize, height: AppTheme.Layout.iconSize)
                 } else if let image = systemImage {
                     Image(systemName: image)
-                        .frame(width: 16, height: 16)
+                        .frame(width: AppTheme.Layout.iconSize, height: AppTheme.Layout.iconSize)
                 }
                 Text(title)
             }
@@ -88,11 +88,10 @@ public struct ApproveButton: View {
     public var body: some View {
         AsyncActionButton(
             title: "Approve",
-            systemImage: "checkmark.circle",
+            systemImage: AppTheme.Icon.success,
             action: action
         )
-        .buttonStyle(.borderedProminent)
-        .tint(.green)
+        .appButtonStyle(.borderedProminent)
     }
 }
 
@@ -106,11 +105,11 @@ public struct RejectButton: View {
     public var body: some View {
         AsyncActionButton(
             title: "Reject",
-            systemImage: "xmark.circle",
+            systemImage: AppTheme.Icon.error,
             role: .destructive,
             action: action
         )
-        .buttonStyle(.bordered)
+        .appButtonStyle(.borderedDestructive)
     }
 }
 
@@ -124,16 +123,16 @@ public struct PublishButton: View {
     public var body: some View {
         AsyncActionButton(
             title: "Publish",
-            systemImage: "arrow.up.circle",
+            systemImage: AppTheme.Icon.upload,
             action: action
         )
-        .buttonStyle(.borderedProminent)
+        .appButtonStyle(.borderedProminent)
     }
 }
 
 #Preview {
-    VStack(spacing: 16) {
-        AsyncActionButton(title: "Save", systemImage: "checkmark") {
+    AppVStack(spacing: .large) {
+        AsyncActionButton(title: "Save", systemImage: AppTheme.Icon.save) {
             try await Task.sleep(nanoseconds: 1_000_000_000)
         }
 
@@ -149,5 +148,5 @@ public struct PublishButton: View {
             try await Task.sleep(nanoseconds: 500_000_000)
         }
     }
-    .padding()
+    .appScreenPadding()
 }

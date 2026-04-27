@@ -3,10 +3,10 @@ import Foundation
 /// Categories for pop-culture name generation
 public enum NameCategory: String, Codable, CaseIterable, Sendable {
     case sciFi = "sci-fi"
-    case fantasy = "fantasy"
-    case comics = "comics"
-    case games = "games"
-    case bollywood = "bollywood"
+    case fantasy
+    case comics
+    case games
+    case bollywood
 
     public var displayName: String {
         switch self {
@@ -23,7 +23,7 @@ public enum NameCategory: String, Codable, CaseIterable, Sendable {
 public final class AgentNamingService: Sendable {
     private let repository: AgentRepository
     private let logger = AppLogger.agentNaming
-    
+
     /// Curated pop-culture name catalogues by category (2000s+ focus)
     private static let nameCatalogues: [NameCategory: [String]] = [
         .sciFi: [
@@ -79,7 +79,7 @@ public final class AgentNamingService: Sendable {
             "Kiara", "Kriti", "Sara", "Janhvi", "Tara", "Ananya", "Bhumi", "Taapsee", "Radhika",
             "Rishi", "Sanjay", "Sunny", "Bobby", "Jackie", "Anil", "Juhi", "Madhuri",
             "Dharmendra", "Vinod", "Shatrughan", "Mithun", "Govinda", "Chunky", "Shakti", "Pran"
-        ],
+        ]
     ]
 
     public struct GeneratedName: Sendable {
@@ -87,7 +87,7 @@ public final class AgentNamingService: Sendable {
         public let category: NameCategory
         public let baseName: String
         public let seed: Int
-        
+
         public init(displayName: String, category: NameCategory, baseName: String, seed: Int) {
             self.displayName = displayName
             self.category = category
@@ -95,21 +95,21 @@ public final class AgentNamingService: Sendable {
             self.seed = seed
         }
     }
-    
+
     public init(repository: AgentRepository) {
         self.repository = repository
     }
-    
+
     /// Generate a unique pop-culture inspired name
     public func generateUniqueName() async throws -> GeneratedName {
         let maxAttempts = 100
-        
-        for attempt in 0..<maxAttempts {
+
+        for _ in 0..<maxAttempts {
             let category = randomCategory()
             let baseName = randomName(from: category)
             let seed = Int.random(in: 1...99)
             let displayName = "\(baseName)-\(String(format: "%02d", seed))"
-            
+
             // Check uniqueness
             let exists = try await repository.existsWithName(name: displayName)
             if !exists {
@@ -122,7 +122,7 @@ public final class AgentNamingService: Sendable {
                 )
             }
         }
-        
+
         // Fallback: use UUID suffix if all attempts fail
         let fallback = "Agent-\(UUID().uuidString.prefix(8).uppercased())"
         logger.warning("Could not generate unique pop-culture name, using fallback: \(fallback)")
@@ -133,46 +133,46 @@ public final class AgentNamingService: Sendable {
             seed: 0
         )
     }
-    
+
     /// Regenerate a name for an existing agent while preserving audit trail
     public func regenerateName(for agentId: String) async throws -> GeneratedName {
         let newName = try await generateUniqueName()
         logger.info("Regenerated name for agent \(agentId): \(newName.displayName)")
         return newName
     }
-    
+
     /// Get all available name categories
     public func availableCategories() -> [NameCategory] {
         NameCategory.allCases
     }
-    
+
     /// Get names from a specific category
     public func names(from category: NameCategory) -> [String] {
         AgentNamingService.nameCatalogues[category] ?? []
     }
-    
+
     /// Get total name pool size
     public func totalNamePoolSize() -> Int {
         AgentNamingService.nameCatalogues.values.reduce(0) { $0 + $1.count }
     }
-    
+
     /// Create display info for the agent name
     public func nameInfo(for name: GeneratedName) -> String {
-        return "\(name.displayName) (\(name.category.displayName): \(name.baseName))"
+        "\(name.displayName) (\(name.category.displayName): \(name.baseName))"
     }
-    
+
     // MARK: - Private Methods
-    
+
     private func randomCategory() -> NameCategory {
-        NameCategory.allCases.randomElement()!
+        NameCategory.allCases.randomElement() ?? .sciFi
     }
-    
+
     private func randomName(from category: NameCategory) -> String {
         guard let names = AgentNamingService.nameCatalogues[category],
               !names.isEmpty else {
             return "Unknown"
         }
-        return names.randomElement()!
+        return names.randomElement() ?? "Unknown"
     }
 }
 
@@ -182,22 +182,22 @@ extension AgentNamingService {
     /// Generate a deterministic name based on a seed (for reproducibility)
     public func generateDeterministicName(seed: Int, category: NameCategory? = nil) -> GeneratedName {
         var rng = SeededRandom(seed: seed)
-        
+
         let selectedCategory = category ?? {
             let allCategories = Array(NameCategory.allCases)
             return allCategories[rng.nextInt(in: 0..<allCategories.count)]
         }()
-        
+
         let names = AgentNamingService.nameCatalogues[selectedCategory] ?? []
         guard !names.isEmpty else {
             return GeneratedName(displayName: "Agent \(seed)", category: selectedCategory, baseName: "Agent", seed: seed)
         }
-        
+
         let index = rng.nextInt(in: 0..<names.count)
         let baseName = names[index]
         let nameSeed = rng.nextInt(in: 1...99)
         let displayName = "\(baseName)-\(String(format: "%02d", nameSeed))"
-        
+
         return GeneratedName(
             displayName: displayName,
             category: selectedCategory,
@@ -212,18 +212,18 @@ extension AgentNamingService {
 /// Deterministic random number generator for reproducible name generation
 public struct SeededRandom {
     private var generator: SeededRandomNumberGenerator
-    
+
     public init(seed: Int) {
         self.generator = SeededRandomNumberGenerator(seed: seed)
     }
-    
+
     public mutating func nextInt(in range: Range<Int>) -> Int {
         let value = generator.next()
         let rangeSize = UInt64(range.upperBound - range.lowerBound)
         let boundedValue = Int(value % rangeSize) + range.lowerBound
         return boundedValue
     }
-    
+
     public mutating func nextInt(in range: ClosedRange<Int>) -> Int {
         let value = generator.next()
         let rangeSize = UInt64(range.upperBound - range.lowerBound + 1)
@@ -234,11 +234,11 @@ public struct SeededRandom {
 
 private struct SeededRandomNumberGenerator: RandomNumberGenerator {
     private var state: UInt64
-    
+
     init(seed: Int) {
         self.state = UInt64(bitPattern: Int64(seed))
     }
-    
+
     mutating func next() -> UInt64 {
         // xorshift64* algorithm
         state ^= state << 12
@@ -247,4 +247,3 @@ private struct SeededRandomNumberGenerator: RandomNumberGenerator {
         return state &* 2685821657736338717
     }
 }
-
