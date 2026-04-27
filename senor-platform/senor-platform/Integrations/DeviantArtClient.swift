@@ -280,6 +280,11 @@ public final class DeviantArtClient {
         authToken = token
     }
 
+    /// Clear auth token on disconnect
+    public func clearAuthToken() {
+        authToken = nil
+    }
+
     // MARK: - Stash Operations
 
     /// Submit a file to stash (step 1: create stash item)

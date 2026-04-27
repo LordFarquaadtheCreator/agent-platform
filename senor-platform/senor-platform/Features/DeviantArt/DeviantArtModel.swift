@@ -144,6 +144,7 @@ public final class DeviantArtModel: ObservableObject {
         settings.refreshToken = nil
         settings.tokenExpiry = nil
         try settingsService.saveDeviantArtSettings(settings)
+        client?.clearAuthToken()
         isAuthenticated = false
         profile = nil
         deviations = []
