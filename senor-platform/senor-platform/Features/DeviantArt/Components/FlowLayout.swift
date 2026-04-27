@@ -46,15 +46,15 @@ struct FlowLayout: Layout {
 // MARK: - Previews
 
 #Preview {
-    FlowLayout(spacing: 8) {
+    FlowLayout(spacing: AppTheme.Spacing.small) {
         ForEach(["swift", "ios", "macos", "dev", "art", "design", "ui", "ux"], id: \.self) { tag in
             Text(tag)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .background(Color.blue.opacity(0.2))
+                .padding(.horizontal, AppTheme.Spacing.small)
+                .padding(.vertical, AppTheme.Spacing.xSmall)
+                .background(AppTheme.ColorToken.accent.opacity(0.2))
                 .clipShape(Capsule())
         }
     }
     .frame(width: 200)
-    .padding()
+    .padding(AppTheme.Spacing.medium)
 }

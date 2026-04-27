@@ -7,7 +7,7 @@ struct StatItem: View {
     var body: some View {
         HStack(spacing: 2) {
             Image(systemName: icon)
-                .font(.caption2)
+                .font(AppTheme.Typography.caption2)
             if value > 0 {
                 Text("\(value)")
                     .fontWeight(.medium)

@@ -7,18 +7,18 @@ struct StatPill: View {
 
     var body: some View {
         VStack(spacing: 2) {
-            HStack(spacing: 4) {
+            HStack(spacing: AppTheme.Spacing.small) {
                 Image(systemName: icon)
-                    .font(.caption2)
+                    .font(AppTheme.Typography.caption2)
                 Text("\(value)")
-                    .font(.caption)
+                    .font(AppTheme.Typography.caption)
                     .fontWeight(.semibold)
             }
             Text(title)
-                .font(.caption2)
+                .font(AppTheme.Typography.caption2)
                 .foregroundColor(AppTheme.ColorToken.textSecondary)
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, AppTheme.Spacing.xSmall)
     }
 }
 

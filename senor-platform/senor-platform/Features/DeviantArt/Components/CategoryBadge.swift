@@ -6,13 +6,13 @@ struct CategoryBadge: View {
     var body: some View {
         HStack(spacing: 4) {
             Image(systemName: "folder.fill")
-                .font(.caption2)
+                .font(AppTheme.Typography.caption2)
             Text(category.capitalized)
-                .font(.caption2)
+                .font(AppTheme.Typography.caption2)
                 .fontWeight(.medium)
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
+        .padding(.horizontal, AppTheme.Spacing.badgeHorizontalPadding)
+        .padding(.vertical, AppTheme.Spacing.badgeVerticalPadding)
         .background(AppTheme.ColorToken.accent.opacity(0.9))
         .foregroundColor(.white)
         .clipShape(Capsule())

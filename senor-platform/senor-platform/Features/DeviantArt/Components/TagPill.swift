@@ -5,9 +5,9 @@ struct TagPill: View {
 
     var body: some View {
         Text(name)
-            .font(.caption)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 5)
+            .font(AppTheme.Typography.caption)
+            .padding(.horizontal, AppTheme.Spacing.tagHorizontalPadding)
+            .padding(.vertical, AppTheme.Spacing.tagVerticalPadding)
             .background(AppTheme.ColorToken.textSecondary.opacity(0.15))
             .foregroundColor(AppTheme.ColorToken.textPrimary)
             .clipShape(Capsule())
