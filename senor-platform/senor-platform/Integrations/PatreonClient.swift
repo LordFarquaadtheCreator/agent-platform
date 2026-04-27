@@ -68,9 +68,14 @@ public struct PatreonPost: Codable, Identifiable {
 
     public struct PatreonPostRelationships: Codable, Sendable {
         public let campaign: PatreonRelationship?
+        public let tiers: PatreonTiersRelationship?
 
         public struct PatreonRelationship: Codable, Sendable {
             public let data: PatreonRelationshipData?
+        }
+
+        public struct PatreonTiersRelationship: Codable, Sendable {
+            public let data: [PatreonRelationshipData]?
         }
 
         public struct PatreonRelationshipData: Codable, Sendable {
@@ -126,6 +131,16 @@ public struct PatreonMembersResponse: Codable {
     public let meta: PatreonPaginationMeta?
 }
 
+public struct PatreonTiersResponse: Codable {
+    public let data: [PatreonTier]
+    public let meta: PatreonPaginationMeta?
+}
+
+public struct PatreonCampaignResponse: Codable {
+    public let data: PatreonCampaign
+    public let included: [PatreonIncludedResource]?
+}
+
 public struct PatreonIncludedResource: Codable {
     public let id: String
     public let type: String
@@ -135,6 +150,13 @@ public struct PatreonIncludedResource: Codable {
 public struct PatreonIncludedAttributes: Codable {
     public let title: String?
     public let url: String?
+    public let amountCents: Int?
+    
+    enum CodingKeys: String, CodingKey {
+        case title
+        case url
+        case amountCents = "amount_cents"
+    }
 }
 
 public struct PatreonPaginationMeta: Codable {
@@ -203,6 +225,7 @@ public final class PatreonClient {
         static func campaign(campaignId: String) -> String { "\(base)/campaigns/\(campaignId)" }
         static func campaignMembers(campaignId: String) -> String { "\(base)/campaigns/\(campaignId)/members" }
         static func campaignPosts(campaignId: String) -> String { "\(base)/campaigns/\(campaignId)/posts" }
+        static func campaignTiers(campaignId: String) -> String { "\(base)/campaigns/\(campaignId)/tiers" }
         static func post(postId: String) -> String { "\(base)/posts/\(postId)" }
         static let posts = "\(base)/posts"
     }
@@ -348,6 +371,39 @@ public final class PatreonClient {
         )
 
         return response.data
+    }
+
+    /// Get tiers for a campaign
+    public func getCampaignTiers(
+        campaignId: String,
+        includeFields: [String] = ["title", "amount_cents"]
+    ) async throws -> [PatreonTier] {
+        try ensureAuthenticated()
+
+        let fieldsParam = includeFields.joined(separator: ",")
+        let queryItems: [URLQueryItem] = [
+            URLQueryItem(name: "include", value: "tiers"),
+            URLQueryItem(name: "fields[tier]", value: fieldsParam)
+        ]
+
+        let response = try await httpClient.request(
+            method: .get,
+            path: Endpoints.campaign(campaignId: campaignId),
+            queryItems: queryItems,
+            authToken: authToken,
+            decodeAs: PatreonCampaignResponse.self
+        )
+
+        return response.data.included?.filter { $0.type == "tier" }.map { resource in
+            PatreonTier(
+                id: resource.id,
+                type: resource.type,
+                attributes: .init(
+                    title: resource.attributes?.title ?? "Untitled",
+                    amountCents: resource.attributes?.amountCents
+                )
+            )
+        } ?? []
     }
 
     // MARK: - Post Operations
