@@ -13,6 +13,7 @@ struct PatreonComposeView: View {
     @State private var isPaid = true
     @State private var isPublic = false
     @State private var selectedTiers: Set<String> = []
+    @State private var mediaURLs: [URL] = []
     @State private var isSaving = false
     
     private var isEditing: Bool { post != nil }
@@ -23,14 +24,18 @@ struct PatreonComposeView: View {
                 VStack(alignment: .leading, spacing: AppTheme.Spacing.large) {
                     titleSection
                     contentSection
-                    visibilitySection
-                    tierSection
+					
+					HStack(alignment: .top) {
+						visibilitySection
+							.frame(maxHeight: .infinity, alignment: .top)
+						tierSection
+							.frame(maxHeight: .infinity, alignment: .top)
+					}
                 }
                 .appScreenPadding()
             }
             .background(AppTheme.ColorToken.chromeBackground)
             .navigationTitle(isEditing ? "Edit Post" : "New Post")
-            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") {
@@ -38,7 +43,7 @@ struct PatreonComposeView: View {
                     }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
+                    Button(isEditing ? "Save" : "Post") {
                         savePost()
                     }
                     .disabled(!canSave)
@@ -61,8 +66,15 @@ struct PatreonComposeView: View {
                 content = post.attributes.content ?? ""
                 isPaid = post.attributes.isPaid ?? true
                 isPublic = post.attributes.isPublic ?? false
+                if let tierData = post.relationships?.tiers?.data {
+                    selectedTiers = Set(tierData.map(\.id))
+                }
             }
         }
+        .toast(message: .init(
+            get: { ToastState.shared.message },
+            set: { ToastState.shared.message = $0 }
+        ))
     }
     
     private var titleSection: some View {
@@ -74,63 +86,20 @@ struct PatreonComposeView: View {
     }
     
     private var contentSection: some View {
-        VStack(alignment: .leading, spacing: AppTheme.Spacing.small) {
-            HStack {
-                AppText("Content", style: .headline)
-                Spacer()
-                Picker("Format", selection: .constant("markdown")) {
-                    Text("Markdown").tag("markdown")
-                    Text("HTML").tag("html")
-                }
-                .pickerStyle(.segmented)
-                .frame(width: 150)
-            }
+        VStack(alignment: .leading, spacing: AppTheme.Spacing.medium) {
+            AIHelperField(
+                title: "Content",
+                placeholder: "Enter post content...",
+                text: $content,
+                isMultiline: true,
+                height: 150
+            )
             
-            TextEditor(text: $content)
-                .font(AppTheme.Typography.body)
-                .frame(minHeight: 200)
-                .padding(AppTheme.Spacing.small)
-                .background(AppTheme.ColorToken.sectionBackground)
-                .clipShape(RoundedRectangle(cornerRadius: AppTheme.CornerRadius.control))
-            
-            aiContentBar
+            MediaPicker(
+                title: "Media",
+                selectedURLs: $mediaURLs
+            )
         }
-    }
-    
-    private var aiContentBar: some View {
-        HStack {
-            HStack(spacing: AppTheme.Spacing.xSmall) {
-                Image(systemName: "sparkles")
-                    .font(.caption2)
-                    .foregroundStyle(AppTheme.ColorToken.accent)
-                AppText("AI", style: .caption2, color: AppTheme.ColorToken.accent)
-            }
-            .padding(.horizontal, AppTheme.Spacing.small)
-            .padding(.vertical, AppTheme.Spacing.xSmall)
-            .background(AppTheme.ColorToken.accent.opacity(0.1))
-            .clipShape(Capsule())
-            
-            Button {
-                ToastManager.shared.show(message: "TODO: IMPLEMENT")
-            } label: {
-                AppText("Generate content with AI", style: .caption, color: AppTheme.ColorToken.accent)
-            }
-            .buttonStyle(.plain)
-            
-            Spacer()
-            
-            Button {
-                ToastManager.shared.show(message: "TODO: IMPLEMENT")
-            } label: {
-                AppText("Improve with AI", style: .caption, color: AppTheme.ColorToken.accent)
-            }
-            .buttonStyle(.plain)
-            .disabled(content.isEmpty)
-        }
-        .padding(.horizontal, AppTheme.Spacing.small)
-        .padding(.vertical, AppTheme.Spacing.xSmall)
-        .background(AppTheme.ColorToken.cardBackground)
-        .clipShape(RoundedRectangle(cornerRadius: AppTheme.CornerRadius.control))
     }
     
     private var visibilitySection: some View {
@@ -160,45 +129,26 @@ struct PatreonComposeView: View {
     private var tierSection: some View {
         AppSurface(style: .card) {
             VStack(alignment: .leading, spacing: AppTheme.Spacing.medium) {
-                HStack {
-                    AppText("Tiers", style: .headline)
-                    Spacer()
-                    
-                    Button {
-                        ToastManager.shared.show(message: "TODO: IMPLEMENT")
-                    } label: {
-                        HStack(spacing: AppTheme.Spacing.xSmall) {
-                            Image(systemName: "sparkles")
-                                .font(.caption2)
-                            AppText("Suggest tiers", style: .caption)
-                        }
-                    }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(AppTheme.ColorToken.accent)
-                }
-                
+				AppText("Tiers", style: .headline)
+
                 AppText("Select which tiers can see this post", style: .caption, color: AppTheme.ColorToken.textSecondary)
-                
-                if viewModel.campaign?.relationships?.tiers?.data?.isEmpty ?? true {
-                    AppText("No tiers available", style: .body, color: AppTheme.ColorToken.textSecondary)
+
+                if viewModel.tiers.isEmpty {
+                    AppText("No tiers loaded", style: .body, color: AppTheme.ColorToken.textSecondary)
                 } else {
-                    tierList
-                }
-            }
-        }
-    }
-    
-    private var tierList: some View {
-        VStack(alignment: .leading, spacing: AppTheme.Spacing.small) {
-            ForEach(viewModel.campaign?.relationships?.tiers?.data ?? [], id: \.id) { tier in
-                TierCheckbox(
-                    tier: tier,
-                    isSelected: selectedTiers.contains(tier.id)
-                ) {
-                    if selectedTiers.contains(tier.id) {
-                        selectedTiers.remove(tier.id)
-                    } else {
-                        selectedTiers.insert(tier.id)
+                    VStack(alignment: .leading, spacing: AppTheme.Spacing.xSmall) {
+                        ForEach(viewModel.tiers) { tier in
+                            TierCheckbox(
+                                tier: tier,
+                                isSelected: selectedTiers.contains(tier.id)
+                            ) {
+                                if selectedTiers.contains(tier.id) {
+                                    selectedTiers.remove(tier.id)
+                                } else {
+                                    selectedTiers.insert(tier.id)
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -237,7 +187,7 @@ struct PatreonComposeView: View {
             } catch {
                 await MainActor.run {
                     isSaving = false
-                    ToastManager.shared.show(message: "Failed: \(error.localizedDescription)")
+                    ToastState.shared.message = "Failed: \(error.localizedDescription)"
                 }
             }
         }
@@ -262,7 +212,7 @@ private struct TierCheckbox: View {
                 VStack(alignment: .leading, spacing: 2) {
                     AppText(tier.attributes.title, style: .body)
                     if let cents = tier.attributes.amountCents {
-                        AppText("$\(Double(cents) / 100, specifier: "%.2f")/month", style: .caption, color: AppTheme.ColorToken.textSecondary)
+                        AppText(String(format: "$%.2f/month", Double(cents) / 100), style: .caption, color: AppTheme.ColorToken.textSecondary)
                     }
                 }
                 
@@ -274,4 +224,8 @@ private struct TierCheckbox: View {
         }
         .buttonStyle(.plain)
     }
+}
+
+#Preview {
+    PatreonComposeView(viewModel: .preview, post: nil)
 }

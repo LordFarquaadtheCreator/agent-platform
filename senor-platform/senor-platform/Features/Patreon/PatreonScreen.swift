@@ -423,7 +423,7 @@ struct PatreonScreen: View {
 // MARK: - Previews
 
 #Preview("Not Configured") {
-    PatreonScreen(viewModel: PatreonViewModel(client: nil, settings: nil), router: AppRouter())
+    PatreonScreen(viewModel: .preview, router: AppRouter())
 }
 
 // MARK: - AttributedString HTML Extension

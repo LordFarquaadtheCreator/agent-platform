@@ -35,7 +35,7 @@ public enum AppTheme {
         // Backgrounds
         static let cardBackground = Color(nsColor: .controlBackgroundColor)
         static let chromeBackground = Color(nsColor: .windowBackgroundColor)
-        static let sectionBackground = Color(nsColor: .textBackgroundColor)
+        static let sectionBackground = Color(nsColor: .secondarySystemFill)
 
         // Text
         static let textPrimary = Color.primary

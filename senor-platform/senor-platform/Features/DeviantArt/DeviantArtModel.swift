@@ -260,7 +260,6 @@ public final class DeviantArtViewModel: ObservableObject {
         // Add to local stash stacks for immediate UI feedback
         let newStack = DeviantArtClient.StashStack(
             stackid: stashItem.itemid,
-            parentid: nil,
             title: title,
             items: [stashItem]
         )
@@ -284,7 +283,7 @@ public final class DeviantArtViewModel: ObservableObject {
             throw AppError.apiAuthenticationFailed("Not authenticated with DeviantArt")
         }
 
-        let result = try await client.stashPublish(
+        _ = try await client.stashPublish(
             stashId: stashId,
             title: title,
             category: category,

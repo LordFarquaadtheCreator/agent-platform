@@ -68,6 +68,24 @@ public enum PatreonAuthState: Equatable {
     }
 }
 
+// MARK: - Tier Model
+
+public struct PatreonTier: Identifiable, Codable, Sendable {
+    public let id: String
+    public let type: String
+    public let attributes: TierAttributes
+    
+    public struct TierAttributes: Codable, Sendable {
+        public let title: String
+        public let amountCents: Int?
+        
+        enum CodingKeys: String, CodingKey {
+            case title
+            case amountCents = "amount_cents"
+        }
+    }
+}
+
 // MARK: - Patreon ViewModel
 
 @MainActor
@@ -77,17 +95,20 @@ public final class PatreonViewModel: ObservableObject {
     @Published public private(set) var campaign: PatreonCampaign?
     @Published public private(set) var posts: [PatreonPost] = []
     @Published public private(set) var members: [PatreonMember] = []
+    @Published public private(set) var tiers: [PatreonTier] = []
 
     // Granular loading states
     @Published public private(set) var isLoadingProfile = false
     @Published public private(set) var isLoadingPosts = false
     @Published public private(set) var isLoadingMembers = false
+    @Published public private(set) var isLoadingTiers = false
     @Published public private(set) var isRefreshingToken = false
 
     // Granular errors per section
     @Published public private(set) var profileError: PatreonError?
     @Published public private(set) var postsError: PatreonError?
     @Published public private(set) var membersError: PatreonError?
+    @Published public private(set) var tiersError: PatreonError?
 
     private let client: PatreonClient?
     private var settings: SettingsService.PatreonSettings?
@@ -96,6 +117,15 @@ public final class PatreonViewModel: ObservableObject {
     init(client: PatreonClient?, settings: SettingsService.PatreonSettings? = nil) {
         self.client = client
         self.settings = settings
+        #if DEBUG
+        if client == nil {
+            tiers = [
+                PatreonTier(id: "tier-1", type: "tier", attributes: .init(title: "Basic", amountCents: 500)),
+                PatreonTier(id: "tier-2", type: "tier", attributes: .init(title: "Premium", amountCents: 1500)),
+                PatreonTier(id: "tier-3", type: "tier", attributes: .init(title: "VIP", amountCents: 5000))
+            ]
+        }
+        #endif
     }
 
     // MARK: - Computed Properties
@@ -117,11 +147,11 @@ public final class PatreonViewModel: ObservableObject {
     }
 
     public var hasAnyError: Bool {
-        profileError != nil || postsError != nil || membersError != nil
+        profileError != nil || postsError != nil || membersError != nil || tiersError != nil
     }
 
     public var isAnyLoading: Bool {
-        isLoadingProfile || isLoadingPosts || isLoadingMembers || isRefreshingToken
+        isLoadingProfile || isLoadingPosts || isLoadingMembers || isLoadingTiers || isRefreshingToken
     }
 
     public var isAuthenticated: Bool {
@@ -174,6 +204,7 @@ public final class PatreonViewModel: ObservableObject {
                 campaign = firstCampaign
                 await loadPosts()
                 await loadMembers()
+                await loadTiers()
             } else {
                 AppLogger.api.error("No campaigns found in response")
             }
@@ -294,6 +325,38 @@ public final class PatreonViewModel: ObservableObject {
         await loadMembers()
     }
 
+    func loadTiers() async {
+        guard let client = client, client.isAuthenticated else {
+            tiersError = authState == .expired ? .authExpired : .unauthenticated
+            return
+        }
+
+        guard let campaignId = campaign?.id ?? settings?.campaignId else {
+            tiersError = .unknown("No campaign selected")
+            return
+        }
+
+        isLoadingTiers = true
+        tiersError = nil
+        defer { isLoadingTiers = false }
+
+        do {
+            let response = try await client.getCampaignTiers(campaignId: campaignId)
+            tiers = response
+            AppLogger.api.debug("Loaded \(tiers.count) tiers")
+        } catch let error as AppError {
+            AppLogger.api.error("Tiers error: \(error)")
+            tiersError = mapAppError(error)
+        } catch {
+            AppLogger.api.error("Tiers unknown error: \(error)")
+            tiersError = .unknown(error.localizedDescription)
+        }
+    }
+
+    func retryTiers() async {
+        await loadTiers()
+    }
+
     // MARK: - Create & Update Posts
 
     /// Create a new Patreon post
@@ -392,3 +455,12 @@ public final class PatreonViewModel: ObservableObject {
         }
     }
 }
+
+#if DEBUG
+extension PatreonViewModel {
+    static var preview: PatreonViewModel {
+        let vm = PatreonViewModel(client: nil, settings: nil)
+        return vm
+    }
+}
+#endif
