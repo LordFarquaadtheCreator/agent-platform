@@ -50,7 +50,7 @@ struct PatreonComposeView: View {
                 }
             }
         }
-        .frame(minWidth: 600, minHeight: 600)
+        .frame(minWidth: 800, maxHeight: 500)
         .disabled(isSaving)
         .overlay {
             if isSaving {

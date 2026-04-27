@@ -242,11 +242,11 @@ public final class PatreonViewModel: ObservableObject {
 
         do {
             let response = try await client.getCampaignPosts(campaignId: campaignId)
-            // Sort by published date (newest first)
+            // Sort by published date (oldest first)
             let allPosts = response.data.sorted { post1, post2 in
                 let date1 = ISO8601DateFormatter().date(from: post1.attributes.publishedAt ?? "") ?? Date.distantPast
                 let date2 = ISO8601DateFormatter().date(from: post2.attributes.publishedAt ?? "") ?? Date.distantPast
-                return date1 > date2
+                return date1 < date2
             }
 
             // Show first 10 immediately
