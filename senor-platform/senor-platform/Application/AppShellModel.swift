@@ -332,3 +332,29 @@ public final class AppShellModel: ObservableObject {
 }
 
 public typealias AppState = AppShellModel
+
+// MARK: - Previews
+
+extension ApprovalsViewModel {
+    static var preview: ApprovalsViewModel {
+        ApprovalsViewModel(
+            approveContentUseCase: PreviewApproveContentUseCase(),
+            rejectContentUseCase: PreviewRejectContentUseCase(),
+            publishContentUseCase: PreviewPublishContentUseCase(),
+            refresh: {}
+        )
+    }
+}
+
+// Preview use cases that do nothing but satisfy protocol requirements
+struct PreviewApproveContentUseCase: ApproveContentUseCaseProtocol {
+    func execute(contentId: String) async throws {}
+}
+
+struct PreviewRejectContentUseCase: RejectContentUseCaseProtocol {
+    func execute(contentId: String, reason: String?) async throws {}
+}
+
+struct PreviewPublishContentUseCase: PublishContentUseCaseProtocol {
+    func execute(_ request: PublicationRequest) async throws {}
+}
