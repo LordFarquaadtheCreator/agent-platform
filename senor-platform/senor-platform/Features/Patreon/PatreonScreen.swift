@@ -59,7 +59,7 @@ struct PatreonScreen: View {
             .padding(AppTheme.Spacing.screenPadding)
 
             // Auth state indicator
-            HStack {
+            AppHStack(spacing: .medium) {
                 authStatePill
                 Spacer()
             }
