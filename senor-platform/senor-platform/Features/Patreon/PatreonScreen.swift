@@ -1,9 +1,15 @@
 import SwiftUI
 import MarkdownUI
 
+extension Notification.Name {
+    static let openPatreonCompose = Notification.Name("openPatreonCompose")
+}
+
 struct PatreonScreen: View {
     @ObservedObject var viewModel: PatreonViewModel
     @ObservedObject var router: AppRouter
+    @State private var showComposeSheet = false
+    @State private var editingPost: PatreonPost?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -32,6 +38,15 @@ struct PatreonScreen: View {
         }
         .background(AppTheme.ColorToken.chromeBackground)
         .task { await viewModel.load() }
+        .sheet(isPresented: $showComposeSheet) {
+            PatreonComposeView(viewModel: viewModel, post: nil)
+        }
+        .sheet(item: $editingPost) { post in
+            PatreonComposeView(viewModel: viewModel, post: post)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .openPatreonCompose)) { _ in
+            showComposeSheet = true
+        }
     }
 
     // MARK: - Header
@@ -49,6 +64,16 @@ struct PatreonScreen: View {
                         .scaleEffect(0.8)
                         .padding(.trailing, AppTheme.Spacing.small)
                 }
+
+                if viewModel.isAuthenticated {
+                    Button {
+                        NotificationCenter.default.post(name: .openPatreonCompose, object: nil)
+                    } label: {
+                        Label("New Post", systemImage: "plus")
+                    }
+                    .padding(.trailing, AppTheme.Spacing.small)
+                }
+
                 Button {
                     Task { await viewModel.refresh() }
                 } label: {
@@ -216,6 +241,16 @@ struct PatreonScreen: View {
                 HStack {
                     AppText(post.attributes.title ?? "Untitled", style: .headline)
                     Spacer()
+
+                    Button {
+                        editingPost = post
+                    } label: {
+                        Image(systemName: "pencil")
+                            .foregroundStyle(AppTheme.ColorToken.accent)
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.trailing, AppTheme.Spacing.small)
+
                     if post.attributes.isPaid == true {
                         Image(systemName: "lock.fill")
                             .foregroundStyle(AppTheme.ColorToken.accent)

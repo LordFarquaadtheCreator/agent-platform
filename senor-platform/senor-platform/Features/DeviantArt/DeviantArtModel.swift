@@ -233,6 +233,70 @@ public final class DeviantArtViewModel: ObservableObject {
         errorMessage = nil
     }
 
+    // MARK: - Upload & Publish
+
+    /// Upload a file to Sta.sh
+    func uploadToStash(
+        fileURL: URL,
+        title: String,
+        tags: [String]? = nil,
+        artistComments: String? = nil
+    ) async throws {
+        guard let client else {
+            throw AppError.apiAuthenticationFailed("DeviantArt client not configured")
+        }
+
+        guard client.isAuthenticated else {
+            throw AppError.apiAuthenticationFailed("Not authenticated with DeviantArt")
+        }
+
+        let stashItem = try await client.stashSubmit(
+            filename: fileURL.lastPathComponent,
+            title: title,
+            artistComments: artistComments,
+            tags: tags
+        )
+
+        // Add to local stash stacks for immediate UI feedback
+        let newStack = DeviantArtClient.StashStack(
+            stackid: stashItem.itemid,
+            parentid: nil,
+            title: title,
+            items: [stashItem]
+        )
+        stashStacks.insert(newStack, at: 0)
+    }
+
+    /// Publish a stash item as a deviation
+    func publishFromStash(
+        stashId: String,
+        title: String,
+        category: String? = nil,
+        isMature: Bool = false,
+        matureLevel: String? = nil,
+        allowsComments: Bool = true
+    ) async throws {
+        guard let client else {
+            throw AppError.apiAuthenticationFailed("DeviantArt client not configured")
+        }
+
+        guard client.isAuthenticated else {
+            throw AppError.apiAuthenticationFailed("Not authenticated with DeviantArt")
+        }
+
+        let result = try await client.stashPublish(
+            stashId: stashId,
+            title: title,
+            category: category,
+            isMature: isMature,
+            matureLevel: matureLevel,
+            allowsComments: allowsComments
+        )
+
+        // Refresh gallery to show the new deviation
+        await refresh()
+    }
+
     // MARK: - Private OAuth Helpers
 
     private struct PKCE {

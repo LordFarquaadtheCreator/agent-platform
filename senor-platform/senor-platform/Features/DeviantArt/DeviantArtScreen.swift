@@ -2,9 +2,15 @@ import SwiftUI
 
 // MARK: - Main Screen
 
+extension Notification.Name {
+    static let openDeviantArtUpload = Notification.Name("openDeviantArtUpload")
+}
+
 struct DeviantArtScreen: View {
     @ObservedObject var viewModel: DeviantArtViewModel
     @ObservedObject var router: AppRouter
+    @State private var showUploadSheet = false
+    @State private var selectedStashItem: DeviantArtClient.StashItem?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -14,6 +20,15 @@ struct DeviantArtScreen: View {
         }
         .background(AppTheme.ColorToken.chromeBackground)
         .task { await viewModel.load() }
+        .sheet(isPresented: $showUploadSheet) {
+            DeviantArtUploadView(viewModel: viewModel)
+        }
+        .sheet(item: $selectedStashItem) { item in
+            DeviantArtPublishView(viewModel: viewModel, stashItem: item)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .openDeviantArtUpload)) { _ in
+            showUploadSheet = true
+        }
     }
 
     private var headerView: some View {
@@ -32,6 +47,17 @@ struct DeviantArtScreen: View {
                 AppText(RelativeDateFormatter.format(lastUpdated), style: .caption2, color: AppTheme.ColorToken.textSecondary)
                     .padding(.trailing, AppTheme.Spacing.small)
             }
+
+            if viewModel.isAuthenticated {
+                Button {
+                    // Open upload sheet
+                    NotificationCenter.default.post(name: .openDeviantArtUpload, object: nil)
+                } label: {
+                    Label("Upload", systemImage: "arrow.up.circle")
+                }
+                .padding(.trailing, AppTheme.Spacing.small)
+            }
+
             Button {
                 Task { await viewModel.refresh() }
             } label: {
@@ -67,7 +93,9 @@ struct DeviantArtScreen: View {
                         ProfileCard(profile: profile)
                     }
                     if !viewModel.stashStacks.isEmpty {
-                        StashSection(stacks: viewModel.stashStacks)
+                        StashSection(stacks: viewModel.stashStacks) { item in
+                            selectedStashItem = item
+                        }
                     }
                     if !viewModel.deviations.isEmpty {
                         GallerySection(deviations: viewModel.deviations, router: router)
@@ -149,13 +177,14 @@ private struct AvatarView: View {
 
 private struct StashSection: View {
     let stacks: [DeviantArtClient.StashStack]
+    let onPublish: (DeviantArtClient.StashItem) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: AppTheme.Spacing.medium) {
             AppText("Sta.sh Stacks", style: .title3)
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 220))], spacing: AppTheme.Spacing.medium) {
                 ForEach(stacks) { stack in
-                    StashStackCard(stack: stack)
+                    StashStackCard(stack: stack, onPublish: onPublish)
                 }
             }
         }
@@ -298,6 +327,7 @@ private struct StatsRow: View {
 
 private struct StashStackCard: View {
     let stack: DeviantArtClient.StashStack
+    let onPublish: ((DeviantArtClient.StashItem) -> Void)?
 
     var body: some View {
         AppCard {
@@ -309,16 +339,28 @@ private struct StashStackCard: View {
                 }
                 HStack {
                     Image(systemName: "archivebox.fill")
-                        .foregroundColor(AppTheme.ColorToken.statusWarning)
+                        .foregroundStyle(AppTheme.ColorToken.statusWarning)
                         .font(.caption)
                     AppText("Sta.sh Stack", style: .caption)
-                        .foregroundColor(AppTheme.ColorToken.statusWarning)
+                        .foregroundStyle(AppTheme.ColorToken.statusWarning)
                     Spacer()
                 }
                 AppText(stack.title ?? "Untitled Stack", style: .headline)
                     .lineLimit(1)
                 if let items = stack.items {
                     StashStatusRow(items: items)
+                }
+
+                // Show publish button for unpublished items
+                if let onPublish = onPublish, let firstUnpublished = stack.items?.first(where: { !$0.isPublished }) {
+                    Divider()
+                    Button {
+                        onPublish(firstUnpublished)
+                    } label: {
+                        Label("Publish", systemImage: "paperplane.fill")
+                            .font(AppTheme.Typography.caption)
+                    }
+                    .appButtonStyle(.borderedProminent)
                 }
             }
             .padding(AppTheme.Spacing.small)

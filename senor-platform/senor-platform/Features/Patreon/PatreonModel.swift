@@ -294,6 +294,71 @@ public final class PatreonViewModel: ObservableObject {
         await loadMembers()
     }
 
+    // MARK: - Create & Update Posts
+
+    /// Create a new Patreon post
+    func createPost(
+        title: String,
+        content: String,
+        isPaid: Bool = true,
+        isPublic: Bool = false,
+        tiers: [String]? = nil
+    ) async throws {
+        guard let client = client else {
+            throw PatreonError.notConfigured
+        }
+
+        guard client.isAuthenticated else {
+            throw PatreonError.unauthenticated
+        }
+
+        guard let campaignId = campaign?.id ?? settings?.campaignId else {
+            throw PatreonError.unknown("No campaign selected")
+        }
+
+        let newPost = try await client.createPost(
+            campaignId: campaignId,
+            title: title,
+            content: content,
+            isPaid: isPaid,
+            isPublic: isPublic,
+            tiers: tiers
+        )
+
+        // Add to local posts for immediate UI feedback
+        posts.insert(newPost, at: 0)
+    }
+
+    /// Update an existing Patreon post
+    func updatePost(
+        postId: String,
+        title: String? = nil,
+        content: String? = nil,
+        isPaid: Bool? = nil,
+        isPublic: Bool? = nil
+    ) async throws {
+        guard let client = client else {
+            throw PatreonError.notConfigured
+        }
+
+        guard client.isAuthenticated else {
+            throw PatreonError.unauthenticated
+        }
+
+        let updatedPost = try await client.updatePost(
+            postId: postId,
+            title: title,
+            content: content,
+            isPaid: isPaid,
+            isPublic: isPublic
+        )
+
+        // Update local posts array
+        if let index = posts.firstIndex(where: { $0.id == postId }) {
+            posts[index] = updatedPost
+        }
+    }
+
     // MARK: - Private Helpers
 
     private func mapAppError(_ error: AppError) -> PatreonError {
