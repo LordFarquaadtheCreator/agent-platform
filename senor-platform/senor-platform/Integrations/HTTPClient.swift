@@ -146,6 +146,9 @@ public final class HTTPClient {
                     }
 
                     logger.debug("Response: \(httpResponse.statusCode) for \(path)")
+                    if let jsonString = String(data: data, encoding: .utf8) {
+                        logger.debug("Response body: \(jsonString.prefix(1000))")
+                    }
 
                     return APIResponse(data: decodedData, statusCode: httpResponse.statusCode, headers: headers)
                 } catch {
@@ -188,7 +191,16 @@ public final class HTTPClient {
         }
 
         if let queryItems = queryItems, !queryItems.isEmpty {
-            components.queryItems = queryItems
+            // Manually encode query items to ensure square brackets are encoded
+            // Patreon API requires fields[post] to be encoded as fields%5Bpost%5D
+            var allowedCharacters = CharacterSet.urlQueryAllowed
+            allowedCharacters.remove(charactersIn: "[]")
+            let queryString = queryItems.map { item in
+                let name = item.name.addingPercentEncoding(withAllowedCharacters: allowedCharacters) ?? item.name
+                let value = item.value?.addingPercentEncoding(withAllowedCharacters: allowedCharacters) ?? item.value ?? ""
+                return "\(name)=\(value)"
+            }.joined(separator: "&")
+            components.percentEncodedQuery = queryString
         }
 
         guard let finalURL = components.url else {
