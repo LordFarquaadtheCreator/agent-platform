@@ -70,7 +70,7 @@ struct DeviationDetailPanel: View {
                     .foregroundColor(AppTheme.ColorToken.statusSuccess)
 
                 if let category = deviation.category {
-                    Text("·")
+                    AppText("·", style: .body, color: AppTheme.ColorToken.textSecondary)
                     CategoryBadge(category: category)
                 }
             }
