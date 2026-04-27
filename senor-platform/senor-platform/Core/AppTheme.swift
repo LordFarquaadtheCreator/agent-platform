@@ -73,6 +73,12 @@ public enum AppTheme {
         static let sectionGap: CGFloat = 24
         static let interItemGap: CGFloat = 12
         static let tightGap: CGFloat = 4
+
+        // Tag/Badge specific spacing (pill-shaped components)
+        static let tagHorizontalPadding: CGFloat = 10
+        static let tagVerticalPadding: CGFloat = 5
+        static let badgeHorizontalPadding: CGFloat = 8
+        static let badgeVerticalPadding: CGFloat = 4
     }
 
     // MARK: - CornerRadius

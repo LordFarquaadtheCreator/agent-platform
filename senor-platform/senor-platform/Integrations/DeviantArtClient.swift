@@ -232,7 +232,7 @@ public final class DeviantArtClient {
 
         // Stub: DeviantArt stash listing endpoint unclear in API docs
         // Previous attempts returned 404 - returning empty for now
-        return StashContentsResponse(results: [], hasMore: false, nextOffset: nil)
+        return StashContentsResponse(results: [], hasMore: false, nextOffset: Int?(nil))
     }
 
     // MARK: - Deviation Operations
@@ -269,18 +269,18 @@ public final class DeviantArtClient {
     public func getDeviationMetadata(deviationId: String) async throws -> [DeviationMetadata] {
         try ensureAuthenticated()
 
-        struct Response: Codable {
-            let metadata: [DeviationMetadata]
-        }
-
         let response = try await httpClient.request(
             method: .get,
             path: Endpoints.deviationMetadata(deviationId: deviationId),
             authToken: authToken,
-            decodeAs: Response.self
+            decodeAs: MetadataResponse.self
         )
 
         return response.data.metadata
+    }
+
+    private struct MetadataResponse: Codable, Sendable {
+        let metadata: [DeviationMetadata]
     }
 
     // MARK: - Gallery/List Operations

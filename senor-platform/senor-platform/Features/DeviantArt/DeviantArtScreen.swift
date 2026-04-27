@@ -297,14 +297,14 @@ private struct StatusRow: View {
         HStack {
             Image(systemName: "checkmark.circle.fill")
                 .foregroundColor(AppTheme.ColorToken.statusSuccess)
-                .font(.caption)
+                .font(AppTheme.Typography.caption)
             AppText("Published", style: .caption)
                 .foregroundColor(AppTheme.ColorToken.statusSuccess)
             Spacer()
             if deviation.allowsComments == true {
                 Image(systemName: "bubble.right.fill")
                     .foregroundColor(AppTheme.ColorToken.statusInfo)
-                    .font(.caption2)
+                    .font(AppTheme.Typography.caption2)
             }
         }
     }
@@ -320,7 +320,7 @@ private struct StatsRow: View {
             StatItem(icon: "bubble.right", value: stats.comments ?? 0)
             StatItem(icon: "arrow.down.circle", value: stats.downloads ?? 0)
         }
-        .font(.caption)
+        .font(AppTheme.Typography.caption)
         .foregroundColor(AppTheme.ColorToken.textSecondary)
     }
 }
@@ -339,8 +339,8 @@ private struct StashStackCard: View {
                 }
                 HStack {
                     Image(systemName: "archivebox.fill")
-                        .foregroundStyle(AppTheme.ColorToken.statusWarning)
-                        .font(.caption)
+                        .foregroundColor(AppTheme.ColorToken.statusWarning)
+                        .font(AppTheme.Typography.caption)
                     AppText("Sta.sh Stack", style: .caption)
                         .foregroundStyle(AppTheme.ColorToken.statusWarning)
                     Spacer()
@@ -415,27 +415,27 @@ private struct ThumbnailGrid: View {
                 stashThumbnail(columns[0])
 
             case 2:
-                HStack(spacing: 2) {
+                HStack(spacing: AppTheme.Spacing.tightGap) {
                     stashThumbnail(columns[0])
                     stashThumbnail(columns[1])
                 }
 
             case 3:
-                HStack(spacing: 2) {
+                HStack(spacing: AppTheme.Spacing.tightGap) {
                     stashThumbnail(columns[0])
-                    VStack(spacing: 2) {
+                    VStack(spacing: AppTheme.Spacing.tightGap) {
                         stashThumbnail(columns[1])
                         stashThumbnail(columns[2])
                     }
                 }
 
             default:
-                VStack(spacing: 2) {
-                    HStack(spacing: 2) {
+                VStack(spacing: AppTheme.Spacing.tightGap) {
+                    HStack(spacing: AppTheme.Spacing.tightGap) {
                         stashThumbnail(columns[0])
                         stashThumbnail(columns[1])
                     }
-                    HStack(spacing: 2) {
+                    HStack(spacing: AppTheme.Spacing.tightGap) {
                         stashThumbnail(columns[2])
                         stashThumbnail(columns[3])
                     }
@@ -453,11 +453,11 @@ private struct ThumbnailGrid: View {
                         image.resizable().aspectRatio(contentMode: .fill)
 
                     default:
-                        Color.gray.opacity(0.3)
+                        AppTheme.ColorToken.statusNeutral.opacity(0.3)
                     }
                 }
             } else {
-                Color.gray.opacity(0.3)
+                AppTheme.ColorToken.statusNeutral.opacity(0.3)
             }
         }
     }

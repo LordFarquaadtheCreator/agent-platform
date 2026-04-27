@@ -93,10 +93,10 @@ public struct StatusBadge: View {
 
     public var body: some View {
         Text(status.capitalized)
-            .font(.caption)
+            .font(AppTheme.Typography.caption)
             .fontWeight(.medium)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
+            .padding(.horizontal, AppTheme.Spacing.badgeHorizontalPadding)
+            .padding(.vertical, AppTheme.Spacing.badgeVerticalPadding)
             .background(color.swiftUIColor.opacity(0.15))
             .foregroundStyle(color.swiftUIColor)
             .clipShape(Capsule())

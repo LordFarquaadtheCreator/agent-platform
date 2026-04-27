@@ -17,7 +17,7 @@ struct DeviationDetailPanel: View {
                 actionsSection
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding()
+            .appScreenPadding()
         }
         .background(AppTheme.ColorToken.chromeBackground)
         .task {
@@ -70,7 +70,7 @@ struct DeviationDetailPanel: View {
                     .foregroundColor(AppTheme.ColorToken.statusSuccess)
 
                 if let category = deviation.category {
-                    Text("·")
+                    AppText("·", style: .body, color: AppTheme.ColorToken.textSecondary)
                     CategoryBadge(category: category)
                 }
             }
@@ -121,7 +121,7 @@ struct DeviationDetailPanel: View {
                !tags.isEmpty {
                 VStack(alignment: .leading, spacing: AppTheme.Spacing.small) {
                     AppText("Tags", style: .title3)
-                    FlowLayout(spacing: 8) {
+                    FlowLayout(spacing: AppTheme.Spacing.small) {
                         ForEach(tags, id: \.tagName) { tag in
                             TagPill(name: tag.tagName)
                         }

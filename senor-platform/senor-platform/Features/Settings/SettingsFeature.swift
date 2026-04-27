@@ -88,7 +88,7 @@ private struct SettingsContent: View {
                         .font(.system(.body, design: .monospaced))
 
                     if let workspace = appState.workspace {
-                        HStack {
+                        AppHStack(spacing: .medium) {
                             AppStatusPill(
                                 title: workspace.deviantArtViewModel.isAuthenticated ? "Connected" : "Not Connected",
                                 color: workspace.deviantArtViewModel.isAuthenticated ? AppTheme.ColorToken.statusSuccess : AppTheme.ColorToken.statusWarning
@@ -96,7 +96,7 @@ private struct SettingsContent: View {
                             Spacer()
                         }
 
-                        HStack(spacing: AppTheme.Spacing.medium) {
+                        AppHStack(spacing: .medium) {
                             Button("Save Credentials") {
                                 do {
                                     try viewModel.saveDeviantArt()
@@ -117,7 +117,7 @@ private struct SettingsContent: View {
                     AppText("Patreon", style: .headline)
 
                     if let workspace = appState.workspace {
-                        HStack {
+                        AppHStack(spacing: .medium) {
                             AppStatusPill(
                                 title: workspace.patreonViewModel.isAuthenticated ? "Connected" : "Not Connected",
                                 color: workspace.patreonViewModel.isAuthenticated ? AppTheme.ColorToken.statusSuccess : AppTheme.ColorToken.statusWarning
