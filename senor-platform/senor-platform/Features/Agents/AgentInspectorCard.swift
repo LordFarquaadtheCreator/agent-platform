@@ -19,3 +19,21 @@ struct AgentInspectorCard: View {
         }
     }
 }
+
+// MARK: - Previews
+
+#Preview("Agent Inspector") {
+    let mockAgent = Agent(
+        id: "preview-agent-1",
+        displayName: "Test Agent",
+        status: .idle,
+        nameSource: "user",
+        nameSeed: 123,
+        createdAt: Date(),
+        updatedAt: Date(),
+        taskCount: 5
+    )
+    AgentInspectorCard(agent: mockAgent)
+        .frame(width: 300)
+        .padding()
+}

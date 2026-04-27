@@ -61,3 +61,23 @@ struct PatreonPostDetailPanel: View {
         PatreonFormatters.formatDate(isoString)
     }
 }
+
+// MARK: - Previews
+
+#Preview("Post Detail") {
+    let mockPost = PatreonPost(
+        id: "preview-post-1",
+        type: "post",
+        attributes: PatreonPost.PatreonPostAttributes(
+            title: "Exclusive Art Preview",
+            content: "<p>This is a preview of exclusive content for patrons!</p>",
+            url: "https://patreon.com/posts/preview-1",
+            isPaid: true,
+            isPublic: false,
+            publishedAt: "2026-04-26T10:00:00.000Z"
+        ),
+        relationships: nil
+    )
+    PatreonPostDetailPanel(post: mockPost)
+        .frame(width: 350)
+}

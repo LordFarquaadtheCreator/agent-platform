@@ -45,3 +45,23 @@ struct PatreonMemberDetailPanel: View {
         PatreonFormatters.statusColor(for: status)
     }
 }
+
+// MARK: - Previews
+
+#Preview("Member Detail") {
+    let mockMember = PatreonMember(
+        id: "preview-member-1",
+        type: "member",
+        attributes: PatreonMember.PatreonMemberAttributes(
+            fullName: "Jane Doe",
+            email: "jane@example.com",
+            patronStatus: "active_patron",
+            lastChargeStatus: "Paid",
+            lifetimeSupportCents: 50000,
+            currentlyEntitledAmountCents: 1000
+        ),
+        relationships: nil
+    )
+    PatreonMemberDetailPanel(member: mockMember)
+        .frame(width: 350)
+}
