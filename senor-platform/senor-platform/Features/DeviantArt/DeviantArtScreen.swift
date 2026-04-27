@@ -411,11 +411,11 @@ private struct ThumbnailGrid: View {
                         image.resizable().aspectRatio(contentMode: .fill)
 
                     default:
-                        Color.gray.opacity(0.3)
+                        AppTheme.ColorToken.statusNeutral.opacity(0.3)
                     }
                 }
             } else {
-                Color.gray.opacity(0.3)
+                AppTheme.ColorToken.statusNeutral.opacity(0.3)
             }
         }
     }
