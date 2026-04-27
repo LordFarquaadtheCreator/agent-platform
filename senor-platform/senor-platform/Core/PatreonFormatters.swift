@@ -37,10 +37,13 @@ public enum PatreonFormatters {
         switch status.lowercased() {
         case "active_patron":
             return AppTheme.ColorToken.statusSuccess
+
         case "declined_patron":
             return AppTheme.ColorToken.statusError
+
         case "former_patron":
             return AppTheme.ColorToken.textSecondary
+
         default:
             return AppTheme.ColorToken.statusInfo
         }
