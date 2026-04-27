@@ -52,7 +52,7 @@ struct PatreonPostDetailPanel: View {
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding()
+            .appScreenPadding()
         }
         .background(AppTheme.ColorToken.chromeBackground)
     }

@@ -34,7 +34,8 @@ public struct InspectorContentRegistry {
     private let providers: [AppSection: InspectorContentProvider]
 
     public init(providers: [InspectorContentProvider]) {
-        self.providers = Dictionary(uniqueKeysWithValues: providers.map { ($0.section, $0) })
+        let pairs: [(AppSection, InspectorContentProvider)] = providers.map { ($0.section, $0) }
+        self.providers = Dictionary(uniqueKeysWithValues: pairs)
     }
 
     @ViewBuilder public func view(for section: AppSection, using workspace: WorkspaceModel, router: AppRouter, appState: AppShellModel) -> some View {
