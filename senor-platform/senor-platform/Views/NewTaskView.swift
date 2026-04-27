@@ -4,8 +4,8 @@ struct NewTaskView: View {
     @EnvironmentObject private var appState: AppShellModel
 
     var body: some View {
-        if let model = appState.workspace?.tasksModel {
-            TaskFormSheet(model: model)
+        if let viewModel = appState.workspace?.tasksViewModel {
+            TaskFormSheet(viewModel: viewModel)
         } else {
             EmptyView()
         }

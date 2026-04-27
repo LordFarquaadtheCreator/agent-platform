@@ -1,14 +1,14 @@
 import SwiftUI
 
 struct TasksScreen: View {
-    @ObservedObject var model: TasksModel
+    @ObservedObject var viewModel: TasksViewModel
     let onCreate: () -> Void
 
     var body: some View {
         VStack(spacing: 0) {
             AppSectionHeader(
                 title: "Tasks",
-                detail: "\(model.tasks.count) enabled workflows",
+                detail: "\(viewModel.tasks.count) enabled workflows",
                 action: AnyView(
                     Button(action: onCreate) {
                         Label("New Task", systemImage: AppTheme.Icon.add)
@@ -20,7 +20,7 @@ struct TasksScreen: View {
 
             AppDivider()
 
-            if model.tasks.isEmpty {
+            if viewModel.tasks.isEmpty {
                 Spacer()
                 AppEmptyState(
                     title: "No Tasks Yet",
@@ -29,7 +29,7 @@ struct TasksScreen: View {
                 )
                 Spacer()
             } else {
-                List(model.tasks) { task in
+                List(viewModel.tasks) { task in
                     AppListRow {
                         AppVStack(spacing: .small, alignment: .leading) {
                             AppHStack(spacing: .medium) {
@@ -61,7 +61,7 @@ struct TasksScreen: View {
 struct TaskFormSheet: View {
     @EnvironmentObject private var appState: AppShellModel
     @Environment(\.dismiss) private var dismiss
-    @ObservedObject var model: TasksModel
+    @ObservedObject var viewModel: TasksViewModel
 
     @State private var taskName = ""
     @State private var taskTypeID = ""
@@ -84,14 +84,14 @@ struct TaskFormSheet: View {
 
                     Picker("Task Type", selection: $taskTypeID) {
                         Text("Select Type").tag("")
-                        ForEach(model.creationContext.taskTypes) { type in
+                        ForEach(viewModel.creationContext.taskTypes) { type in
                             Text(type.name).tag(type.id)
                         }
                     }
 
                     Picker("Agent", selection: $agentID) {
                         Text("Select Agent").tag("")
-                        ForEach(model.creationContext.agents) { agent in
+                        ForEach(viewModel.creationContext.agents) { agent in
                             Text(agent.displayName).tag(agent.id)
                         }
                     }
@@ -166,12 +166,12 @@ struct TaskFormSheet: View {
             }
             .task {
                 do {
-                    try await model.loadCreationContext()
+                    try await viewModel.loadCreationContext()
                     if taskTypeID.isEmpty {
-                        taskTypeID = model.creationContext.taskTypes.first?.id ?? ""
+                        taskTypeID = viewModel.creationContext.taskTypes.first?.id ?? ""
                     }
                     if agentID.isEmpty {
-                        agentID = model.creationContext.agents.first?.id ?? ""
+                        agentID = viewModel.creationContext.agents.first?.id ?? ""
                     }
                 } catch {
                     appState.errorMessage = error.localizedDescription
@@ -185,7 +185,7 @@ struct TaskFormSheet: View {
         isSaving = true
         defer { isSaving = false }
         do {
-            try await model.create(
+            try await viewModel.create(
                 draft: TaskDraft(
                     agentId: agentID,
                     taskTypeId: taskTypeID,
@@ -233,3 +233,7 @@ enum TaskScheduleSelection: CaseIterable {
         }
     }
 }
+
+// MARK: - Previews
+
+// Note: Preview requires complex dependencies - use WorkspaceView for testing

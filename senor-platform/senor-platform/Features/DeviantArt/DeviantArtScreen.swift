@@ -4,7 +4,7 @@ import SwiftUI
 
 struct DeviantArtScreen: View {
     @ObservedObject var viewModel: DeviantArtViewModel
-    @State private var selectedDeviation: DeviantArtClient.Deviation?
+    @ObservedObject var router: AppRouter
 
     var body: some View {
         VStack(spacing: 0) {
@@ -14,9 +14,6 @@ struct DeviantArtScreen: View {
         }
         .background(AppTheme.ColorToken.chromeBackground)
         .task { await viewModel.load() }
-        .sheet(item: $selectedDeviation) { deviation in
-            DeviationDetailSheet(deviation: deviation, viewModel: viewModel)
-        }
     }
 
     private var headerView: some View {
@@ -66,10 +63,7 @@ struct DeviantArtScreen: View {
                         StashSection(stacks: viewModel.stashStacks)
                     }
                     if !viewModel.deviations.isEmpty {
-                        GallerySection(
-                            deviations: viewModel.deviations,
-                            onSelect: { selectedDeviation = $0 }
-                        )
+                        GallerySection(deviations: viewModel.deviations, router: router)
                     }
                 }
                 .appScreenPadding()
@@ -163,15 +157,15 @@ private struct StashSection: View {
 
 private struct GallerySection: View {
     let deviations: [DeviantArtClient.Deviation]
-    let onSelect: (DeviantArtClient.Deviation) -> Void
+    let router: AppRouter
 
     var body: some View {
         VStack(alignment: .leading, spacing: AppTheme.Spacing.medium) {
             AppText("Published Gallery", style: .title3)
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 220))], spacing: AppTheme.Spacing.medium) {
                 ForEach(deviations) { deviation in
-                    DeviationCard(deviation: deviation)
-                        .onTapGesture { onSelect(deviation) }
+                    DeviationCard(deviation: deviation, isSelected: router.selectedDeviationID == deviation.id)
+                        .onTapGesture { router.selectedDeviationID = deviation.id }
                 }
             }
         }
@@ -182,6 +176,7 @@ private struct GallerySection: View {
 
 private struct DeviationCard: View {
     let deviation: DeviantArtClient.Deviation
+    let isSelected: Bool
 
     var body: some View {
         AppCard {
@@ -202,6 +197,10 @@ private struct DeviationCard: View {
                 .padding(.bottom, AppTheme.Spacing.small)
             }
         }
+        .overlay(
+            RoundedRectangle(cornerRadius: AppTheme.CornerRadius.card)
+                .stroke(isSelected ? AppTheme.ColorToken.accent : Color.clear, lineWidth: 2)
+        )
     }
 }
 
@@ -417,5 +416,5 @@ private struct ThumbnailGrid: View {
 
 // MARK: - Previews
 #Preview {
-    DeviantArtScreen(viewModel: DeviantArtViewModel.preview)
+    DeviantArtScreen(viewModel: DeviantArtViewModel.preview, router: AppRouter())
 }

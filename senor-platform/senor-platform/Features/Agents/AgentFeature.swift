@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct AgentsScreen: View {
-    @ObservedObject var model: AgentsModel
+    @ObservedObject var viewModel: AgentsViewModel
     @ObservedObject var router: AppRouter
     let onCreate: () -> Void
 
@@ -9,7 +9,7 @@ struct AgentsScreen: View {
         VStack(spacing: 0) {
             AppSectionHeader(
                 title: "Agents",
-                detail: "\(model.agents.count) configured",
+                detail: "\(viewModel.agents.count) configured",
                 action: AnyView(
                     Button(action: onCreate) {
                         Label("New Agent", systemImage: AppTheme.Icon.add)
@@ -21,7 +21,7 @@ struct AgentsScreen: View {
 
             AppDivider()
 
-            if model.agents.isEmpty {
+            if viewModel.agents.isEmpty {
                 Spacer()
                 AppEmptyState(
                     title: "No Agents Yet",
@@ -30,7 +30,7 @@ struct AgentsScreen: View {
                 )
                 Spacer()
             } else {
-                List(model.agents, selection: $router.selectedAgentID) { agent in
+                List(viewModel.agents, selection: $router.selectedAgentID) { agent in
                     AppListRow {
                         AppHStack(spacing: .medium) {
                             AppIcon(AppTheme.Icon.agent, size: .medium, color: AppTheme.ColorToken.accent)
@@ -55,7 +55,7 @@ struct AgentsScreen: View {
 struct AgentFormSheet: View {
     @EnvironmentObject private var appState: AppShellModel
     @Environment(\.dismiss) private var dismiss
-    @ObservedObject var model: AgentsModel
+    @ObservedObject var viewModel: AgentsViewModel
 
     @State private var displayName = ""
     @State private var description = ""
@@ -101,7 +101,7 @@ struct AgentFormSheet: View {
         isSaving = true
         defer { isSaving = false }
         do {
-            try await model.create(
+            try await viewModel.create(
                 draft: AgentDraft(
                     displayName: displayName,
                     isActive: isActive,
@@ -116,3 +116,7 @@ struct AgentFormSheet: View {
         }
     }
 }
+
+// MARK: - Previews
+
+// Note: Preview requires complex dependencies - use WorkspaceView for testing

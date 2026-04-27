@@ -51,22 +51,18 @@ public struct PatreonPost: Codable, Identifiable {
     public struct PatreonPostAttributes: Codable, Sendable {
         public let title: String?
         public let content: String?
-        public let teaserText: String?
         public let url: String?
         public let isPaid: Bool?
         public let isPublic: Bool?
         public let publishedAt: String?
-        public let editedAt: String?
 
         enum CodingKeys: String, CodingKey {
             case title
             case content
-            case teaserText = "teaser_text"
             case url
             case isPaid = "is_paid"
             case isPublic = "is_public"
             case publishedAt = "published_at"
-            case editedAt = "edited_at"
         }
     }
 
@@ -306,7 +302,7 @@ public final class PatreonClient {
 
     /// Get all campaigns for the current user
     public func getCampaigns(
-        includeFields: [String] = ["creation_name"]
+        includeFields: [String] = ["creation_name", "patron_count"]
     ) async throws -> CampaignsResponse {
         try ensureAuthenticated()
 
@@ -359,7 +355,7 @@ public final class PatreonClient {
     /// Get all posts for a campaign
     public func getCampaignPosts(
         campaignId: String,
-        includeFields: [String] = ["title", "teaser_text", "is_paid", "is_public", "published_at", "url", "edited_at"],
+        includeFields: [String] = ["title", "content", "is_paid", "is_public", "published_at", "url"],
         cursor: String? = nil
     ) async throws -> PostsResponse {
         try ensureAuthenticated()
@@ -388,7 +384,7 @@ public final class PatreonClient {
     /// Get a specific post by ID
     public func getPost(
         postId: String,
-        includeFields: [String] = ["title", "content", "is_paid", "is_public", "published_at", "url", "edited_at"]
+        includeFields: [String] = ["title", "content", "is_paid", "is_public", "published_at", "url"]
     ) async throws -> Post {
         try ensureAuthenticated()
 

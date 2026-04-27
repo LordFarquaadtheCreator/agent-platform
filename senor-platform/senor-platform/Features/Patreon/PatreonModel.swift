@@ -17,16 +17,22 @@ public enum PatreonError: Error, Equatable {
         switch self {
         case .notConfigured:
             return "Patreon not configured. Add credentials in Settings."
+
         case .unauthenticated:
             return "Not connected to Patreon. Complete OAuth in Settings."
+
         case .authExpired:
             return "Session expired. Please reconnect your Patreon account."
+
         case .networkFailure(let detail):
             return "Connection failed: \(detail)"
+
         case .rateLimited(let seconds):
             return "Rate limited. Retry in \(seconds)s."
+
         case .decodeError(let detail):
             return "Data error: \(detail)"
+
         case .unknown(let detail):
             return "Error: \(detail)"
         }
@@ -36,6 +42,7 @@ public enum PatreonError: Error, Equatable {
         switch self {
         case .networkFailure, .rateLimited, .unknown:
             return true
+
         case .notConfigured, .unauthenticated, .authExpired, .decodeError:
             return false
         }
@@ -61,10 +68,10 @@ public enum PatreonAuthState: Equatable {
     }
 }
 
-// MARK: - Patreon Model
+// MARK: - Patreon ViewModel
 
 @MainActor
-public final class PatreonModel: ObservableObject {
+public final class PatreonViewModel: ObservableObject {
     // Data states
     @Published public private(set) var identity: PatreonIdentityResponse?
     @Published public private(set) var campaign: PatreonCampaign?
@@ -103,7 +110,7 @@ public final class PatreonModel: ObservableObject {
         if client.isAuthenticated {
             return .authenticated
         }
-        if settings.tokenExpiry != nil && settings.tokenExpiry! < Date() {
+        if let expiry = settings.tokenExpiry, expiry < Date() {
             return .expired
         }
         return .unauthenticated
@@ -200,10 +207,36 @@ public final class PatreonModel: ObservableObject {
 
         do {
             let response = try await client.getCampaignPosts(campaignId: campaignId)
-            posts = response.data
-            AppLogger.api.debug("Loaded \(posts.count) posts")
+            // Sort by published date (newest first)
+            let allPosts = response.data.sorted { post1, post2 in
+                let date1 = ISO8601DateFormatter().date(from: post1.attributes.publishedAt ?? "") ?? Date.distantPast
+                let date2 = ISO8601DateFormatter().date(from: post2.attributes.publishedAt ?? "") ?? Date.distantPast
+                return date1 > date2
+            }
+
+            // Show first 10 immediately
+            let firstBatch = allPosts.prefix(10)
+            posts = Array(firstBatch)
+            AppLogger.api.debug("Loaded first \(posts.count) posts")
+
+            // Load rest in background after UI update
+            if allPosts.count > 10 {
+                Task {
+                    let secondBatch = Array(allPosts.dropFirst(10))
+                    await MainActor.run {
+                        posts.append(contentsOf: secondBatch)
+                        AppLogger.api.debug("Loaded remaining \(secondBatch.count) posts")
+                    }
+                }
+            }
         } catch let error as AppError {
             AppLogger.api.error("Posts error: \(error)")
+            if case .apiRequestFailed(_, let underlying) = error,
+               let apiError = underlying as? HTTPClient.APIError,
+               let body = apiError.responseBody,
+               let bodyString = String(data: body, encoding: .utf8) {
+                AppLogger.api.error("Posts response body: \(bodyString)")
+            }
             postsError = mapAppError(error)
         } catch {
             AppLogger.api.error("Posts unknown error: \(error)")
@@ -263,8 +296,10 @@ public final class PatreonModel: ObservableObject {
         switch error {
         case .apiAuthenticationFailed:
             return .authExpired
+
         case .apiResourceNotFound(let resource):
             return .networkFailure("Not found: \(resource)")
+
         case .apiRequestFailed(_, let underlying):
             if let apiError = underlying as? HTTPClient.APIError {
                 if apiError.isRateLimited {
@@ -279,8 +314,10 @@ public final class PatreonModel: ObservableObject {
                 return .networkFailure(apiError.message)
             }
             return .networkFailure(underlying.localizedDescription)
+
         case .decodingFailed(let message):
             return .decodeError(message)
+
         default:
             return .unknown(error.localizedDescription)
         }

@@ -8,16 +8,21 @@ struct ToastView: View {
         HStack(spacing: AppTheme.Spacing.small) {
             if let systemImage = systemImage {
                 Image(systemName: systemImage)
-                    .font(.caption)
+                    .font(AppTheme.Typography.caption)
             }
             AppText(message, style: .caption)
         }
         .padding(.horizontal, AppTheme.Spacing.medium)
         .padding(.vertical, AppTheme.Spacing.small)
-        .background(AppTheme.ColorToken.textPrimary.opacity(0.9))
-        .foregroundStyle(AppTheme.ColorToken.chromeBackground)
+        .background(AppTheme.ColorToken.chromeBackground.opacity(0.95))
+        .foregroundStyle(AppTheme.ColorToken.textPrimary)
         .clipShape(RoundedRectangle(cornerRadius: AppTheme.CornerRadius.small))
-        .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
+        .shadow(
+            color: AppTheme.Shadow.toast.color,
+            radius: AppTheme.Shadow.toast.radius,
+            x: AppTheme.Shadow.toast.x,
+            y: AppTheme.Shadow.toast.y
+        )
     }
 }
 

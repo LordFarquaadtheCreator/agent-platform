@@ -51,7 +51,6 @@ private struct SettingsContent: View {
                     Toggle("Launch at Login", isOn: $viewModel.generalSettings.launchAtLogin)
                     Toggle("Show Notifications", isOn: $viewModel.generalSettings.showNotifications)
                     AppText("Log Level", style: .caption)
-                    // swiftlint:disable:next unlabeled_input_field
                     TextField("info, debug, warning, error", text: $viewModel.generalSettings.logLevel)
                     Button("Save General Settings") {
                         viewModel.saveGeneral()
@@ -64,7 +63,6 @@ private struct SettingsContent: View {
                 AppVStack(spacing: .medium, alignment: .leading) {
                     AppText("Task Runtime", style: .headline)
                     AppText("Task Script Path", style: .caption)
-                    // swiftlint:disable:next unlabeled_input_field
                     TextField("/usr/local/bin/senor-task", text: $viewModel.taskScriptPath)
                     Button("Save Script Path") {
                         viewModel.saveTaskScriptPath()
@@ -78,16 +76,13 @@ private struct SettingsContent: View {
                     AppText("DeviantArt", style: .headline)
 
                     AppText("Client ID", style: .caption)
-                    // swiftlint:disable:next unlabeled_input_field
                     TextField("Enter DeviantArt Client ID", text: $viewModel.deviantArtSettings.clientId)
                     AppText("Client Secret", style: .caption)
-                    // swiftlint:disable:next unlabeled_input_field
                     SecureField("Enter DeviantArt Client Secret", text: Binding(
                         get: { viewModel.deviantArtSettings.clientSecret },
                         set: { viewModel.deviantArtSettings.clientSecret = $0 }
                     ))
                     AppText("Redirect URI", style: .caption)
-                    // swiftlint:disable:next unlabeled_input_field
                     TextField("senorplatform://oauth/deviantart", text: $viewModel.deviantArtSettings.redirectURI)
                         .textContentType(.URL)
                         .font(.system(.body, design: .monospaced))
@@ -132,19 +127,16 @@ private struct SettingsContent: View {
                     }
 
                     AppText("Access Token", style: .caption)
-                    // swiftlint:disable:next unlabeled_input_field
                     SecureField("Enter Patreon Access Token", text: Binding(
                         get: { viewModel.patreonSettings.accessToken },
                         set: { viewModel.patreonSettings.accessToken = $0 }
                     ))
                     AppText("Refresh Token (optional)", style: .caption)
-                    // swiftlint:disable:next unlabeled_input_field
                     SecureField("Enter Refresh Token", text: Binding(
                         get: { viewModel.patreonSettings.refreshToken ?? "" },
                         set: { viewModel.patreonSettings.refreshToken = $0.isEmpty ? nil : $0 }
                     ))
                     AppText("Campaign ID (optional)", style: .caption)
-                    // swiftlint:disable:next unlabeled_input_field
                     TextField("Enter Campaign ID", text: Binding(
                         get: { viewModel.patreonSettings.campaignId ?? "" },
                         set: { viewModel.patreonSettings.campaignId = $0.isEmpty ? nil : $0 }
@@ -165,7 +157,6 @@ private struct SettingsContent: View {
                 AppVStack(spacing: .medium, alignment: .leading) {
                     AppText("ComfyUI", style: .headline)
                     AppText("Server URL", style: .caption)
-                    // swiftlint:disable:next unlabeled_input_field
                     TextField("http://127.0.0.1:8188", text: $viewModel.comfyUISettings.serverURL)
                     Stepper("Timeout: \(viewModel.comfyUISettings.timeout)s", value: $viewModel.comfyUISettings.timeout, in: 30...900, step: 30)
                     Button("Save ComfyUI Settings") {

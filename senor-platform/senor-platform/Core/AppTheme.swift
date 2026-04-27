@@ -93,6 +93,7 @@ public enum AppTheme {
         static let clear: ShadowStyle = ShadowStyle(color: .clear, radius: 0, x: 0, y: 0)
         static let subtle: ShadowStyle = ShadowStyle(color: .black.opacity(0.05), radius: 8, x: 0, y: 2)
         static let elevated: ShadowStyle = ShadowStyle(color: .black.opacity(0.1), radius: 16, x: 0, y: 4)
+        static let toast: ShadowStyle = ShadowStyle(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
 
         // Legacy raw values for components that need them
         static let radius: CGFloat = 8

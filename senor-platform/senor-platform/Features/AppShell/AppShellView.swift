@@ -3,21 +3,32 @@ import SwiftUI
 struct AppShellView: View {
     @EnvironmentObject private var appState: AppShellModel
     @ObservedObject var workspace: WorkspaceModel
+    @State private var showInspector = true
 
     var body: some View {
-        NavigationSplitView {
-            AppSidebarView(router: workspace.router, approvalsModel: workspace.approvalsModel)
+        HStack(spacing: 0) {
+            AppSidebarView(router: workspace.router, approvalsViewModel: workspace.approvalsViewModel)
                 .frame(minWidth: AppTheme.Layout.sidebarMinWidth, idealWidth: AppTheme.Layout.sidebarIdealWidth)
-        } content: {
+
             AppMainAreaView(workspace: workspace, router: workspace.router)
                 .frame(minWidth: AppTheme.Layout.mainAreaMinWidth)
-        } detail: {
-            AppInspectorPanel(workspace: workspace, router: workspace.router)
-                .frame(minWidth: AppTheme.Layout.detailMinWidth, idealWidth: AppTheme.Layout.detailIdealWidth)
+
+            if showInspector {
+                AppInspectorPanel(workspace: workspace, router: workspace.router)
+                    .frame(minWidth: AppTheme.Layout.detailMinWidth, idealWidth: AppTheme.Layout.detailIdealWidth)
+            }
         }
-        .navigationSplitViewStyle(.balanced)
         .toolbar {
             ToolbarItemGroup {
+                Button {
+                    showInspector.toggle()
+                } label: {
+                    Label(
+                        showInspector ? "Hide Inspector" : "Show Inspector",
+                        systemImage: "sidebar.right"
+                    )
+                }
+
                 Button {
                     appState.present(.newAgent)
                 } label: {
@@ -48,7 +59,7 @@ struct AppShellView: View {
 
 private struct AppSidebarView: View {
     @ObservedObject var router: AppRouter
-    @ObservedObject var approvalsModel: ApprovalsModel
+    @ObservedObject var approvalsViewModel: ApprovalsViewModel
 
     var body: some View {
         VStack(spacing: 0) {
@@ -69,9 +80,9 @@ private struct AppSidebarView: View {
                         Label {
                             HStack {
                                 AppText(section.title, style: .body)
-                                if section == .approvals && !approvalsModel.approvals.isEmpty {
+                                if section == .approvals && !approvalsViewModel.approvals.isEmpty {
                                     Spacer()
-                                    AppStatusPill(title: "\(approvalsModel.approvals.count)", color: AppTheme.ColorToken.statusError)
+                                    AppStatusPill(title: "\(approvalsViewModel.approvals.count)", color: AppTheme.ColorToken.statusError)
                                 }
                             }
                         } icon: {
@@ -99,35 +110,35 @@ private struct AppMainAreaView: View {
     var body: some View {
         switch router.selectedSection {
         case .dashboard:
-            DashboardScreen(model: workspace.dashboardModel)
+            DashboardScreen(viewModel: workspace.dashboardViewModel)
 
         case .agents:
-            AgentsScreen(model: workspace.agentsModel, router: workspace.router) {
+            AgentsScreen(viewModel: workspace.agentsViewModel, router: workspace.router) {
                 appState.present(.newAgent)
             }
 
         case .tasks:
-            TasksScreen(model: workspace.tasksModel) {
+            TasksScreen(viewModel: workspace.tasksViewModel) {
                 appState.present(.newTask)
             }
 
         case .content:
-            ContentScreen(model: workspace.contentModel, router: workspace.router)
+            ContentScreen(viewModel: workspace.contentViewModel, router: workspace.router)
 
         case .approvals:
-            ApprovalsScreen(model: workspace.approvalsModel)
+            ApprovalsScreen(viewModel: workspace.approvalsViewModel)
 
         case .tools:
             ToolsHostView()
 
         case .settings:
-            SettingsScreen(model: workspace.settingsModel)
+            SettingsScreen(viewModel: workspace.settingsViewModel)
 
         case .deviantArt:
-            DeviantArtScreen(model: workspace.deviantArtModel)
+            DeviantArtScreen(viewModel: workspace.deviantArtViewModel, router: workspace.router)
 
         case .patreon:
-            PatreonScreen(model: workspace.patreonModel)
+            PatreonScreen(viewModel: workspace.patreonViewModel)
         }
     }
 }
@@ -139,12 +150,14 @@ private struct AppInspectorPanel: View {
 
     var body: some View {
         Group {
-            if let content = selectedContent {
+            if router.selectedSection == .deviantArt, let deviation = selectedDeviation {
+                DeviationDetailPanel(deviation: deviation, viewModel: workspace.deviantArtViewModel)
+            } else if router.selectedSection == .content, let content = selectedContent {
                 ContentInspectorCard(
                     content: content,
-                    approvalsModel: workspace.approvalsModel
+                    approvalsViewModel: workspace.approvalsViewModel
                 )
-            } else if let agent = selectedAgent {
+            } else if router.selectedSection == .agents, let agent = selectedAgent {
                 AgentInspectorCard(agent: agent)
             } else {
                 AppEmptyState(
@@ -158,11 +171,15 @@ private struct AppInspectorPanel: View {
     }
 
     private var selectedAgent: Agent? {
-        workspace.agentsModel.agents.first { $0.id == router.selectedAgentID }
+        workspace.agentsViewModel.agents.first { $0.id == router.selectedAgentID }
     }
 
     private var selectedContent: ContentSummary? {
-        workspace.contentModel.contentItems.first { $0.id == router.selectedContentID }
+        workspace.contentViewModel.contentItems.first { $0.id == router.selectedContentID }
+    }
+
+    private var selectedDeviation: DeviantArtClient.Deviation? {
+        workspace.deviantArtViewModel.deviations.first { $0.id == router.selectedDeviationID }
     }
 }
 
@@ -189,7 +206,7 @@ private struct AgentInspectorCard: View {
 private struct ContentInspectorCard: View {
     @EnvironmentObject private var appState: AppShellModel
     let content: ContentSummary
-    @ObservedObject var approvalsModel: ApprovalsModel
+    @ObservedObject var approvalsViewModel: ApprovalsViewModel
     @State private var rejectReason = ""
     @State private var showRejectDialog = false
     @State private var isProcessing = false
@@ -258,7 +275,7 @@ private struct ContentInspectorCard: View {
         isProcessing = true
         defer { isProcessing = false }
         do {
-            try await approvalsModel.approve(contentId: content.id)
+            try await approvalsViewModel.approve(contentId: content.id)
         } catch {
             appState.errorMessage = error.localizedDescription
         }
@@ -268,7 +285,7 @@ private struct ContentInspectorCard: View {
         isProcessing = true
         defer { isProcessing = false }
         do {
-            try await approvalsModel.reject(contentId: content.id, reason: rejectReason.isEmpty ? nil : rejectReason)
+            try await approvalsViewModel.reject(contentId: content.id, reason: rejectReason.isEmpty ? nil : rejectReason)
             rejectReason = ""
         } catch {
             appState.errorMessage = error.localizedDescription
@@ -279,7 +296,7 @@ private struct ContentInspectorCard: View {
         isProcessing = true
         defer { isProcessing = false }
         do {
-            try await approvalsModel.publish(
+            try await approvalsViewModel.publish(
                 PublicationRequest(
                     contentId: content.id,
                     platform: platform,

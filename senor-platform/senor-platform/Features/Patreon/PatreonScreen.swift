@@ -1,7 +1,8 @@
 import SwiftUI
+import MarkdownUI
 
 struct PatreonScreen: View {
-    @ObservedObject var model: PatreonModel
+    @ObservedObject var viewModel: PatreonViewModel
 
     var body: some View {
         VStack(spacing: 0) {
@@ -9,18 +10,27 @@ struct PatreonScreen: View {
 
             AppDivider()
 
-            if model.isAnyLoading && !hasAnyData {
-                loadingState
-            } else if case .notConfigured = model.authState {
-                notConfiguredState
-            } else if case .expired = model.authState {
-                authExpiredState
+            if viewModel.isAnyLoading && !hasAnyData {
+                LoadingStateView(
+                    message: viewModel.isRefreshingToken ? "Refreshing session..." : nil
+                )
+            } else if case .notConfigured = viewModel.authState {
+                NotConnectedView(
+                    title: "Patreon Not Configured",
+                    systemImage: "heart",
+                    message: "Add your Patreon access token in Settings to see your campaign, posts, and patrons."
+                )
+            } else if case .expired = viewModel.authState {
+                ErrorStateView(
+                    title: "Session Expired",
+                    message: "Your Patreon session has expired. Please reconnect your account in Settings."
+                )
             } else {
                 contentScrollView
             }
         }
         .background(AppTheme.ColorToken.chromeBackground)
-        .task { await model.load() }
+        .task { await viewModel.load() }
     }
 
     // MARK: - Header
@@ -29,7 +39,7 @@ struct PatreonScreen: View {
         VStack(alignment: .leading, spacing: AppTheme.Spacing.small) {
             AppSectionHeader(
                 title: "Patreon",
-                detail: model.identity?.data.attributes.fullName ?? model.identity?.data.attributes.vanity
+                detail: viewModel.identity?.data.attributes.fullName ?? viewModel.identity?.data.attributes.vanity
             )
             .padding(AppTheme.Spacing.screenPadding)
 
@@ -44,13 +54,16 @@ struct PatreonScreen: View {
 
     private var authStatePill: some View {
         let (text, color): (String, Color) = {
-            switch model.authState {
+            switch viewModel.authState {
             case .authenticated:
                 return ("Connected", AppTheme.ColorToken.statusSuccess)
+
             case .expired:
                 return ("Session Expired", AppTheme.ColorToken.statusWarning)
+
             case .unauthenticated:
                 return ("Not Connected", AppTheme.ColorToken.statusError)
+
             case .notConfigured:
                 return ("Not Configured", AppTheme.ColorToken.textSecondary)
             }
@@ -59,77 +72,38 @@ struct PatreonScreen: View {
         return AppStatusPill(title: text, color: color)
     }
 
-    // MARK: - States
-
-    private var loadingState: some View {
-        VStack {
-            Spacer()
-            if model.isRefreshingToken {
-                VStack(spacing: AppTheme.Spacing.medium) {
-                    ProgressView()
-                    AppText("Refreshing session...", style: .caption, color: AppTheme.ColorToken.textSecondary)
-                }
-            } else {
-                ProgressView()
-            }
-            Spacer()
-        }
-    }
-
-    private var notConfiguredState: some View {
-        VStack {
-            Spacer()
-            AppEmptyState(
-                title: "Patreon Not Configured",
-                systemImage: "heart",
-                message: "Add your Patreon access token in Settings to see your campaign, posts, and patrons."
-            )
-            Spacer()
-        }
-    }
-
-    private var authExpiredState: some View {
-        VStack {
-            Spacer()
-            AppEmptyState(
-                title: "Session Expired",
-                systemImage: "exclamationmark.triangle",
-                message: "Your Patreon session has expired. Please reconnect your account in Settings."
-            )
-            Spacer()
-        }
-    }
+    // MARK: - Content
 
     private var contentScrollView: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: AppTheme.Spacing.large) {
                 // Profile/Campaign Card
-                if let error = model.profileError {
-                    errorCard(error, retryAction: { Task { await model.retryProfile() } })
-                } else if let identity = model.identity {
+                if let error = viewModel.profileError {
+                    errorCard(error, retryAction: { Task { await viewModel.retryProfile() } })
+                } else if let identity = viewModel.identity {
                     profileCard(identity)
                 }
 
                 // Campaign stats
-                if let campaign = model.campaign {
+                if let campaign = viewModel.campaign {
                     campaignStatsCard(campaign)
                 }
 
                 // Posts Section
-                if let error = model.postsError {
-                    errorCard(error, title: "Posts Error", retryAction: { Task { await model.retryPosts() } })
-                } else if !model.posts.isEmpty {
+                if let error = viewModel.postsError {
+                    errorCard(error, title: "Posts Error", retryAction: { Task { await viewModel.retryPosts() } })
+                } else if !viewModel.posts.isEmpty {
                     postsSection
-                } else if !model.isLoadingPosts {
+                } else if !viewModel.isLoadingPosts {
                     emptySectionCard(title: "No Posts", message: "No posts found for this campaign.")
                 }
 
                 // Members Section
-                if let error = model.membersError {
-                    errorCard(error, title: "Members Error", retryAction: { Task { await model.retryMembers() } })
-                } else if !model.members.isEmpty {
+                if let error = viewModel.membersError {
+                    errorCard(error, title: "Members Error", retryAction: { Task { await viewModel.retryMembers() } })
+                } else if !viewModel.members.isEmpty {
                     membersSection
-                } else if !model.isLoadingMembers {
+                } else if !viewModel.isLoadingMembers {
                     emptySectionCard(title: "No Patrons", message: "No active patrons found.")
                 }
             }
@@ -145,8 +119,9 @@ struct PatreonScreen: View {
                 HStack {
                     AppText(identity.data.attributes.fullName ?? "Patreon Creator", style: .title2)
                     Spacer()
-                    if let url = identity.data.attributes.url {
-                        Link(destination: URL(string: url)!) {
+                    if let urlString = identity.data.attributes.url,
+                       let url = URL(string: urlString) {
+                        Link(destination: url) {
                             Image(systemName: "arrow.up.right.square")
                                 .foregroundStyle(AppTheme.ColorToken.accent)
                         }
@@ -189,7 +164,7 @@ struct PatreonScreen: View {
                     )
                     AppMetricCard(
                         title: "Posts",
-                        value: "\(model.posts.count)",
+                        value: "\(viewModel.posts.count)",
                         icon: "doc.text",
                         tint: AppTheme.ColorToken.statusInfo
                     )
@@ -203,7 +178,7 @@ struct PatreonScreen: View {
             HStack {
                 AppText("Recent Posts", style: .title3)
                 Spacer()
-                if model.isLoadingPosts {
+                if viewModel.isLoadingPosts {
                     ProgressView()
                         .scaleEffect(0.8)
                 }
@@ -211,7 +186,7 @@ struct PatreonScreen: View {
 
             ScrollView(.vertical, showsIndicators: true) {
                 LazyVStack(spacing: AppTheme.Spacing.medium) {
-                    ForEach(model.posts) { post in
+                    ForEach(viewModel.posts) { post in
                         postCard(post)
                     }
                 }
@@ -240,10 +215,11 @@ struct PatreonScreen: View {
                 }
 
                 if let content = post.attributes.content {
-                    // Convert HTML to Markdown for rendering
-                    Text(AttributedString(htmlString: content, lineLimit: 2))
-                        .font(AppTheme.Typography.body)
-                        .foregroundColor(AppTheme.ColorToken.textSecondary)
+                    // Convert HTML to Markdown and render
+                    let markdownContent = HTMLUtils.toMarkdown(content)
+                    Markdown(markdownContent)
+                        .markdownTheme(.gitHub)
+                        .lineLimit(4)
                 }
             }
         }
@@ -254,14 +230,14 @@ struct PatreonScreen: View {
             HStack {
                 AppText("Active Patrons", style: .title3)
                 Spacer()
-                if model.isLoadingMembers {
+                if viewModel.isLoadingMembers {
                     ProgressView()
                         .scaleEffect(0.8)
                 }
             }
 
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 200))], spacing: AppTheme.Spacing.medium) {
-                ForEach(model.members.prefix(8)) { member in
+                ForEach(viewModel.members.prefix(8)) { member in
                     memberCard(member)
                 }
             }
@@ -324,7 +300,7 @@ struct PatreonScreen: View {
     // MARK: - Helpers
 
     private var hasAnyData: Bool {
-        model.identity != nil || !model.posts.isEmpty || !model.members.isEmpty
+        viewModel.identity != nil || !viewModel.posts.isEmpty || !viewModel.members.isEmpty
     }
 
     private func formatCents(_ cents: Int?) -> String {
@@ -354,7 +330,7 @@ struct PatreonScreen: View {
     }
 
     private func stripHTML(_ html: String) -> String {
-        return html.replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression)
+        html.replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression)
                   .replacingOccurrences(of: "&quot;", with: "\"")
                   .replacingOccurrences(of: "&amp;", with: "&")
                   .replacingOccurrences(of: "&lt;", with: "<")
@@ -365,14 +341,23 @@ struct PatreonScreen: View {
         switch status.lowercased() {
         case "active_patron":
             return AppTheme.ColorToken.statusSuccess
+
         case "declined_patron":
             return AppTheme.ColorToken.statusError
+
         case "former_patron":
             return AppTheme.ColorToken.textSecondary
+
         default:
             return AppTheme.ColorToken.statusInfo
         }
     }
+}
+
+// MARK: - Previews
+
+#Preview("Not Configured") {
+    PatreonScreen(viewModel: PatreonViewModel(client: nil, settings: nil))
 }
 
 // MARK: - AttributedString HTML Extension
@@ -382,8 +367,10 @@ extension AttributedString {
         guard let data = htmlString.data(using: .utf8),
               let nsAttributedString = try? NSAttributedString(
                 data: data,
-                options: [.documentType: NSAttributedString.DocumentType.html,
-                         .characterEncoding: String.Encoding.utf8.rawValue],
+                options: [
+                    .documentType: NSAttributedString.DocumentType.html,
+                    .characterEncoding: String.Encoding.utf8.rawValue
+                ],
                 documentAttributes: nil
               ) else {
             self.init(htmlString)

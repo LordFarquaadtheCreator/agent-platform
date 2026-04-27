@@ -5,8 +5,8 @@ struct JSONEditorView: View {
     let contentId: String
 
     var body: some View {
-        if let model = appState.workspace?.contentModel {
-            ContentJSONEditorSheet(model: model, contentId: contentId)
+        if let viewModel = appState.workspace?.contentViewModel {
+            ContentJSONEditorSheet(viewModel: viewModel, contentId: contentId)
         } else {
             EmptyView()
         }
@@ -18,8 +18,8 @@ struct VersionHistoryView: View {
     let contentId: String
 
     var body: some View {
-        if let model = appState.workspace?.contentModel {
-            ContentVersionHistorySheet(model: model, contentId: contentId)
+        if let viewModel = appState.workspace?.contentViewModel {
+            ContentVersionHistorySheet(viewModel: viewModel, contentId: contentId)
         } else {
             EmptyView()
         }

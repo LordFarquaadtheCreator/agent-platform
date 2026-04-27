@@ -2,7 +2,7 @@ import SwiftUI
 
 struct ApprovalsScreen: View {
     @EnvironmentObject private var appState: AppShellModel
-    @ObservedObject var model: ApprovalsModel
+    @ObservedObject var viewModel: ApprovalsViewModel
     @State private var selectedItems = Set<String>()
     @State private var rejectReason = ""
     @State private var showRejectDialog = false
@@ -11,7 +11,7 @@ struct ApprovalsScreen: View {
         VStack(spacing: 0) {
             AppSectionHeader(
                 title: "Approvals",
-                detail: "\(model.approvals.count) awaiting review",
+                detail: "\(viewModel.approvals.count) awaiting review",
                 action: AnyView(
                     HStack {
                         Button("Approve All") {
@@ -32,7 +32,7 @@ struct ApprovalsScreen: View {
 
             AppDivider()
 
-            if model.approvals.isEmpty {
+            if viewModel.approvals.isEmpty {
                 Spacer()
                 AppEmptyState(
                     title: "Queue Clear",
@@ -41,7 +41,7 @@ struct ApprovalsScreen: View {
                 )
                 Spacer()
             } else {
-                List(model.approvals, selection: $selectedItems) { item in
+                List(viewModel.approvals, selection: $selectedItems) { item in
                     AppListRow {
                         AppVStack(spacing: .small, alignment: .leading) {
                             AppText(item.contentTitle, style: .headline)
@@ -74,7 +74,7 @@ struct ApprovalsScreen: View {
     private func approveSelected() async {
         do {
             for id in selectedItems {
-                try await model.approve(contentId: id)
+                try await viewModel.approve(contentId: id)
             }
             selectedItems.removeAll()
         } catch {
@@ -85,7 +85,7 @@ struct ApprovalsScreen: View {
     private func rejectSelected() async {
         do {
             for id in selectedItems {
-                try await model.reject(contentId: id, reason: rejectReason.isEmpty ? nil : rejectReason)
+                try await viewModel.reject(contentId: id, reason: rejectReason.isEmpty ? nil : rejectReason)
             }
             rejectReason = ""
             selectedItems.removeAll()
@@ -94,3 +94,7 @@ struct ApprovalsScreen: View {
         }
     }
 }
+
+// MARK: - Previews
+
+// Note: Preview requires complex dependencies - use WorkspaceView for testing

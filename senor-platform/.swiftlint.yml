@@ -242,4 +242,13 @@ custom_rules:
       - "senor-platform/AppCore/**/*.swift"
       - "senor-platform/Views/**/*.swift"
 
+  # Require AppText caption labels above TextField and SecureField in Settings views
+  unlabeled_input_field:
+    name: "Unlabeled Input Field"
+    regex: "(?m)^\\s*(TextField|SecureField)\\("
+    message: "Add an AppText(\"Label\", style: .caption) line above this input field"
+    severity: warning
+    included:
+      - "senor-platform/Features/**/Settings*.swift"
+
 reporter: "xcode"

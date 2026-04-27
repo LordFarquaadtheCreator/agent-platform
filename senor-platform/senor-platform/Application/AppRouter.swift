@@ -7,6 +7,7 @@ public final class AppRouter: ObservableObject {
     @Published public var selectedAgentID: String?
     @Published public var selectedTaskID: String?
     @Published public var selectedContentID: String?
+    @Published public var selectedDeviationID: String?
 
     public init() {}
 }

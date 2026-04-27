@@ -1,34 +1,27 @@
 import SwiftUI
 import MarkdownUI
 
-struct DeviationDetailSheet: View {
+struct DeviationDetailPanel: View {
     let deviation: DeviantArtClient.Deviation
     @ObservedObject var viewModel: DeviantArtViewModel
-    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-		ScrollView {
-			VStack(alignment: .leading, spacing: AppTheme.Spacing.large) {
-				fullImageSection
-				titleSection
-				descriptionSection
-				tagsSection
-				commentsSection
-				actionsSection
-			}
-			.frame(maxWidth: .infinity, alignment: .leading)
-			.padding()
-		}
-		.frame(width: 700)
-		.navigationTitle("Deviation Details")
-		.toolbar {
-			ToolbarItem(placement: .cancellationAction) {
-				Button("Close") { dismiss() }
-			}
-		}
-		.task {
-			await viewModel.loadMetadata(for: deviation.id)
-		}
+        ScrollView {
+            VStack(alignment: .leading, spacing: AppTheme.Spacing.large) {
+                fullImageSection
+                titleSection
+                descriptionSection
+                tagsSection
+                commentsSection
+                actionsSection
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding()
+        }
+        .background(AppTheme.ColorToken.chromeBackground)
+        .task {
+            await viewModel.loadMetadata(for: deviation.id)
+        }
     }
 
     private var fullImageSection: some View {
@@ -42,8 +35,10 @@ struct DeviationDetailSheet: View {
                             .resizable()
                             .aspectRatio(contentMode: .fit)
                             .clipShape(RoundedRectangle(cornerRadius: AppTheme.CornerRadius.card))
+
                     case .failure:
                         placeholderImage
+
                     default:
                         RoundedRectangle(cornerRadius: AppTheme.CornerRadius.card)
                             .fill(AppTheme.ColorToken.textSecondary.opacity(0.2))
@@ -64,18 +59,8 @@ struct DeviationDetailSheet: View {
 
     private var titleSection: some View {
         VStack(alignment: .leading, spacing: AppTheme.Spacing.small) {
-            HStack(alignment: .firstTextBaseline) {
-                AppText(deviation.title, style: .title2)
-                    .lineLimit(1)
-                    .layoutPriority(1)
-                Spacer()
-                Button(action: { dismiss() }) {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.title3)
-                        .foregroundColor(AppTheme.ColorToken.textSecondary)
-                }
-                .buttonStyle(.plain)
-            }
+            AppText(deviation.title, style: .title2)
+                .lineLimit(2)
 
             HStack {
                 Image(systemName: "checkmark.circle.fill")
@@ -185,8 +170,5 @@ struct DeviationDetailSheet: View {
 // MARK: - Previews
 
 #Preview {
-    DeviationDetailSheet(
-        deviation: DeviantArtClient.Deviation.preview,
-        viewModel: DeviantArtViewModel.preview
-    )
+    DeviationDetailPanel(deviation: DeviantArtClient.Deviation.preview, viewModel: DeviantArtViewModel.preview)
 }

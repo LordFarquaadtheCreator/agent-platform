@@ -1,20 +1,20 @@
 import SwiftUI
 
 struct ContentScreen: View {
-    @ObservedObject var model: ContentModel
+    @ObservedObject var viewModel: ContentViewModel
     @ObservedObject var router: AppRouter
     @State private var searchText = ""
 
     var filteredItems: [ContentSummary] {
-        guard !searchText.isEmpty else { return model.contentItems }
-        return model.contentItems.filter { $0.title.localizedCaseInsensitiveContains(searchText) }
+        guard !searchText.isEmpty else { return viewModel.contentItems }
+        return viewModel.contentItems.filter { $0.title.localizedCaseInsensitiveContains(searchText) }
     }
 
     var body: some View {
         VStack(spacing: 0) {
             AppSectionHeader(
                 title: "Content",
-                detail: "\(model.contentItems.count) generated items"
+                detail: "\(viewModel.contentItems.count) generated items"
             )
             .padding(AppTheme.Spacing.screenPadding)
 
@@ -62,7 +62,7 @@ struct ContentScreen: View {
 struct ContentJSONEditorSheet: View {
     @EnvironmentObject private var appState: AppShellModel
     @Environment(\.dismiss) private var dismiss
-    @ObservedObject var model: ContentModel
+    @ObservedObject var viewModel: ContentViewModel
     let contentId: String
 
     @State private var jsonText = ""
@@ -120,7 +120,7 @@ struct ContentJSONEditorSheet: View {
 
     private func load() async {
         do {
-            let json = try await model.loadEditorJSON(contentId: contentId)
+            let json = try await viewModel.loadEditorJSON(contentId: contentId)
             jsonText = json
             originalJSON = json
             isLoading = false
@@ -136,7 +136,7 @@ struct ContentJSONEditorSheet: View {
             return
         }
         do {
-            try await model.save(
+            try await viewModel.save(
                 ContentEditRequest(
                     contentId: contentId,
                     json: jsonText,
@@ -154,7 +154,7 @@ struct ContentJSONEditorSheet: View {
 struct ContentVersionHistorySheet: View {
     @EnvironmentObject private var appState: AppShellModel
     @Environment(\.dismiss) private var dismiss
-    @ObservedObject var model: ContentModel
+    @ObservedObject var viewModel: ContentViewModel
     let contentId: String
 
     @State private var versions: [VersionInfo] = []
@@ -218,7 +218,7 @@ struct ContentVersionHistorySheet: View {
 
     private func load() async {
         do {
-            versions = try await model.loadHistory(contentId: contentId)
+            versions = try await viewModel.loadHistory(contentId: contentId)
             selectedVersion = versions.first
             isLoading = false
         } catch {
@@ -230,7 +230,7 @@ struct ContentVersionHistorySheet: View {
     private func restore() async {
         guard let selectedVersion else { return }
         do {
-            try await model.restore(
+            try await viewModel.restore(
                 contentId: contentId,
                 version: selectedVersion.version,
                 changeReason: "Restored from version \(selectedVersion.version)"
@@ -241,3 +241,7 @@ struct ContentVersionHistorySheet: View {
         }
     }
 }
+
+// MARK: - Previews
+
+// Note: Preview requires complex dependencies - use WorkspaceView for testing

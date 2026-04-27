@@ -1,5 +1,8 @@
 import Foundation
 
+// MARK: - Dependencies
+// AppLogger is accessed through the Core module's shared logging infrastructure
+
 /// Disk-based image caching service with LRU eviction and size limits
 public actor ImageCacheService {
     private let fileManager = FileManager.default
@@ -18,12 +21,18 @@ public actor ImageCacheService {
         self.defaultTTL = TimeInterval(defaultTTLHours * 3600)
 
         // Get cache directory in app support
-        let appSupportURL = try! fileManager.url(
-            for: .cachesDirectory,
-            in: .userDomainMask,
-            appropriateFor: nil,
-            create: true
-        )
+        let appSupportURL: URL
+        do {
+            appSupportURL = try fileManager.url(
+                for: .cachesDirectory,
+                in: .userDomainMask,
+                appropriateFor: nil,
+                create: true
+            )
+        } catch {
+            // Fallback to temp directory if caches directory is unavailable
+            appSupportURL = fileManager.temporaryDirectory
+        }
         let bundleId = Bundle.main.bundleIdentifier ?? "fahad.senor-platform"
         self.cacheDirectory = appSupportURL
             .appendingPathComponent(bundleId, isDirectory: true)
@@ -131,7 +140,7 @@ public actor ImageCacheService {
         let byteFormatter = ByteCountFormatter()
         byteFormatter.countStyle = .file
         let freedString = byteFormatter.string(fromByteCount: freedSpace)
-        print("[ImageCache] Cleaned up \(deletedCount) expired images, freed \(freedString)")
+        AppLogger.ui.debug("[ImageCache] Cleaned up \(deletedCount) expired images, freed \(freedString)")
     }
 
     /// Clear entire cache

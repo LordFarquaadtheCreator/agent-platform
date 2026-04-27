@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct DashboardScreen: View {
-    @ObservedObject var model: DashboardModel
+    @ObservedObject var viewModel: DashboardViewModel
 
     var body: some View {
         ScrollView {
@@ -14,25 +14,25 @@ struct DashboardScreen: View {
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: AppTheme.Spacing.medium) {
                     AppMetricCard(
                         title: "Active Agents",
-                        value: "\(model.snapshot.activeAgentCount)",
+                        value: "\(viewModel.snapshot.activeAgentCount)",
                         icon: AppTheme.Icon.agent,
                         tint: AppTheme.ColorToken.statusInfo
                     )
                     AppMetricCard(
                         title: "Pending Approvals",
-                        value: "\(model.snapshot.pendingApprovalCount)",
+                        value: "\(viewModel.snapshot.pendingApprovalCount)",
                         icon: AppTheme.Icon.approval,
                         tint: AppTheme.ColorToken.statusWarning
                     )
                     AppMetricCard(
                         title: "Enabled Tasks",
-                        value: "\(model.snapshot.scheduledTaskCount)",
+                        value: "\(viewModel.snapshot.scheduledTaskCount)",
                         icon: AppTheme.Icon.task,
                         tint: AppTheme.ColorToken.statusSuccess
                     )
                     AppMetricCard(
                         title: "Published Content",
-                        value: "\(model.snapshot.publishedContentCount)",
+                        value: "\(viewModel.snapshot.publishedContentCount)",
                         icon: AppTheme.Icon.content,
                         tint: AppTheme.ColorToken.accent
                     )
@@ -41,14 +41,14 @@ struct DashboardScreen: View {
                 AppCard {
                     AppVStack(spacing: .medium, alignment: .leading) {
                         AppSectionHeader(title: "Recent Activity")
-                        if model.snapshot.recentContent.isEmpty {
+                        if viewModel.snapshot.recentContent.isEmpty {
                             AppEmptyState(
                                 title: "No Recent Content",
                                 systemImage: AppTheme.Icon.clock,
                                 message: "Generated content will appear here once the workflow starts producing output."
                             )
                         } else {
-                            ForEach(model.snapshot.recentContent) { item in
+                            ForEach(viewModel.snapshot.recentContent) { item in
                                 AppHStack(spacing: .medium) {
                                     AppVStack(spacing: .tight, alignment: .leading) {
                                         AppText(item.title, style: .headline)
@@ -64,7 +64,7 @@ struct DashboardScreen: View {
                                         color: StatusColor.from(item.status.rawValue).swiftUIColor
                                     )
                                 }
-                                if item.id != model.snapshot.recentContent.last?.id {
+                                if item.id != viewModel.snapshot.recentContent.last?.id {
                                     AppDivider()
                                 }
                             }
@@ -76,4 +76,10 @@ struct DashboardScreen: View {
         }
         .background(AppTheme.ColorToken.chromeBackground)
     }
+}
+
+// MARK: - Previews
+
+#Preview {
+    DashboardScreen(viewModel: DashboardViewModel())
 }

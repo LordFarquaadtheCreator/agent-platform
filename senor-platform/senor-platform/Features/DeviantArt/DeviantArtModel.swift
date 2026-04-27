@@ -3,7 +3,7 @@ import Combine
 import CryptoKit
 
 @MainActor
-public final class DeviantArtModel: ObservableObject {
+public final class DeviantArtViewModel: ObservableObject {
     @Published public private(set) var profile: DeviantArtClient.UserProfile?
     @Published public private(set) var deviations: [DeviantArtClient.Deviation] = []
     @Published public private(set) var stashStacks: [DeviantArtClient.StashStack] = []
@@ -45,7 +45,6 @@ public final class DeviantArtModel: ObservableObject {
     }
 
     private func load(forceRefresh: Bool) async {
-        print("[DeviantArt] load() starting... (forceRefresh: \(forceRefresh))")
         let settings = settingsService.loadDeviantArtSettings()
 
         guard settings.isAuthenticated else {
@@ -93,18 +92,15 @@ public final class DeviantArtModel: ObservableObject {
                 let stashResult = try await client.getStashContents(limit: 24)
                 stashStacks = stashResult.results
             } catch {
-                print("[DeviantArt] Stash fetch skipped: \(error.localizedDescription)")
                 stashStacks = []
             }
 
             errorMessage = nil
-            print("[DeviantArt] Load successful - profile: \(profileResult.user.username), deviations: \(galleryResult.results.count)")
         } catch {
             // Only show error if we don't have cached data
             if profile == nil {
                 errorMessage = error.localizedDescription
             }
-            print("[DeviantArt] Load failed (using cache if available): \(error)")
         }
     }
 
@@ -130,10 +126,9 @@ public final class DeviantArtModel: ObservableObject {
             let metadata = try await client.getDeviationMetadata(deviationId: deviationId)
             if let first = metadata.first {
                 deviationMetadata[deviationId] = first
-                print("[DeviantArt] Loaded metadata from API for \(deviationId)")
             }
         } catch {
-            print("[DeviantArt] Failed to load metadata: \(error)")
+            // Silently fail - metadata is non-critical
         }
     }
 
@@ -141,11 +136,9 @@ public final class DeviantArtModel: ObservableObject {
 
     /// Start the OAuth connection flow
     func startConnection() async -> URL? {
-        print("[OAuth] Starting connection...")
         let settings = settingsService.loadDeviantArtSettings()
         guard !settings.clientId.isEmpty, !settings.clientSecret.isEmpty else {
             errorMessage = "Client ID and Client Secret required in Settings"
-            print("[OAuth] Error: Missing client ID or secret")
             return nil
         }
 
@@ -154,23 +147,19 @@ public final class DeviantArtModel: ObservableObject {
 
         let pkce = generatePKCE()
         let state = UUID().uuidString
-        print("[OAuth] Generated state: \(state)")
 
         // Persist to UserDefaults in case app restarts during OAuth
         UserDefaults.standard.set(pkce.verifier, forKey: PendingKeys.codeVerifier)
         UserDefaults.standard.set(state, forKey: PendingKeys.state)
         pendingCodeVerifier = pkce.verifier
         pendingState = state
-        print("[OAuth] State and verifier persisted to UserDefaults")
 
         guard let authURL = buildAuthURL(settings: settings, state: state, codeChallenge: pkce.challenge) else {
             errorMessage = "Failed to build authorization URL"
-            print("[OAuth] Error: Failed to build auth URL")
             clearPendingState()
             return nil
         }
 
-        print("[OAuth] Auth URL built: \(authURL)")
         return authURL
     }
 
@@ -183,18 +172,13 @@ public final class DeviantArtModel: ObservableObject {
 
     /// Handle the OAuth callback URL
     func handleCallback(url: URL) async {
-        print("[OAuth] Callback received: \(url)")
-
         // Restore from UserDefaults if memory was cleared
         let storedVerifier = UserDefaults.standard.string(forKey: PendingKeys.codeVerifier)
         let storedState = UserDefaults.standard.string(forKey: PendingKeys.state)
-        print("[OAuth] Stored state: \(storedState ?? "nil"), pending state: \(pendingState ?? "nil")")
-        print("[OAuth] Stored verifier exists: \(storedVerifier != nil), pending verifier exists: \(pendingCodeVerifier != nil)")
 
         guard let components = URLComponents(url: url, resolvingAgainstBaseURL: true),
               let queryItems = components.queryItems else {
             errorMessage = "Invalid callback URL"
-            print("[OAuth] Error: Invalid callback URL - no query items")
             clearPendingState()
             return
         }
@@ -202,11 +186,9 @@ public final class DeviantArtModel: ObservableObject {
         let params = Dictionary(uniqueKeysWithValues: queryItems.compactMap { item in
             item.value.map { (item.name, $0) }
         })
-        print("[OAuth] Callback params: \(params.keys)")
 
         if let error = params["error"] {
             errorMessage = "OAuth error: \(error)"
-            print("[OAuth] Error from DeviantArt: \(error)")
             clearPendingState()
             return
         }
@@ -215,7 +197,6 @@ public final class DeviantArtModel: ObservableObject {
               let state = params["state"],
               state == pendingState || state == storedState else {
             errorMessage = "State mismatch - possible CSRF attack or session expired"
-            print("[OAuth] State mismatch. Received: \(params["state"] ?? "nil"), expected: \(pendingState ?? "nil") or \(storedState ?? "nil")")
             clearPendingState()
             return
         }
@@ -223,21 +204,16 @@ public final class DeviantArtModel: ObservableObject {
         let codeVerifier = pendingCodeVerifier ?? storedVerifier
         guard let verifier = codeVerifier else {
             errorMessage = "PKCE verifier not found. Please try connecting again."
-            print("[OAuth] Error: No code verifier available")
             clearPendingState()
             return
         }
 
-        print("[OAuth] State verified, exchanging code for token...")
         await exchangeCodeForToken(code: code, codeVerifier: verifier)
-        print("[OAuth] exchangeCodeForToken returned, errorMessage is nil: \(errorMessage == nil)")
         clearPendingState()
-        print("[OAuth] Callback handling complete")
     }
 
     /// Disconnect and clear stored tokens
     func disconnect() throws {
-        print("[DeviantArt] Disconnecting...")
         var settings = settingsService.loadDeviantArtSettings()
         settings.accessToken = nil
         settings.refreshToken = nil
@@ -248,7 +224,6 @@ public final class DeviantArtModel: ObservableObject {
         profile = nil
         deviations = []
         stashStacks = []
-        print("[DeviantArt] Disconnected successfully")
     }
 
     /// Clear error message
@@ -296,20 +271,12 @@ public final class DeviantArtModel: ObservableObject {
     }
 
     private func exchangeCodeForToken(code: String, codeVerifier: String) async {
-        print("[OAuth] exchangeCodeForToken starting...")
         let settings = settingsService.loadDeviantArtSettings()
-        print("[OAuth] Settings loaded for token exchange")
-        print("[OAuth] clientId empty: \(settings.clientId.isEmpty), clientSecret empty: \(settings.clientSecret.isEmpty)")
-        print("[OAuth] redirectURI: \(settings.redirectURI)")
-        print("[OAuth] code prefix: \(code.prefix(10))...")
-        print("[OAuth] codeVerifier prefix: \(codeVerifier.prefix(10))...")
 
         guard let tokenURL = URL(string: "https://www.deviantart.com/oauth2/token") else {
-            print("[OAuth] ERROR: Failed to create token URL")
             errorMessage = "Invalid token URL"
             return
         }
-        print("[OAuth] Token URL valid: \(tokenURL)")
 
         var request = URLRequest(url: tokenURL)
         request.httpMethod = "POST"
@@ -323,45 +290,27 @@ public final class DeviantArtModel: ObservableObject {
             "redirect_uri": settings.redirectURI,
             "code_verifier": codeVerifier
         ]
-        print("[OAuth] Body params: grant_type=\(body["grant_type"]!), client_id empty=\(body["client_id"]!.isEmpty)")
 
         let bodyString = body.map { "\($0.key)=\($0.value.addingPercentEncoding(withAllowedCharacters: .urlQueryValueAllowed) ?? $0.value)" }.joined(separator: "&")
-        print("[OAuth] Body string length: \(bodyString.count)")
         request.httpBody = bodyString.data(using: .utf8)
 
-        print("[OAuth] Starting URLSession.data(for:)...")
         do {
             let (data, response) = try await URLSession.shared.data(for: request)
-            print("[OAuth] URLSession completed")
             guard let httpResponse = response as? HTTPURLResponse else {
-                print("[OAuth] ERROR: Response is not HTTPURLResponse, type: \(type(of: response))")
                 throw URLError(.badServerResponse)
-            }
-            print("[OAuth] Token exchange response: \(httpResponse.statusCode)")
-            if let responseBody = String(data: data, encoding: .utf8) {
-                print("[OAuth] Response body: \(responseBody)")
             }
             guard httpResponse.statusCode == 200 else {
-                print("[OAuth] ERROR: Non-200 status code")
                 throw URLError(.badServerResponse)
             }
-            print("[OAuth] Calling saveTokenResponse...")
             try await saveTokenResponse(data: data)
-            print("[OAuth] Token saved successfully")
         } catch let urlError as URLError {
-            print("[OAuth] URLError caught: \(urlError.code.rawValue) - \(urlError.localizedDescription)")
-            print("[OAuth] URLError failingURL: \(urlError.failingURL?.absoluteString ?? "nil")")
             errorMessage = "Network error (\(urlError.code.rawValue)): \(urlError.localizedDescription)"
         } catch {
-            print("[OAuth] Generic error caught: \(error)")
-            print("[OAuth] Error type: \(type(of: error))")
             errorMessage = "Token exchange failed: \(error.localizedDescription)"
         }
-        print("[OAuth] exchangeCodeForToken finished")
     }
 
     private func saveTokenResponse(data: Data) async throws {
-        print("[OAuth] saveTokenResponse starting...")
         struct TokenResponse: Decodable {
             let accessToken: String
             let refreshToken: String?
@@ -376,18 +325,14 @@ public final class DeviantArtModel: ObservableObject {
 
         do {
             let response = try JSONDecoder().decode(TokenResponse.self, from: data)
-            print("[OAuth] TokenResponse decoded - accessToken prefix: \(response.accessToken.prefix(10))...")
 
             var settings = settingsService.loadDeviantArtSettings()
             settings.accessToken = response.accessToken
             settings.refreshToken = response.refreshToken
             if let expiresIn = response.expiresIn {
                 settings.tokenExpiry = Date().addingTimeInterval(TimeInterval(expiresIn))
-                print("[OAuth] Token expiry set to: \(settings.tokenExpiry!)")
             }
-            print("[OAuth] Saving settings...")
             try settingsService.saveDeviantArtSettings(settings)
-            print("[OAuth] Settings saved")
 
             let token = HTTPClient.AuthToken(
                 accessToken: response.accessToken,
@@ -395,17 +340,12 @@ public final class DeviantArtModel: ObservableObject {
                 expiresAt: settings.tokenExpiry,
                 tokenType: "Bearer"
             )
-            print("[OAuth] Setting auth token on client...")
             client?.setAuthToken(token)
             isAuthenticated = true
-            print("[OAuth] Calling load()...")
             await load()
-            print("[OAuth] load() completed")
         } catch let decodingError as DecodingError {
-            print("[OAuth] Decoding error: \(decodingError)")
             throw decodingError
         } catch {
-            print("[OAuth] saveTokenResponse error: \(error)")
             throw error
         }
     }
@@ -416,5 +356,86 @@ private extension CharacterSet {
         var allowed = CharacterSet.urlQueryAllowed
         allowed.remove(charactersIn: "&+=")
         return allowed
+    }
+}
+
+// MARK: - Previews
+
+extension DeviantArtViewModel {
+    static var preview: DeviantArtViewModel {
+        let viewModel = DeviantArtViewModel(
+            client: nil,
+            settingsService: SettingsService(),
+            cacheService: nil
+        )
+        viewModel.isAuthenticated = true
+        viewModel.profile = DeviantArtClient.UserProfile.preview
+        viewModel.deviations = [
+            DeviantArtClient.Deviation.preview,
+            DeviantArtClient.Deviation(
+                deviationid: "2",
+                url: "https://deviantart.com/art/sample-2",
+                title: "Sample Artwork 2",
+                category: "Photography",
+                author: nil,
+                stats: DeviantArtClient.Deviation.Stats(
+                    views: 500,
+                    favourites: 50,
+                    comments: 5,
+                    downloads: 10
+                ),
+                publishedTime: nil,
+                allowsComments: false,
+                isFavourited: nil,
+                isDeleted: nil,
+                thumbs: nil,
+                content: nil
+            )
+        ]
+        viewModel.stashStacks = []
+        viewModel.lastUpdated = Date()
+        return viewModel
+    }
+}
+
+extension DeviantArtClient.UserProfile {
+    static var preview: DeviantArtClient.UserProfile {
+        DeviantArtClient.UserProfile(
+            user: DeviantArtClient.UserProfile.UserInfo(
+                userid: "123",
+                username: "preview_user",
+                usericon: "https://a.deviantart.net/avatars/default.png",
+                type: nil
+            ),
+            stats: DeviantArtClient.UserProfile.UserStats(
+                watchers: 150,
+                friends: 23,
+                deviations: 42
+            )
+        )
+    }
+}
+
+extension DeviantArtClient.Deviation {
+    static var preview: DeviantArtClient.Deviation {
+        DeviantArtClient.Deviation(
+            deviationid: "1",
+            url: "https://mwi.westpoint.edu/wp-content/uploads/2016/04/3264149-42-iron-man-iron-man-hd-8-free-spot-free-download-1.jpg",
+            title: "Sample Artwork",
+            category: "Digital Art",
+            author: nil,
+            stats: DeviantArtClient.Deviation.Stats(
+                views: 1200,
+                favourites: 150,
+                comments: 25,
+                downloads: 45
+            ),
+            publishedTime: nil,
+            allowsComments: true,
+            isFavourited: nil,
+            isDeleted: nil,
+            thumbs: nil,
+            content: nil
+        )
     }
 }
