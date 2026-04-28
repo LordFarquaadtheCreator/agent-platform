@@ -163,7 +163,7 @@ private struct AppSidebarView: View {
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                     }
-                    .buttonStyle(.plain)
+                    .appButtonStyle(.plain)
                     .padding(.vertical, AppTheme.Spacing.small)
                     .padding(.horizontal, AppTheme.Spacing.small)
                     .background(

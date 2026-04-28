@@ -130,7 +130,7 @@ struct AppTagInput: View {
             Button("Add Tag", systemImage: "plus.circle.fill") {
                 addTag()
             }
-            .buttonStyle(.plain)
+            .appButtonStyle(.plain)
             .foregroundStyle(AppTheme.ColorToken.accent)
             .disabled(currentInput.isEmpty)
             .labelStyle(.iconOnly)

@@ -150,7 +150,7 @@ private struct AIHelperButton: View {
         Button("AI Helper", systemImage: "sparkles") {
             // AI helper: see AgentKit for tool protocol
         }
-        .buttonStyle(.plain)
+        .appButtonStyle(.plain)
         .labelStyle(AIHelperLabelStyle())
     }
 }
@@ -181,7 +181,7 @@ struct TagChip: View {
         HStack(spacing: AppTheme.Spacing.xSmall) {
             AppText(text, style: .caption)
             Button("Remove", systemImage: "xmark.circle.fill", action: onRemove)
-                .buttonStyle(.plain)
+                .appButtonStyle(.plain)
                 .font(AppTheme.Typography.caption)
                 .foregroundStyle(AppTheme.ColorToken.textSecondary)
                 .labelStyle(.iconOnly)

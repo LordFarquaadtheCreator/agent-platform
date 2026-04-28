@@ -96,6 +96,7 @@ public final class PatreonViewModel: ObservableObject {
     @Published public private(set) var posts: [PatreonPost] = []
     @Published public private(set) var members: [PatreonMember] = []
     @Published public private(set) var tiers: [PatreonTier] = []
+    @Published public private(set) var selectedPost: PatreonPost?
 
     // Granular loading states
     @Published public private(set) var isLoadingProfile = false
@@ -361,6 +362,52 @@ public final class PatreonViewModel: ObservableObject {
 
     func retryTiers() async {
         await loadTiers()
+    }
+
+    // MARK: - Selected Post Details
+
+    @Published public private(set) var isLoadingSelectedPost = false
+    @Published public private(set) var selectedPostError: PatreonError?
+
+    /// Load full details for a selected post (refreshes from API)
+    func loadSelectedPost(postId: String) async {
+        guard let client = client, client.isAuthenticated else {
+            selectedPostError = authState == .expired ? .authExpired : .unauthenticated
+            return
+        }
+
+        // Check if we already have this post locally
+        if let localPost = posts.first(where: { $0.id == postId }) {
+            selectedPost = localPost
+        }
+
+        isLoadingSelectedPost = true
+        selectedPostError = nil
+        defer { isLoadingSelectedPost = false }
+
+        do {
+            // Fetch fresh data from API to get any updates
+            let freshPost = try await client.getPost(postId: postId)
+            selectedPost = freshPost
+
+            // Also update in posts array if present
+            if let index = posts.firstIndex(where: { $0.id == postId }) {
+                posts[index] = freshPost
+            }
+
+            AppLogger.api.debug("Loaded fresh details for post \(postId)")
+        } catch let error as AppError {
+            AppLogger.api.error("Selected post load error: \(error)")
+            selectedPostError = mapAppError(error)
+        } catch {
+            AppLogger.api.error("Selected post unknown error: \(error)")
+            selectedPostError = .unknown(error.localizedDescription)
+        }
+    }
+
+    func clearSelectedPost() {
+        selectedPost = nil
+        selectedPostError = nil
     }
 
     // MARK: - Create & Update Posts

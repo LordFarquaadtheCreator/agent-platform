@@ -59,12 +59,25 @@ public class AIChatViewModel: ObservableObject {
         do {
             let models = try await aiClient.fetchModels()
             availableModels = models
-            if selectedModel.isEmpty || selectedModel == "Select a Model" {
-                selectedModel = "Select a Model"
+
+            // Restore previously selected model if available
+            let savedModel = workspace.dependencies.settingsService.loadAISettings().model
+            if availableModels.contains(savedModel) {
+                selectedModel = savedModel
+            } else if selectedModel.isEmpty || !availableModels.contains(selectedModel) {
+                // Default to first available model if saved not found
+                selectedModel = availableModels.first ?? ""
             }
         } catch {
             errorMessage = "Failed to load models: \(error.localizedDescription)"
         }
+    }
+
+    public func saveSelectedModel(_ model: String) {
+        selectedModel = model
+        var settings = workspace.dependencies.settingsService.loadAISettings()
+        settings.model = model
+        workspace.dependencies.settingsService.saveAISettings(settings)
     }
 
     public func loadHistorySessions() async {
@@ -85,7 +98,7 @@ public class AIChatViewModel: ObservableObject {
     public func sendMessage(text: String) async {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
-        guard selectedModel != "Select a Model" else { return }
+        guard !selectedModel.isEmpty, availableModels.contains(selectedModel) else { return }
 
         // If generating, queue the message instead
         if isGenerating {

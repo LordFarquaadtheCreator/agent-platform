@@ -235,7 +235,7 @@ private struct TierCheckbox: View {
             .background(isSelected ? AppTheme.ColorToken.accent.opacity(0.1) : AppTheme.ColorToken.clear)
             .clipShape(RoundedRectangle(cornerRadius: AppTheme.CornerRadius.small))
         }
-        .buttonStyle(.plain)
+        .appButtonStyle(.plain)
     }
 }
 

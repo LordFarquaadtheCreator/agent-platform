@@ -188,45 +188,149 @@ public final class ContextExtractor {
 
     private func extractPatreon(_ viewModel: PatreonViewModel, router: AppRouter) -> [String: Any] {
         var result: [String: Any] = [:]
+
+        // Auth and loading states
         result["authState"] = viewModel.authState.displayName
+        result["isAuthenticated"] = viewModel.isAuthenticated
+        result["isAnyLoading"] = viewModel.isAnyLoading
+        result["hasAnyError"] = viewModel.hasAnyError
+
+        // Loading states per section
+        result["loadingStates"] = [
+            "profile": viewModel.isLoadingProfile,
+            "posts": viewModel.isLoadingPosts,
+            "members": viewModel.isLoadingMembers,
+            "tiers": viewModel.isLoadingTiers,
+            "refreshingToken": viewModel.isRefreshingToken
+        ]
+
+        // Error states
+        if let profileError = viewModel.profileError {
+            result["profileError"] = profileError.displayMessage
+        }
+        if let postsError = viewModel.postsError {
+            result["postsError"] = postsError.displayMessage
+        }
+        if let membersError = viewModel.membersError {
+            result["membersError"] = membersError.displayMessage
+        }
+        if let tiersError = viewModel.tiersError {
+            result["tiersError"] = tiersError.displayMessage
+        }
+
+        // Selection state
         result["selectedPostID"] = router.selectedPostID ?? "none"
         result["selectedMemberID"] = router.selectedMemberID ?? "none"
 
+        // Full identity
         if let identity = viewModel.identity {
             result["identity"] = [
-                "id": identity.data.id
+                "id": identity.data.id,
+                "type": identity.data.type,
+                "email": identity.data.attributes.email as Any,
+                "firstName": identity.data.attributes.firstName as Any,
+                "fullName": identity.data.attributes.fullName as Any,
+                "imageUrl": identity.data.attributes.imageUrl as Any,
+                "thumbUrl": identity.data.attributes.thumbUrl as Any,
+                "url": identity.data.attributes.url as Any,
+                "vanity": identity.data.attributes.vanity as Any
             ]
         }
 
+        // Full campaign with stats
         if let campaign = viewModel.campaign {
             result["campaign"] = [
-                "id": campaign.id
+                "id": campaign.id,
+                "type": campaign.type,
+                "summary": campaign.attributes.summary as Any,
+                "creationName": campaign.attributes.creationName as Any,
+                "payPerName": campaign.attributes.payPerName as Any,
+                "thanksMsg": campaign.attributes.thanksMsg as Any,
+                "thanksVideoUrl": campaign.attributes.thanksVideoUrl as Any,
+                "imageUrl": campaign.attributes.imageUrl as Any,
+                "url": campaign.attributes.url as Any,
+                "publishedAt": campaign.attributes.publishedAt as Any,
+                "patronCount": campaign.attributes.patronCount ?? 0,
+                "pledgeSum": campaign.attributes.pledgeSum ?? 0,
+                "pledgeSumCurrency": campaign.attributes.pledgeSumCurrency as Any
             ]
         }
 
-        result["posts"] = viewModel.posts.prefix(5).map { post in
-            [
+        // Full posts with content
+        result["posts"] = viewModel.posts.map { post in
+            var postDict: [String: Any] = [
                 "id": post.id,
-                "title": post.attributes.title,
-                "isPaid": post.attributes.isPaid,
-                "isPublic": post.attributes.isPublic
+                "type": post.type,
+                "title": post.attributes.title as Any,
+                "content": post.attributes.content as Any,
+                "url": post.attributes.url as Any,
+                "isPaid": post.attributes.isPaid as Any,
+                "isPublic": post.attributes.isPublic as Any,
+                "publishedAt": post.attributes.publishedAt as Any
             ]
+
+            // Include tier relationships if available
+            if let tierIds = post.relationships?.tiers?.data?.map({ $0.id }) {
+                postDict["tierIds"] = tierIds
+            }
+            if let campaignId = post.relationships?.campaign?.data?.id {
+                postDict["campaignId"] = campaignId
+            }
+
+            return postDict
         }
 
-        result["members"] = viewModel.members.prefix(5).map { member in
-            [
+        // Full members with all financial data
+        result["members"] = viewModel.members.map { member in
+            var memberDict: [String: Any] = [
                 "id": member.id,
-                "fullName": member.attributes?.fullName ?? "unknown"
+                "type": member.type,
+                "fullName": member.attributes?.fullName as Any,
+                "email": member.attributes?.email as Any,
+                "patronStatus": member.attributes?.patronStatus as Any,
+                "lastChargeStatus": member.attributes?.lastChargeStatus as Any,
+                "lifetimeSupportCents": member.attributes?.lifetimeSupportCents as Any,
+                "currentlyEntitledAmountCents": member.attributes?.currentlyEntitledAmountCents as Any
             ]
+
+            // Include entitled tier IDs
+            if let tierIds = member.relationships?.currentlyEntitledTiers?.map({ $0.id }) {
+                memberDict["entitledTierIds"] = tierIds
+            }
+
+            return memberDict
         }
 
-        result["tiers"] = viewModel.tiers.prefix(5).map { tier in
+        // Full tiers
+        result["tiers"] = viewModel.tiers.map { tier in
             [
                 "id": tier.id,
+                "type": tier.type,
                 "title": tier.attributes.title,
-                "amountCents": tier.attributes.amountCents ?? 0
+                "amountCents": tier.attributes.amountCents as Any
             ]
         }
+
+        // Selected post details (fetched fresh from API)
+        if let selectedPost = viewModel.selectedPost {
+            result["selectedPost"] = [
+                "id": selectedPost.id,
+                "title": selectedPost.attributes.title as Any,
+                "content": selectedPost.attributes.content as Any,
+                "url": selectedPost.attributes.url as Any,
+                "isPaid": selectedPost.attributes.isPaid as Any,
+                "isPublic": selectedPost.attributes.isPublic as Any,
+                "publishedAt": selectedPost.attributes.publishedAt as Any,
+                "isLoadingFreshDetails": viewModel.isLoadingSelectedPost
+            ]
+        }
+
+        // Summary stats
+        result["stats"] = [
+            "totalPosts": viewModel.posts.count,
+            "totalMembers": viewModel.members.count,
+            "totalTiers": viewModel.tiers.count
+        ]
 
         return result
     }

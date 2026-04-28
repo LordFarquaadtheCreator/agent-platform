@@ -584,7 +584,8 @@ public final class PatreonClient {
         campaignId: String,
         includeFields: [String] = [
             "full_name", "email", "patron_status",
-            "last_charge_status", "lifetime_support_cents"
+            "last_charge_status", "lifetime_support_cents",
+            "currently_entitled_amount_cents"
         ],
         cursor: String? = nil
     ) async throws -> MembersResponse {

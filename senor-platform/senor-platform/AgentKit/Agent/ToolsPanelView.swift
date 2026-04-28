@@ -23,7 +23,7 @@ struct ToolsPanelView: View {
                         Spacer()
                     }
                 })
-                .buttonStyle(PlainButtonStyle())
+                .appButtonStyle(.plain)
                 if expandedIndices.contains(index) {
                     let json = JSONEncoderHelper.encodeToJSONString(tools[index])
                     ?? "{\"error\": \"Unable to encode tool\"}"

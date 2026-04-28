@@ -255,7 +255,7 @@ struct PatreonScreen: View {
                         Image(systemName: "pencil")
                             .foregroundStyle(AppTheme.ColorToken.accent)
                     }
-                    .buttonStyle(.plain)
+                    .appButtonStyle(.plain)
                     .padding(.trailing, AppTheme.Spacing.small)
 
                     if post.attributes.isPaid == true {
@@ -292,6 +292,7 @@ struct PatreonScreen: View {
         .onTapGesture {
             router.selectedPostID = post.id
             router.selectedMemberID = nil
+            Task { await viewModel.loadSelectedPost(postId: post.id) }
         }
     }
 

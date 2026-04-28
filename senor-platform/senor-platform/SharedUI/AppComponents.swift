@@ -308,6 +308,28 @@ struct AppStatusPill: View {
     }
 }
 
+// MARK: - AppHoverButtonStyle
+// Plain button with faint accent hover background and smooth animation.
+
+struct AppHoverButtonStyle: ButtonStyle {
+    @State private var isHovered = false
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .padding(.horizontal, AppTheme.Spacing.xSmall)
+            .padding(.vertical, AppTheme.Spacing.xSmall)
+            .background(
+                RoundedRectangle(cornerRadius: AppTheme.CornerRadius.small, style: .continuous)
+                    .fill(AppTheme.ColorToken.accent.opacity(isHovered ? 0.08 : 0))
+            )
+            .onHover { hovering in
+                withAnimation(.easeInOut(duration: 0.15)) {
+                    isHovered = hovering
+                }
+            }
+    }
+}
+
 // MARK: - AppButtonStyle
 // Enum for standardized button styles. Use with .buttonStyle().
 
@@ -332,7 +354,7 @@ extension View {
             return AnyView(self.buttonStyle(.bordered).tint(AppTheme.ColorToken.statusError))
 
         case .plain:
-            return AnyView(self.buttonStyle(.plain))
+            return AnyView(self.buttonStyle(AppHoverButtonStyle()))
 
         case .cancel:
             return AnyView(self.buttonStyle(.bordered).keyboardShortcut(.cancelAction))

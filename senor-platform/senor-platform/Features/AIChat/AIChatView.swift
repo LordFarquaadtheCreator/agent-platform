@@ -41,6 +41,7 @@ struct AIChatView: View {
             VStack(spacing: AppTheme.Spacing.small) {
                 inputArea
                 modelSelector
+					.padding(.horizontal, AppTheme.Spacing.small)
             }
             .padding(AppTheme.Spacing.medium)
         }
@@ -52,43 +53,6 @@ struct AIChatView: View {
         .sheet(isPresented: $viewModel.showHistory) {
             historyViewer
         }
-    }
-
-    private var modelSelector: some View {
-        HStack {
-            Picker("Model:", selection: $viewModel.selectedModel) {
-				Text("Select a Model").tag("Select a Model").id(-1)
-                ForEach(viewModel.availableModels, id: \.self) { model in
-                    Text(model).tag(model)
-                }
-            }
-			.pickerStyle(.menu)
-            .buttonStyle(.plain)
-            .foregroundStyle(AppTheme.ColorToken.textSecondary)
-
-            Spacer()
-
-            Menu {
-                Button("View History", systemImage: "clock") {
-                    Task {
-                        await viewModel.loadHistorySessions()
-                        viewModel.showHistory = true
-                    }
-                }
-                .accessibilityIdentifier("viewHistoryButton")
-
-                Button("Clear History", systemImage: "trash") {
-                    Task { await viewModel.clearHistory() }
-                }
-                .accessibilityIdentifier("clearHistoryButton")
-            } label: {
-                Label("Options", systemImage: "ellipsis.circle")
-            }
-            .accessibilityIdentifier("optionsButton")
-            .buttonStyle(.plain)
-            .foregroundStyle(AppTheme.ColorToken.textSecondary)
-        }
-		.padding(.horizontal, AppTheme.Spacing.small)
     }
 
     private var messageList: some View {
@@ -106,10 +70,10 @@ struct AIChatView: View {
                 }
                 .padding(AppTheme.Spacing.small)
             }
-            .onChange(of: viewModel.messages.count) { _ in
+            .onChange(of: viewModel.messages.count) {
                 scrollToLast(proxy)
             }
-            .onChange(of: viewModel.isGenerating) { _ in
+            .onChange(of: viewModel.isGenerating) {
                 scrollToLast(proxy)
             }
         }
@@ -185,7 +149,7 @@ struct AIChatView: View {
     }
 
     private var inputArea: some View {
-        HStack(alignment: .center, spacing: AppTheme.Spacing.small) {
+        HStack() {
             AppInputField(
                 title: nil,
                 placeholder: "Ask about ...",
@@ -193,12 +157,16 @@ struct AIChatView: View {
             )
             .focused($isInputFocused)
             .onSubmit {
-                Task { await sendMessage() }
+                let text = inputText
+                inputText = ""
+                Task { await viewModel.sendMessage(text: text) }
             }
             .accessibilityIdentifier("chatInputField")
 
             Button {
-                Task { await sendMessage() }
+                let text = inputText
+                inputText = ""
+                Task { await viewModel.sendMessage(text: text) }
             } label: {
                 if viewModel.isGenerating {
                     ProgressView()
@@ -213,16 +181,51 @@ struct AIChatView: View {
             .accessibilityIdentifier("sendMessageButton")
             .disabled(
                 inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
-                viewModel.selectedModel == "Select a Model"
+                viewModel.selectedModel.isEmpty
             )
         }
     }
+	
+	private var modelSelector: some View {
+		HStack {
+			Picker("Model:", selection: $viewModel.selectedModel) {
+				if viewModel.availableModels.isEmpty {
+					Text("No Models Available")
+						.tag("")
+						.disabled(true)
+				} else {
+					ForEach(viewModel.availableModels, id: \.self) { model in
+						Text(model).tag(model)
+					}
+				}
+			}
+			.pickerStyle(.menu)
+			.foregroundStyle(AppTheme.ColorToken.textSecondary)
+			.onChange(of: viewModel.selectedModel) { _, newValue in
+				viewModel.saveSelectedModel(newValue)
+			}
 
-    private func sendMessage() async {
-        let text = inputText
-        inputText = ""
-        await viewModel.sendMessage(text: text)
-    }
+			Spacer()
+
+			Button("", systemImage: "clock") {
+				Task {
+					await viewModel.loadHistorySessions()
+					viewModel.showHistory = true
+				}
+			}
+			.accessibilityIdentifier("viewHistoryButton")
+			.buttonStyle(.plain)
+			.foregroundStyle(AppTheme.ColorToken.textSecondary)
+
+			Button("", systemImage: "trash") {
+				Task { await viewModel.clearHistory() }
+			}
+			.accessibilityIdentifier("clearHistoryButton")
+			.buttonStyle(.plain)
+			.foregroundStyle(AppTheme.ColorToken.textSecondary)
+		}
+	}
+
 
     private var queueArea: some View {
         VStack(alignment: .leading, spacing: AppTheme.Spacing.small) {
@@ -237,7 +240,7 @@ struct AIChatView: View {
                     viewModel.clearQueue()
                 }
                 .font(AppTheme.Typography.caption)
-                .buttonStyle(.plain)
+                .appButtonStyle(.plain)
                 .disabled(viewModel.queuedMessages.isEmpty)
             }
 
@@ -279,7 +282,7 @@ struct AIChatView: View {
                     Image(systemName: "checkmark")
                         .font(AppTheme.Typography.caption)
                 }
-                .buttonStyle(.plain)
+                .appButtonStyle(.plain)
                 .foregroundStyle(AppTheme.ColorToken.statusSuccess)
 
                 Button {
@@ -288,7 +291,7 @@ struct AIChatView: View {
                     Image(systemName: "xmark")
                         .font(AppTheme.Typography.caption)
                 }
-                .buttonStyle(.plain)
+                .appButtonStyle(.plain)
                 .foregroundStyle(AppTheme.ColorToken.textSecondary)
             } else if hoveredQueueId == item.id {
                 Button {
@@ -298,7 +301,7 @@ struct AIChatView: View {
                     Image(systemName: "pencil")
                         .font(AppTheme.Typography.caption)
                 }
-                .buttonStyle(.plain)
+                .appButtonStyle(.plain)
                 .foregroundStyle(AppTheme.ColorToken.textSecondary)
 
                 Button {
@@ -307,7 +310,7 @@ struct AIChatView: View {
                     Image(systemName: "trash")
                         .font(AppTheme.Typography.caption)
                 }
-                .buttonStyle(.plain)
+                .appButtonStyle(.plain)
                 .foregroundStyle(AppTheme.ColorToken.textSecondary)
             }
         }
@@ -470,7 +473,7 @@ private final class PreviewAIChatViewModel: AIChatViewModel {
 
     override func fetchAvailableModels() async {}
     override func loadHistory() async {}
-    override func sendMessage(text: String) async {
+    override func sendMessage() async {
         isGenerating = true
         try? await Task.sleep(nanoseconds: 500_000_000)
         messages.append(ChatMessage(role: .assistant, content: "This is a preview response."))
@@ -505,7 +508,7 @@ private final class PreviewAIChatLoadingViewModel: AIChatViewModel {
 
     override func fetchAvailableModels() async {}
     override func loadHistory() async {}
-    override func sendMessage(text: String) async {}
+    override func sendMessage() async {}
     override func clearHistory() async { messages.removeAll() }
     override func loadHistorySessions() async {}
     override func loadSession(_ session: ChatSession) async {}
@@ -549,7 +552,7 @@ private final class PreviewAIChatStreamingViewModel: AIChatViewModel {
 
     override func fetchAvailableModels() async {}
     override func loadHistory() async {}
-    override func sendMessage(text: String) async {}
+    override func sendMessage() async {}
     override func clearHistory() async { messages.removeAll() }
     override func loadHistorySessions() async {}
     override func loadSession(_ session: ChatSession) async {}
@@ -603,7 +606,7 @@ private final class PreviewAIChatQueuedViewModel: AIChatViewModel {
 
     override func fetchAvailableModels() async {}
     override func loadHistory() async {}
-    override func sendMessage(text: String) async {}
+    override func sendMessage() async {}
     override func clearHistory() async { messages.removeAll() }
     override func loadHistorySessions() async {}
     override func loadSession(_ session: ChatSession) async {}
@@ -656,7 +659,7 @@ private final class PreviewAIChatHistoryViewModel: AIChatViewModel {
 
     override func fetchAvailableModels() async {}
     override func loadHistory() async {}
-    override func sendMessage(text: String) async {}
+    override func sendMessage() async {}
     override func clearHistory() async {}
     override func loadHistorySessions() async {}
     override func loadSession(_ session: ChatSession) async { showHistory = false }
