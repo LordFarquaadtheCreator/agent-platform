@@ -1,4 +1,5 @@
 import SwiftUI
+import Combine
 
 struct AppShellView: View {
     @EnvironmentObject private var appState: AppShellModel
@@ -39,28 +40,34 @@ struct AppShellView: View {
                         idealWidth: AppTheme.Layout.sidebarIdealWidth,
                         maxWidth: AppTheme.Layout.sidebarIdealWidth
                     )
+                    .transition(.move(edge: .leading).combined(with: .opacity))
             }
 
             contentRegistry.view(for: router.selectedSection, using: workspace, router: router, appState: appState)
                 .frame(minWidth: AppTheme.Layout.mainAreaMinWidth)
 
             if showInspector {
-                ResizeHandle(width: $inspectorWidth, minWidth: AppTheme.Layout.detailMinWidth)
+                Group {
+                    ResizeHandle(width: $inspectorWidth, minWidth: AppTheme.Layout.detailMinWidth)
 
-                if showAIChat {
-                    AIChatPanel(workspace: workspace, router: router, appState: appState)
+                    if showAIChat {
+                        AIChatPanel(workspace: workspace, router: router)
+                            .frame(width: inspectorWidth)
+                    } else {
+                        inspectorRegistry.view(
+                            for: router.selectedSection,
+                            using: workspace,
+                            router: router,
+                            appState: appState
+                        )
                         .frame(width: inspectorWidth)
-                } else {
-                    inspectorRegistry.view(
-                    for: router.selectedSection,
-                    using: workspace,
-                    router: router,
-                    appState: appState
-                )
-                        .frame(width: inspectorWidth)
+                    }
                 }
+                .transition(.move(edge: .trailing).combined(with: .opacity))
             }
         }
+        .animation(.smooth(duration: 0.25), value: showSidebar)
+        .animation(.smooth(duration: 0.25), value: showInspector)
         .toolbar {
             ToolbarItemGroup {
                 Button {
@@ -86,9 +93,10 @@ struct AppShellView: View {
                 } label: {
                     Label(
                         showAIChat ? "Show Inspector" : "AI Chat",
-                        systemImage: showAIChat ? "sidebar.right" : "sparkles"
+                        systemImage: "sparkles"
                     )
                 }
+                .accessibilityIdentifier("aiChatToolbarButton")
                 .foregroundStyle(showAIChat ? AppTheme.ColorToken.accent : AppTheme.ColorToken.textPrimary)
 
                 Button {
@@ -235,16 +243,12 @@ private struct AIChatPanel: View {
         }
     }
 
-    init(workspace: WorkspaceModel, router: AppRouter, appState: AppShellModel) {
+    init(workspace: WorkspaceModel, router: AppRouter) {
         self.workspace = workspace
         self.router = router
-        self._appState = EnvironmentObject(appState)
 
         // Initialize viewModel with dependencies
-        guard let dependencies = workspace.dependencies else {
-            return
-        }
-
+        let dependencies = workspace.dependencies
         self._viewModel = State(initialValue: AIChatViewModel(
             aiClient: dependencies.aiClient,
             contextExtractor: dependencies.contextExtractor,

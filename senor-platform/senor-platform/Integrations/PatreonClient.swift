@@ -151,7 +151,7 @@ public struct PatreonIncludedAttributes: Codable {
     public let title: String?
     public let url: String?
     public let amountCents: Int?
-    
+
     enum CodingKeys: String, CodingKey {
         case title
         case url
@@ -266,7 +266,10 @@ public final class PatreonClient {
     // MARK: - OAuth
 
     /// Generate authorization URL for OAuth flow
-    public func authorizationURL(scopes: [String] = ["identity", "identity.memberships", "campaigns", "w:campaigns.post"], state: String = UUID().uuidString) async throws -> URL {
+    public func authorizationURL(
+        scopes: [String] = ["identity", "identity.memberships", "campaigns", "w:campaigns.post"],
+        state: String = UUID().uuidString
+    ) async throws -> URL {
         try await oauthHelper.authorizationURL(scopes: scopes, state: state)
     }
 
@@ -299,7 +302,9 @@ public final class PatreonClient {
     // MARK: - Identity/User Operations
 
     /// Get current user's identity
-    public func getIdentity(fields: [String] = ["email", "first_name", "full_name", "image_url", "url", "vanity"]) async throws -> IdentityResponse {
+    public func getIdentity(
+        fields: [String] = ["email", "first_name", "full_name", "image_url", "url", "vanity"]
+    ) async throws -> IdentityResponse {
         try ensureAuthenticated()
 
         let fieldsParam = fields.joined(separator: ",")
@@ -577,7 +582,10 @@ public final class PatreonClient {
     /// Get members for a campaign
     public func getCampaignMembers(
         campaignId: String,
-        includeFields: [String] = ["full_name", "email", "patron_status", "last_charge_status", "lifetime_support_cents"],
+        includeFields: [String] = [
+            "full_name", "email", "patron_status",
+            "last_charge_status", "lifetime_support_cents"
+        ],
         cursor: String? = nil
     ) async throws -> MembersResponse {
         try ensureAuthenticated()

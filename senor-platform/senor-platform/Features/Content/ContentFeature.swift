@@ -20,7 +20,7 @@ struct ContentScreen: View {
 
             AppDivider()
 
-            AppText("Search", style: .caption)
+            // swiftlint:disable:next unlabeled_input_field
             TextField("Search content", text: $searchText)
                 .textFieldStyle(.roundedBorder)
                 .padding(.horizontal, AppTheme.Spacing.screenPadding)

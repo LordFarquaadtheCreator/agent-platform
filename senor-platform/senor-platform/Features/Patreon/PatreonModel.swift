@@ -391,7 +391,8 @@ public final class PatreonViewModel: ObservableObject {
             content: content,
             isPaid: isPaid,
             isPublic: isPublic,
-            tiers: tiers
+            tiers: tiers,
+            publishAt: nil
         )
 
         // Add to local posts for immediate UI feedback

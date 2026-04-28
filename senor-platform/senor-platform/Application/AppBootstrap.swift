@@ -82,7 +82,10 @@ public final class AppBootstrap {
             deviantArtClient: integrations.deviantArt,
             patreonClient: integrations.patreon
         )
-        return Services(settings: settings, cache: cache, versioning: versioning, approval: approval, publication: publication)
+        return Services(
+            settings: settings, cache: cache, versioning: versioning,
+            approval: approval, publication: publication
+        )
     }
 
     private struct Integrations {
@@ -127,10 +130,19 @@ public final class AppBootstrap {
         }
         try await scheduler.startup()
 
-        return RuntimeComponents(workerManager: workerManager, taskPipeline: taskPipeline, scheduler: scheduler)
+        return RuntimeComponents(
+            workerManager: workerManager,
+            taskPipeline: taskPipeline,
+            scheduler: scheduler
+        )
     }
 
-    private func registerWithLegacyBridge(repos: Repositories, services: Services, runtime: RuntimeComponents, integrations: Integrations) async {
+    private func registerWithLegacyBridge(
+        repos: Repositories,
+        services: Services,
+        runtime: RuntimeComponents,
+        integrations: Integrations
+    ) async {
         await legacyContainerBridge.register(
             LegacyContainerSnapshot(
                 databaseManager: repos.dbManager,
@@ -157,7 +169,12 @@ public final class AppBootstrap {
         )
     }
 
-    private func createDependencies(repos: Repositories, services: Services, runtime: RuntimeComponents, integrations: Integrations) -> AppDependencies {
+    private func createDependencies(
+        repos: Repositories,
+        services: Services,
+        runtime: RuntimeComponents,
+        integrations: Integrations
+    ) -> AppDependencies {
         let loadWorkspaceUseCase = LoadWorkspaceUseCase(
             agentRepository: repos.agent,
             taskRepository: repos.task,

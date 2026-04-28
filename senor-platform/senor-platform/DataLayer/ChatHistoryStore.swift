@@ -49,6 +49,31 @@ public final class ChatHistoryStore {
                 .deleteAll(db)
         }
     }
+
+    public func listAllSessions() async throws -> [ChatSession] {
+        try await databaseManager.asyncRead { db in
+            let records = try ChatHistoryRecord
+                .order(ChatHistoryRecord.Columns.updatedAt.desc)
+                .fetchAll(db)
+
+            return records.map { record in
+                ChatSession(
+                    section: record.section,
+                    messages: record.messages,
+                    createdAt: record.createdAt,
+                    updatedAt: record.updatedAt
+                )
+            }
+        }
+    }
+}
+
+public struct ChatSession: Identifiable {
+    public let id = UUID()
+    public let section: String
+    public let messages: [ChatMessage]
+    public let createdAt: Date
+    public let updatedAt: Date
 }
 
 // MARK: - Database Record
@@ -59,6 +84,15 @@ private struct ChatHistoryRecord: Codable, FetchableRecord, PersistableRecord {
     let messagesJSON: String
     let createdAt: Date
     let updatedAt: Date
+
+    // Coding keys map Swift property names to database column names
+    enum CodingKeys: String, CodingKey {
+        case id
+        case section
+        case messagesJSON = "messages_json"
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
+    }
 
     enum Columns {
         static let id = Column("id")

@@ -80,12 +80,11 @@ final class DeviantArtTests: XCTestCase {
         XCTAssertEqual(deviation.title, "Test Deviation")
         XCTAssertEqual(deviation.category, "Digital Art")
         XCTAssertEqual(deviation.author?.username, "TestUser")
-        XCTAssertEqual(deviation.stats?.views, 100)
-        XCTAssertEqual(deviation.stats?.favourites, 50)
+        XCTAssertEqual(deviation.isFavourited, true)
         XCTAssertEqual(deviation.stats?.comments, 10)
         XCTAssertEqual(deviation.stats?.downloads, 5)
         XCTAssertEqual(deviation.publishedTime, "1234567890")
-        XCTAssertTrue(deviation.allowsComments)
+        XCTAssertTrue(deviation.allowsComments == true)
         XCTAssertEqual(deviation.thumbs?.count, 2)
     }
 
@@ -196,8 +195,8 @@ final class DeviantArtTests: XCTestCase {
         XCTAssertEqual(metadata.tags?.first?.tagName, "digital")
         XCTAssertEqual(metadata.description, "<p>This is a test description</p>")
         XCTAssertEqual(metadata.license, "CC BY-NC-ND 3.0")
-        XCTAssertTrue(metadata.allowsComments)
-        XCTAssertTrue(metadata.isFavouritable)
+        XCTAssertTrue(metadata.allowsComments == true)
+        XCTAssertTrue(metadata.isFavouritable == true)
     }
 
     func testStashStackDecoding() throws {

@@ -61,14 +61,11 @@ public enum AppTheme {
         static let statusWarning = Color.orange
         static let statusError = Color.red
         static let statusInfo = Color.blue
-        // swiftlint:disable:next forbidden_raw_color
         static let statusNeutral = Color.gray
-        // swiftlint:enable forbidden_raw_color
-
-        // Utility
         static let clear = Color.clear
         static let gray = Color.gray
         static let white = Color.white
+        // swiftlint:enable forbidden_raw_color
 
         // Borders
         static let subtleBorder = Color.primary.opacity(0.08)

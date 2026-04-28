@@ -190,7 +190,12 @@ extension AgentNamingService {
 
         let names = AgentNamingService.nameCatalogues[selectedCategory] ?? []
         guard !names.isEmpty else {
-            return GeneratedName(displayName: "Agent \(seed)", category: selectedCategory, baseName: "Agent", seed: seed)
+            return GeneratedName(
+                displayName: "Agent \(seed)",
+                category: selectedCategory,
+                baseName: "Agent",
+                seed: seed
+            )
         }
 
         let index = rng.nextInt(in: 0..<names.count)

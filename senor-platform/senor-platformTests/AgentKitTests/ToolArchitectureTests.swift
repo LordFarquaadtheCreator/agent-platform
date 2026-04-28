@@ -49,9 +49,7 @@ final class ToolArchitectureTests: XCTestCase {
             httpClientProvider: { httpClient },
             fileManagerProvider: { fileManager },
             commandExecutorProvider: { commandExecutor },
-            configResolver: { key in key == "TOKEN" ? "secret" : nil },
-            deviantArtClientProvider: { deviantArtClient },
-            patreonClientProvider: { patreonClient }
+            configResolver: { key in key == "TOKEN" ? "secret" : nil }
         )
 
         let resolvedHTTPClient = try await provider.getHTTPClient()

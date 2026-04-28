@@ -16,6 +16,14 @@ actor MockDeviantArtService: DeviantArtServiceProtocol, AKDeviantArtClient {
     var shouldFailStashPublish = false
     var shouldFailGetDeviation = false
 
+    func setShouldFailStashSubmit(_ value: Bool) {
+        shouldFailStashSubmit = value
+    }
+
+    func setShouldFailStashPublish(_ value: Bool) {
+        shouldFailStashPublish = value
+    }
+
     func stashSubmit(filename: String, title: String?, artistComments: String?, tags: [String]?, originalUrl: String?) async throws -> DeviantArtClient.StashItem {
         stashSubmitCallCount += 1
 
@@ -130,6 +138,18 @@ actor MockPatreonService: PatreonServiceProtocol, AKPatreonClient {
     var shouldFailGetPublicURL = false
     var shouldFailGetPost = false
 
+    func setShouldFailCreatePost(_ value: Bool) {
+        shouldFailCreatePost = value
+    }
+
+    func setShouldFailGetPublicURL(_ value: Bool) {
+        shouldFailGetPublicURL = value
+    }
+
+    func setShouldFailGetPost(_ value: Bool) {
+        shouldFailGetPost = value
+    }
+
     func createPost(campaignId: String, title: String, content: String, isPaid: Bool?, isPublic: Bool?, tiers: [String]?, publishAt: Date?) async throws -> PatreonClient.Post {
         createPostCallCount += 1
 
@@ -146,7 +166,7 @@ actor MockPatreonService: PatreonServiceProtocol, AKPatreonClient {
                 url: "https://www.patreon.com/posts/post-\(createPostCallCount)",
                 isPaid: isPaid,
                 isPublic: isPublic,
-                publishedAt: publishAt
+                publishedAt: nil
             ),
             relationships: nil
         )
@@ -168,7 +188,7 @@ actor MockPatreonService: PatreonServiceProtocol, AKPatreonClient {
         return "https://www.patreon.com/posts/\(postId)"
     }
 
-    func getPost(postId: String) async throws -> PatreonClient.Post {
+    func getPost(postId: String, includeFields: [String]) async throws -> PatreonClient.Post {
         getPostCallCount += 1
 
         if shouldFailGetPost {
@@ -431,7 +451,7 @@ final class PublicationServiceTests: XCTestCase {
         XCTAssertEqual(daPublishCalls, 1)
     }
 
-    func testPublishToDeviantArt_WithoutClient_ThrowsError() async {
+    func testPublishToDeviantArt_WithoutClient_ThrowsError() async throws {
         // Arrange - service without DeviantArt client
         let service = PublicationService(
             approvalQueueRepository: approvalRepository,
@@ -449,7 +469,7 @@ final class PublicationServiceTests: XCTestCase {
             title: "Test Artwork",
             generatedContentJson: "{}"
         )
-        _ = try? await contentRepository.create(content: content)
+        _ = try await contentRepository.create(content: content)
 
         // Act & Assert
         do {
@@ -462,7 +482,7 @@ final class PublicationServiceTests: XCTestCase {
 
     func testPublishToDeviantArt_StashSubmitFailure_MarksTargetFailed() async throws {
         // Arrange
-        await deviantArtService.shouldFailStashSubmit = true
+        await deviantArtService.setShouldFailStashSubmit(true)
 
         let content = GeneratedContentRecord(
             taskRunId: "task-run-3",
@@ -478,7 +498,7 @@ final class PublicationServiceTests: XCTestCase {
             XCTFail("Expected error to be thrown")
         } catch {
             // Verify target was created and marked as failed
-            let targets = await publicationRepository.listByContent(contentId: content.id)
+            let targets = try await publicationRepository.listByContent(contentId: content.id)
             XCTAssertEqual(targets.count, 1)
             XCTAssertEqual(targets.first?.state, .failed)
         }
@@ -614,7 +634,10 @@ final class PublicationServiceTests: XCTestCase {
         XCTAssertEqual(result.generatedContentId, contentId)
         XCTAssertEqual(result.platform, "deviantart")
         XCTAssertEqual(result.state, .scheduled)
-        XCTAssertEqual(result.scheduledAt?.timeIntervalSince1970, publishAt.timeIntervalSince1970, accuracy: 0.001)
+        XCTAssertNotNil(result.scheduledAt)
+        if let scheduledAt = result.scheduledAt {
+            XCTAssertEqual(scheduledAt.timeIntervalSince1970, publishAt.timeIntervalSince1970, accuracy: 0.001)
+        }
     }
 
     // MARK: - List Publications Tests

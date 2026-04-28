@@ -36,9 +36,53 @@
 		10BDEBB82F8DE63C00AA59F6 /* TestPlan.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; name = TestPlan.xctestplan; path = "senor-platformTests/TestPlan.xctestplan"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		10BBE6F82F85C5BB00407568 /* Exceptions for "senor-platform" folder in "senor-platform" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				AgentKit/Agent/agents.md,
+				AgentKit/agents.md,
+				AgentKit/Logging/agents.md,
+				AgentKit/Tools/agents.md,
+				AgentNaming/agents.md,
+				agents.md,
+				AppCore/agents.md,
+				Application/agents.md,
+				CacheLayer/agents.md,
+				Core/agents.md,
+				DataLayer/agents.md,
+				Domain/agents.md,
+				Features/agents.md,
+				Features/Agents/agents.md,
+				Features/AIChat/agents.md,
+				Features/Approvals/agents.md,
+				Features/AppShell/agents.md,
+				Features/Content/agents.md,
+				Features/Dashboard/agents.md,
+				Features/DeviantArt/agents.md,
+				Features/Patreon/agents.md,
+				Features/Settings/agents.md,
+				Features/Tasks/agents.md,
+				Info.plist,
+				Infrastructure/AIService/agents.md,
+				Integrations/agents.md,
+				SchedulerCore/agents.md,
+				SharedUI/agents.md,
+				TaskEngine/agents.md,
+				Views/agents.md,
+				Views/Components/agents.md,
+				WorkerRuntime/agents.md,
+			);
+			target = 10BBE6F42F85C5BB00407568 /* senor-platform */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		10BBE6F72F85C5BB00407568 /* senor-platform */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				10BBE6F82F85C5BB00407568 /* Exceptions for "senor-platform" folder in "senor-platform" target */,
+			);
 			path = "senor-platform";
 			sourceTree = "<group>";
 		};
@@ -328,6 +372,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = N7479DGFCN;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -353,6 +398,7 @@
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
@@ -392,6 +438,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = N7479DGFCN;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -410,6 +457,7 @@
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 			};
 			name = Release;
@@ -423,6 +471,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = N7479DGFCN;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -457,6 +506,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = N7479DGFCN;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -488,6 +538,7 @@
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = N7479DGFCN;
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 26.3;
@@ -509,6 +560,7 @@
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = N7479DGFCN;
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 26.3;
@@ -529,6 +581,7 @@
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = N7479DGFCN;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
@@ -548,6 +601,7 @@
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = N7479DGFCN;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;

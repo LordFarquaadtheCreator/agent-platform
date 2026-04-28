@@ -162,7 +162,12 @@ public final actor ScheduleCompiler {
         return calendar.date(from: components)
     }
 
-    private func nextWeeklyRunTime(time: ScheduleSpec.ScheduleTime, days: [ScheduleSpec.Weekday], timezoneId: String, after date: Date) -> Date? {
+    private func nextWeeklyRunTime(
+        time: ScheduleSpec.ScheduleTime,
+        days: [ScheduleSpec.Weekday],
+        timezoneId: String,
+        after date: Date
+    ) -> Date? {
         guard let timezone = TimeZone(identifier: timezoneId),
               !days.isEmpty else {
             return nil
@@ -213,7 +218,12 @@ public final actor ScheduleCompiler {
         return nil
     }
 
-    private func nextMonthlyRunTime(time: ScheduleSpec.ScheduleTime, days: [Int], timezoneId: String, after date: Date) -> Date? {
+    private func nextMonthlyRunTime(
+        time: ScheduleSpec.ScheduleTime,
+        days: [Int],
+        timezoneId: String,
+        after date: Date
+    ) -> Date? {
         guard let timezone = TimeZone(identifier: timezoneId),
               !days.isEmpty else {
             return nil

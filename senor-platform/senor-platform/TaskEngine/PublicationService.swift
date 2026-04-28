@@ -266,7 +266,10 @@ public final actor PublicationService {
 
             case "patreon":
                 if let client = patreonClient {
-                    let post = try await client.getPost(postId: remoteId)
+                    let post = try await client.getPost(
+                        postId: remoteId,
+                        includeFields: ["title", "content", "is_paid", "is_public", "published_at", "url"]
+                    )
                     mutableTarget.remoteUrl = post.attributes.url
                 }
 

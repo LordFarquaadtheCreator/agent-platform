@@ -466,7 +466,7 @@ private struct ThumbnailGrid: View {
 
     private func stashThumbnail(_ item: DeviantArtClient.StashItem) -> some View {
         @Environment(\.privacyMode) var isPrivacyMode
-        Group {
+        return Group {
             if let thumbURL = item.previewURL {
                 AsyncImage(url: thumbURL) { phase in
                     switch phase {

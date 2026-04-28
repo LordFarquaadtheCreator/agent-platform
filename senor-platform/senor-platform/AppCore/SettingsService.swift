@@ -222,7 +222,12 @@ public final class SettingsService {
         public var temperature: Double
         public var maxTokens: Int
 
-        public init(baseURL: String = "http://localhost:1234/v1", model: String = "model", temperature: Double = 0.7, maxTokens: Int = 4096) {
+        public init(
+            baseURL: String = "http://localhost:1234/v1",
+            model: String = "model",
+            temperature: Double = 0.7,
+            maxTokens: Int = 4096
+        ) {
             self.baseURL = baseURL
             self.model = model
             self.temperature = temperature
@@ -243,7 +248,9 @@ public final class SettingsService {
             baseURL: defaults.string(forKey: Keys.aiBaseURL) ?? "http://localhost:1234/v1",
             model: defaults.string(forKey: Keys.aiModel) ?? "model",
             temperature: defaults.object(forKey: Keys.aiTemperature) as? Double ?? 0.7,
-            maxTokens: defaults.integer(forKey: Keys.aiMaxTokens) != 0 ? defaults.integer(forKey: Keys.aiMaxTokens) : 4096
+            maxTokens: defaults.integer(forKey: Keys.aiMaxTokens) != 0
+                ? defaults.integer(forKey: Keys.aiMaxTokens)
+                : 4096
         )
     }
 

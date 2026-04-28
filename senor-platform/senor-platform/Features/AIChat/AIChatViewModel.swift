@@ -7,6 +7,11 @@ public final class AIChatViewModel: ObservableObject {
     @Published public private(set) var isGenerating = false
     @Published public private(set) var contextSummary = ""
     @Published public private(set) var errorMessage: String?
+    @Published public var selectedModel = ""
+    @Published public var showHistory = false
+    @Published public private(set) var historySessions: [ChatSession] = []
+    @Published public private(set) var availableModels: [String] = []
+    public var queuedMessages: [WorkspaceModel.QueuedMessage] { workspace.messageQueue }
 
     private let aiClient: AIClient
     private let contextExtractor: ContextExtractor
@@ -14,9 +19,12 @@ public final class AIChatViewModel: ObservableObject {
     private let workspace: WorkspaceModel
     private let router: AppRouter
 
+    // Track stateful chat session ID (like ragtool)
+    private var previousResponseID: String?
+
     private var systemPrompt: String {
         """
-        You are an AI assistant helping the user understand and work with the Senor Platform. 
+        You are an AI assistant helping the user understand and work with the Senor Platform.
         You have access to the current page's state and can answer questions about it.
         Be concise and helpful. If you don't know something, say so.
         """
@@ -39,42 +47,84 @@ public final class AIChatViewModel: ObservableObject {
     public func loadHistory() async {
         do {
             messages = try await chatHistoryStore.load(for: router.selectedSection)
+            // Reset stateful session when loading history since we don't have the response ID
+            previousResponseID = nil
             updateContextSummary()
         } catch {
             errorMessage = "Failed to load chat history: \(error.localizedDescription)"
         }
     }
 
-    public func sendMessage(text: String) async {
-        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+    public func fetchAvailableModels() async {
+        do {
+            let models = try await aiClient.fetchModels()
+            availableModels = models
+            if selectedModel.isEmpty || !availableModels.contains(selectedModel) {
+                selectedModel = models.first ?? ""
+            }
+        } catch {
+            errorMessage = "Failed to load models: \(error.localizedDescription)"
+        }
+    }
 
-        let userMessage = ChatMessage(role: .user, content: text)
+    public func loadHistorySessions() async {
+        do {
+            historySessions = try await chatHistoryStore.listAllSessions()
+        } catch {
+            errorMessage = "Failed to load history sessions: \(error.localizedDescription)"
+        }
+    }
+
+    public func loadSession(_ session: ChatSession) async {
+        messages = session.messages
+        previousResponseID = nil  // Reset stateful session
+        showHistory = false
+        updateContextSummary()
+    }
+
+    public func sendMessage(text: String) async {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+
+        // If generating, queue the message instead
+        if isGenerating {
+            workspace.enqueueMessage(trimmed)
+            return
+        }
+
+        let userMessage = ChatMessage(role: .user, content: trimmed)
         messages.append(userMessage)
 
         isGenerating = true
         errorMessage = nil
 
         do {
-            // Build context
+            // Build instructions with system prompt + context (ragtool style)
             let context = contextExtractor.extractContext(
                 for: router.selectedSection,
                 workspace: workspace,
                 router: router
             )
+            let instructions = """
+                \(systemPrompt)
 
-            // Apply sliding window to history
-            let historyMessages = contextExtractor.applySlidingWindow(to: messages)
+                Current page context:
+                \(context)
+                """
 
-            // Build full message list
-            var fullMessages: [ChatMessage] = [
-                ChatMessage(role: .system, content: systemPrompt),
-                ChatMessage(role: .system, content: "Current page context:\n\(context)")
-            ]
-            fullMessages.append(contentsOf: historyMessages)
+            // Use stateful chat: instructions only on first message, then previousResponseID
+            let effectiveInstructions = previousResponseID == nil ? instructions : nil
 
-            // Stream response
+            // Stream response using ragtool-style API
             var assistantResponse = ""
-            for try await chunk in aiClient.chatStream(messages: fullMessages) {
+            let stream = await aiClient.chatStream(
+                input: trimmed,
+                instructions: effectiveInstructions,
+                model: selectedModel,
+                previousResponseID: previousResponseID
+            )
+
+            for try await chunk in stream {
                 assistantResponse += chunk
                 // Update last message with streaming content
                 if messages.last?.role == .assistant {
@@ -84,10 +134,14 @@ public final class AIChatViewModel: ObservableObject {
                 }
             }
 
+            // Capture response ID for stateful continuation
+            if let id = await aiClient.getLastResponseID() {
+                previousResponseID = id
+            }
+
             // Save history
             try await chatHistoryStore.save(for: router.selectedSection, messages: messages)
             updateContextSummary()
-
         } catch {
             errorMessage = "Failed to get AI response: \(error.localizedDescription)"
             // Remove user message if failed
@@ -97,15 +151,34 @@ public final class AIChatViewModel: ObservableObject {
         }
 
         isGenerating = false
+
+        // Auto-drain queue: if messages waiting, send next one
+        if let next = workspace.messageQueue.first {
+            workspace.removeQueuedMessage(id: next.id)
+            await sendMessage(text: next.text)
+        }
     }
 
     public func clearHistory() async {
         messages.removeAll()
+        previousResponseID = nil  // Reset stateful session
         do {
             try await chatHistoryStore.clear(for: router.selectedSection)
         } catch {
             errorMessage = "Failed to clear history: \(error.localizedDescription)"
         }
+    }
+
+    public func removeQueuedMessage(id: UUID) {
+        workspace.removeQueuedMessage(id: id)
+    }
+
+    public func updateQueuedMessage(id: UUID, text: String) {
+        workspace.updateQueuedMessage(id: id, text: text)
+    }
+
+    public func clearQueue() {
+        workspace.clearQueue()
     }
 
     private func updateContextSummary() {
@@ -115,6 +188,7 @@ public final class AIChatViewModel: ObservableObject {
             router: router
         )
         let estimatedTokens = context.count / 4
-        contextSummary = "\(router.selectedSection.title) • ~\(estimatedTokens) tokens"
+        let modelShort = selectedModel.split(separator: "-").first.map(String.init) ?? selectedModel
+        contextSummary = "\(router.selectedSection.title) • \(modelShort) • ~\(estimatedTokens) tokens"
     }
 }

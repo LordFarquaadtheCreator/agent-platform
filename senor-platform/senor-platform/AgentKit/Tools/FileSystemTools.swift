@@ -41,7 +41,8 @@ public struct ReadFileTool: AgentTool {
         ToolInputSchema(
             properties: [
                 "path": PropertySchema(type: "string", description: "Absolute path to the file"),
-                "encoding": PropertySchema(type: "string", description: "Encoding: 'utf8' or 'base64'", defaultValue: "utf8")
+                "encoding": PropertySchema(type: "string", description: "Encoding: 'utf8' or 'base64'",
+                                            defaultValue: "utf8")
             ],
             required: ["path"]
         )
@@ -109,7 +110,8 @@ public struct CreateFileTool: AgentTool {
             properties: [
                 "path": PropertySchema(type: "string", description: "Absolute path for the new file"),
                 "content": PropertySchema(type: "string", description: "File content"),
-                "encoding": PropertySchema(type: "string", description: "Encoding: 'utf8' or 'base64'", defaultValue: "utf8")
+                "encoding": PropertySchema(type: "string", description: "Encoding: 'utf8' or 'base64'",
+                                            defaultValue: "utf8")
             ],
             required: ["path", "content"]
         )
@@ -169,8 +171,10 @@ public struct WriteFileTool: AgentTool {
             properties: [
                 "path": PropertySchema(type: "string", description: "Absolute path to the file"),
                 "content": PropertySchema(type: "string", description: "Content to write"),
-                "mode": PropertySchema(type: "string", description: "'overwrite' or 'append'", defaultValue: "overwrite"),
-                "encoding": PropertySchema(type: "string", description: "Encoding: 'utf8' or 'base64'", defaultValue: "utf8")
+                "mode": PropertySchema(type: "string", description: "'overwrite' or 'append'",
+                                        defaultValue: "overwrite"),
+                "encoding": PropertySchema(type: "string", description: "Encoding: 'utf8' or 'base64'",
+                                            defaultValue: "utf8")
             ],
             required: ["path", "content"]
         )
@@ -382,7 +386,8 @@ public struct ReadFileChunkTool: AgentTool {
                 "path": PropertySchema(type: "string", description: "Absolute path to the file"),
                 "offset": PropertySchema(type: "integer", description: "Byte offset to start reading"),
                 "length": PropertySchema(type: "integer", description: "Number of bytes to read"),
-                "encoding": PropertySchema(type: "string", description: "Encoding: 'utf8' or 'base64'", defaultValue: "utf8")
+                "encoding": PropertySchema(type: "string", description: "Encoding: 'utf8' or 'base64'",
+                                            defaultValue: "utf8")
             ],
             required: ["path", "offset", "length"]
         )
@@ -523,7 +528,8 @@ public struct CreateDirectoryTool: AgentTool {
         ToolInputSchema(
             properties: [
                 "path": PropertySchema(type: "string", description: "Absolute path for new directory"),
-                "intermediate": PropertySchema(type: "boolean", description: "Create intermediate directories", defaultValue: "true")
+                "intermediate": PropertySchema(type: "boolean", description: "Create intermediate directories",
+                                            defaultValue: "true")
             ],
             required: ["path"]
         )
@@ -966,7 +972,13 @@ public struct GetWorkingDirectoryTool: AgentTool {
 
 struct RealCommandExecutor: CommandExecutor {
 
-    func execute(command: String, arguments: [String], workingDirectory: URL, environment: [String: String], timeout: Int) async throws -> (stdout: String, stderr: String, exitCode: Int) {
+    func execute(
+        command: String,
+        arguments: [String],
+        workingDirectory: URL,
+        environment: [String: String],
+        timeout: Int
+    ) async throws -> (stdout: String, stderr: String, exitCode: Int) {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: command)
         process.arguments = arguments
@@ -1015,7 +1027,10 @@ struct RealCommandExecutor: CommandExecutor {
         }
     }
 
-    private func withTimeout<T: Sendable>(seconds: Int, operation: @Sendable @escaping () async throws -> T) async throws -> T {
+    private func withTimeout<T: Sendable>(
+        seconds: Int,
+        operation: @Sendable @escaping () async throws -> T
+    ) async throws -> T {
         try await withThrowingTaskGroup(of: T.self) { group in
             group.addTask { try await operation() }
             group.addTask {

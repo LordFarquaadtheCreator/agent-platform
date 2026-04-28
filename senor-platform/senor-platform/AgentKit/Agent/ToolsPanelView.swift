@@ -1,6 +1,5 @@
 import SwiftUI
 
-
 struct ToolsPanelView: View {
     let tools: [any AgentTool]
 

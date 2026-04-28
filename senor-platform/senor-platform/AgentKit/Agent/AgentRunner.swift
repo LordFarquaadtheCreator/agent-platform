@@ -1,7 +1,8 @@
 import Foundation
 
 /// Main entry point for agent processes
-/// Usage: SenorAgent --task-id <id> --system-prompt <prompt> --task-prompt <prompt> --status-file <path> --tools <tool1,tool2,...>
+/// Usage: SenorAgent --task-id <id> --system-prompt <prompt> --task-prompt <prompt>
+///                    --status-file <path> --tools <tool1,tool2,...>
 public final class AgentRunner {
     private let arguments: AgentArguments
     private let toolRegistry: ToolRegistry

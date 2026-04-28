@@ -80,7 +80,9 @@ public struct ComfyUITool: AgentTool {
             }
             workflowJSON = fileContent
         } else {
-            throw ToolError.missingRequiredParameter("Either 'workflow_api_json' or 'workflow_file_path' must be provided")
+            throw ToolError.missingRequiredParameter(
+                "Either 'workflow_api_json' or 'workflow_file_path' must be provided"
+            )
         }
 
         // Get optional parameters
@@ -222,7 +224,11 @@ public struct ComfyUITool: AgentTool {
                     let folderType = imageInfo["type"] as? String ?? "output"
 
                     // Download image
-                    let viewUrl = "\(comfyUIConfig.baseURL)/view?filename=\(filename.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? filename)&subfolder=\(subfolder)&type=\(folderType)"
+                    let encodedFilename = filename.addingPercentEncoding(
+                        withAllowedCharacters: .urlQueryAllowed
+                    ) ?? filename
+                    let viewUrl = "\(comfyUIConfig.baseURL)/view?" +
+                        "filename=\(encodedFilename)&subfolder=\(subfolder)&type=\(folderType)"
 
                     let outputFilename = "\(outputPrefix)_\(nodeId)_\(index).png"
                     let outputPath = context.workingDirectory.appendingPathComponent(outputFilename)

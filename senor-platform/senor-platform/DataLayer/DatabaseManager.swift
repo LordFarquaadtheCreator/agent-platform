@@ -164,7 +164,8 @@ public final class DatabaseManager: LifecycleAware, Sendable {
             // approval_queue table
             try db.create(table: "approval_queue") { t in
                 t.primaryKey("id", .text).notNull()
-                t.column("generated_content_id", .text).notNull().references("generated_content", onDelete: .cascade).unique()
+                t.column("generated_content_id", .text).notNull()
+                    .references("generated_content", onDelete: .cascade).unique()
                 t.column("approval_status", .text).notNull().defaults(to: "pending") // pending, approved, rejected
                 t.column("approved_by", .text)
                 t.column("approved_at", .datetime)
@@ -203,11 +204,16 @@ public final class DatabaseManager: LifecycleAware, Sendable {
             }
 
             // Create indexes for performance
-            try db.create(index: "idx_task_runs_status_started", on: "task_runs", columns: ["status", "started_at"])
-            try db.create(index: "idx_task_schedules_next_run", on: "task_schedules", columns: ["next_run_at", "is_active"])
-            try db.create(index: "idx_approval_queue_status_created", on: "approval_queue", columns: ["approval_status", "created_at"])
-            try db.create(index: "idx_content_versions", on: "generated_content_versions", columns: ["generated_content_id", "version"])
-            try db.create(index: "idx_cache_platform_key_expires", on: "remote_post_cache", columns: ["platform", "cache_key", "expires_at"])
+            try db.create(index: "idx_task_runs_status_started", on: "task_runs",
+                          columns: ["status", "started_at"])
+            try db.create(index: "idx_task_schedules_next_run", on: "task_schedules",
+                          columns: ["next_run_at", "is_active"])
+            try db.create(index: "idx_approval_queue_status_created", on: "approval_queue",
+                          columns: ["approval_status", "created_at"])
+            try db.create(index: "idx_content_versions", on: "generated_content_versions",
+                          columns: ["generated_content_id", "version"])
+            try db.create(index: "idx_cache_platform_key_expires", on: "remote_post_cache",
+                          columns: ["platform", "cache_key", "expires_at"])
         }
 
         // Migration 002: AI Chat History

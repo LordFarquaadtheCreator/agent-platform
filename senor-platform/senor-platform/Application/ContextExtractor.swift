@@ -20,29 +20,40 @@ public final class ContextExtractor {
         switch section {
         case .dashboard:
             context["dashboard"] = extractDashboard(workspace.dashboardViewModel)
+
         case .agents:
             context["agents"] = extractAgents(workspace.agentsViewModel, router: router)
+
         case .tasks:
             context["tasks"] = extractTasks(workspace.tasksViewModel, router: router)
+
         case .content:
             context["content"] = extractContent(workspace.contentViewModel, router: router)
+
         case .approvals:
             context["approvals"] = extractApprovals(workspace.approvalsViewModel)
+
         case .deviantArt:
             context["deviantArt"] = extractDeviantArt(workspace.deviantArtViewModel, router: router)
+
         case .patreon:
             context["patreon"] = extractPatreon(workspace.patreonViewModel, router: router)
+
         case .tools:
             context["tools"] = extractTools()
+
         case .settings:
             context["settings"] = extractSettings(workspace.settingsViewModel)
         }
 
         // Serialize to JSON
-        guard let jsonData = try? JSONSerialization.data(withJSONObject: context, options: [.prettyPrinted, .sortedKeys]),
+        guard let jsonData = try? JSONSerialization.data(
+            withJSONObject: context, options: [.prettyPrinted, .sortedKeys]
+        ),
               let jsonString = String(data: jsonData, encoding: .utf8) else {
             return "{}"
         }
+        // Rough estimation: 4 characters ≈ 1 token.
 
         // Truncate if too large
         return truncateToFitTokenBudget(jsonString)
@@ -79,7 +90,7 @@ public final class ContextExtractor {
     }
 
     private func extractAgents(_ viewModel: AgentsViewModel, router: AppRouter) -> [String: Any] {
-        return [
+        [
             "selectedAgentID": router.selectedAgentID ?? "none",
             "agents": viewModel.agents.prefix(10).map { agent in
                 [
@@ -94,7 +105,7 @@ public final class ContextExtractor {
     }
 
     private func extractTasks(_ viewModel: TasksViewModel, router: AppRouter) -> [String: Any] {
-        return [
+        [
             "selectedTaskID": router.selectedTaskID ?? "none",
             "tasks": viewModel.tasks.prefix(10).map { task in
                 [
@@ -113,7 +124,7 @@ public final class ContextExtractor {
     }
 
     private func extractContent(_ viewModel: ContentViewModel, router: AppRouter) -> [String: Any] {
-        return [
+        [
             "selectedContentID": router.selectedContentID ?? "none",
             "contentItems": viewModel.contentItems.prefix(10).map { content in
                 [
@@ -129,7 +140,7 @@ public final class ContextExtractor {
     }
 
     private func extractApprovals(_ viewModel: ApprovalsViewModel) -> [String: Any] {
-        return [
+        [
             "approvals": viewModel.approvals.prefix(10).map { approval in
                 [
                     "id": approval.id,
@@ -152,9 +163,9 @@ public final class ContextExtractor {
             result["profile"] = [
                 "username": profile.user.username,
                 "stats": [
-                    "watchers": profile.stats.watchers,
-                    "friends": profile.stats.friends,
-                    "deviations": profile.stats.deviations
+                    "watchers": profile.stats?.watchers ?? 0,
+                    "friends": profile.stats?.friends ?? 0,
+                    "deviations": profile.stats?.deviations ?? 0
                 ]
             ]
         }
@@ -165,9 +176,9 @@ public final class ContextExtractor {
                 "title": deviation.title,
                 "category": deviation.category,
                 "stats": [
-                    "views": deviation.stats.views,
-                    "favourites": deviation.stats.favourites,
-                    "comments": deviation.stats.comments
+                    "views": deviation.stats?.views ?? 0,
+                    "favourites": deviation.stats?.favourites ?? 0,
+                    "comments": deviation.stats?.comments ?? 0
                 ]
             ]
         }
@@ -221,14 +232,11 @@ public final class ContextExtractor {
     }
 
     private func extractTools() -> [String: Any] {
-        // TODO: Implement when Tools feature is explored
-        return ["available": []]
+        ["available": []]
     }
 
     private func extractSettings(_ viewModel: SettingsViewModel) -> [String: Any] {
-        return [
-            "taskScriptPath": viewModel.taskScriptPath
-        ]
+        ["taskScriptPath": viewModel.taskScriptPath]
     }
 
     // MARK: - Token Management
@@ -249,9 +257,9 @@ public final class ContextExtractor {
         if targetLength < jsonString.count {
             let index = jsonString.index(jsonString.startIndex, offsetBy: targetLength)
             return String(jsonString[..<index]) + "\n... (truncated)"
+        } else {
+            return jsonString
         }
-
-        return jsonString
     }
 }
 

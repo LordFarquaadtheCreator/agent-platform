@@ -1,7 +1,8 @@
 import Foundation
 
-// MARK: - Chat Models
+// MARK: - Chat Models (OpenAI Responses API Format)
 
+/// A message in the conversation history (for local storage/display)
 public struct ChatMessage: Codable, Sendable {
     public let role: MessageRole
     public let content: String
@@ -18,58 +19,88 @@ public enum MessageRole: String, Codable, Sendable {
     case assistant
 }
 
+/// OpenAI Responses API request format
 public struct ChatRequest: Codable, Sendable {
-    public let messages: [ChatMessage]
     public let model: String
-    public let temperature: Double?
-    public let maxTokens: Int?
+    public let input: String
+    public var instructions: String?
+    public let stream: Bool
+    public let store: Bool
+    public var temperature: Double?
+    public var previousResponseID: String?
 
     public init(
-        messages: [ChatMessage],
         model: String,
+        input: String,
+        instructions: String? = nil,
+        stream: Bool = false,
+        store: Bool = true,
         temperature: Double? = nil,
-        maxTokens: Int? = nil
+        previousResponseID: String? = nil
     ) {
-        self.messages = messages
         self.model = model
+        self.input = input
+        self.instructions = instructions
+        self.stream = stream
+        self.store = store
         self.temperature = temperature
-        self.maxTokens = maxTokens
+        self.previousResponseID = previousResponseID
     }
 
     enum CodingKeys: String, CodingKey {
-        case messages
         case model
+        case input
+        case instructions
+        case stream
+        case store
         case temperature
-        case maxTokens = "max_tokens"
+        case previousResponseID = "previous_response_id"
     }
 }
 
+/// OpenAI Responses API response format
 public struct ChatResponse: Codable, Sendable {
     public let id: String
-    public let choices: [Choice]
+    public let object: String
+    public let createdAt: Int64
+    public let status: String
+    public let model: String
+    public let output: [OutputItem]
     public let usage: Usage?
+    public let previousResponseID: String?
 
-    public struct Choice: Codable, Sendable {
-        public let index: Int
-        public let message: ChatMessage
-        public let finishReason: String?
+    public struct OutputItem: Codable, Sendable {
+        public let type: String
+        public let id: String?
+        public let role: String?
+        public let content: [ContentItem]?
+    }
 
-        enum CodingKeys: String, CodingKey {
-            case index
-            case message
-            case finishReason = "finish_reason"
-        }
+    public struct ContentItem: Codable, Sendable {
+        public let type: String
+        public let text: String?
     }
 
     public struct Usage: Codable, Sendable {
-        public let promptTokens: Int
-        public let completionTokens: Int
+        public let inputTokens: Int
+        public let outputTokens: Int
         public let totalTokens: Int
 
         enum CodingKeys: String, CodingKey {
-            case promptTokens = "prompt_tokens"
-            case completionTokens = "completion_tokens"
+            case inputTokens = "input_tokens"
+            case outputTokens = "output_tokens"
             case totalTokens = "total_tokens"
         }
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case object
+        case createdAt = "created_at"
+        case status
+        case model
+        case output
+        case usage
+        case previousResponseID = "previous_response_id"
     }
 }

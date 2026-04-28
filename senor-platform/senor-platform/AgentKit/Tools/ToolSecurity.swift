@@ -272,7 +272,8 @@ public struct CommandValidator: Sendable {
 
         // If not in safe list and not allowing unsafe, reject
         if !safeCommands.contains(executable) && !allowUnsafe {
-            let msg = "Command '\(executable)' is not in the allowed list. Enable unsafe mode to allow arbitrary commands."
+            let msg = "Command '\(executable)' is not in the allowed list. " +
+                "Enable unsafe mode to allow arbitrary commands."
             return .failure(CommandValidationError(msg))
         }
 

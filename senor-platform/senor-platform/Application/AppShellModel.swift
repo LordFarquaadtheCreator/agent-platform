@@ -221,7 +221,10 @@ public final class WorkspaceModel: ObservableObject {
 
     private var cancellables = Set<AnyCancellable>()
     public let settingsViewModel: SettingsViewModel
-    public lazy var deviantArtViewModel = DeviantArtViewModel(client: dependencies.deviantArtClient, settingsService: dependencies.settingsService)
+    public lazy var deviantArtViewModel = DeviantArtViewModel(
+        client: dependencies.deviantArtClient,
+        settingsService: dependencies.settingsService
+    )
     public lazy var patreonViewModel = PatreonViewModel(
         client: dependencies.patreonClient,
         settings: dependencies.settingsService.loadPatreonSettings()
@@ -253,6 +256,40 @@ public final class WorkspaceModel: ObservableObject {
 
     @Published public private(set) var isRefreshing = false
     @Published public var lastErrorMessage: String?
+
+    // MARK: - Global Message Queue
+
+    @Published public var messageQueue: [QueuedMessage] = []
+
+    public struct QueuedMessage: Identifiable, Codable {
+        public let id: UUID
+        public var text: String
+
+        public init(id: UUID = UUID(), text: String) {
+            self.id = id
+            self.text = text
+        }
+    }
+
+    public func enqueueMessage(_ text: String) {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        messageQueue.append(QueuedMessage(text: trimmed))
+    }
+
+    public func removeQueuedMessage(id: UUID) {
+        messageQueue.removeAll { $0.id == id }
+    }
+
+    public func updateQueuedMessage(id: UUID, text: String) {
+        if let index = messageQueue.firstIndex(where: { $0.id == id }) {
+            messageQueue[index].text = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+    }
+
+    public func clearQueue() {
+        messageQueue.removeAll()
+    }
 
     public init(dependencies: AppDependencies) {
         self.dependencies = dependencies

@@ -340,6 +340,7 @@ struct MediaPicker: View {
 
 	private func mediaThumbnail(url: URL) -> some View {
 	    AsyncImage(url: url) { phase in
+	        // swiftlint:disable vertical_whitespace_between_cases
 	        switch phase {
 	        case .empty:
 	            ProgressView()
@@ -350,7 +351,7 @@ struct MediaPicker: View {
 	                .scaledToFit()
 	                .blur(radius: isPrivacyMode ? 20 : 0)
 	                .frame(maxHeight: 200)
-	        case .failure:
+	        case .failure(let error):
 	            Image(systemName: "photo")
 	                .resizable()
 	                .scaledToFit()
@@ -360,6 +361,7 @@ struct MediaPicker: View {
 	            ProgressView()
 	                .frame(maxWidth: .infinity, maxHeight: 200)
 	        }
+	        // swiftlint:enable vertical_whitespace_between_cases
 	    }
 	}
 
@@ -420,4 +422,3 @@ struct MediaPicker: View {
     .frame(width: 400)
     .padding()
 }
-
