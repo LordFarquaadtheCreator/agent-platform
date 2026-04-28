@@ -45,12 +45,31 @@ public enum AppTheme {
         // Accent
         static let accent = Color.accentColor
 
+        /// Text color that contrasts against the accent color. Computed once at launch since accent is compiled.
+        static let textOnAccent: Color = {
+            let nsColor = NSColor.controlAccentColor
+
+            guard let rgbColor = nsColor.usingColorSpace(.sRGB) else {
+                return .white
+            }
+
+            // WCAG relative luminance formula
+            let r = rgbColor.redComponent
+            let g = rgbColor.greenComponent
+            let b = rgbColor.blueComponent
+            let luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b
+
+            // Dark accent (< 0.5 luminance) needs white text; light needs black
+            return luminance < 0.5 ? .white : .black
+        }()
+
         // Backgrounds
         static let cardBackground = Color(nsColor: .controlBackgroundColor)
         static let chromeBackground = Color(nsColor: .windowBackgroundColor)
         static let sectionBackground = Color(nsColor: .secondarySystemFill)
 
         // Text
+		// TODO: make into custom colors
         static let textPrimary = Color.primary
         static let textSecondary = Color.secondary
         static let textTertiary = Color.primary.opacity(0.5)
@@ -184,4 +203,81 @@ public enum AppTheme {
         static let sidebar = "sidebar.right"
         static let taskAdd = "plus.square"
     }
+
+    /// Computes contrasting text color (white/black) for any given color using WCAG luminance
+    static func textColor(for color: NSColor) -> Color {
+        guard let rgbColor = color.usingColorSpace(.sRGB) else { return .white }
+        let luminance = 0.2126 * rgbColor.redComponent + 0.7152 * rgbColor.greenComponent + 0.0722 * rgbColor.blueComponent
+        return luminance < 0.5 ? .white : .black
+    }
+}
+
+// MARK: - Preview
+
+#Preview("TextOnAccent Preview") {
+    struct TextOnAccentPreview: View {
+        @State private var hue: Double = 0.65 // Default blue-ish
+
+        private var accentColor: Color {
+            Color(hue: hue, saturation: 0.8, brightness: 0.5)
+        }
+
+        private var nsAccentColor: NSColor {
+            NSColor(hue: CGFloat(hue), saturation: 1, brightness: 1, alpha: 1.0)
+        }
+
+        private var computedTextColor: Color {
+            AppTheme.textColor(for: nsAccentColor)
+        }
+
+        var body: some View {
+            VStack(spacing: AppTheme.Spacing.large) {
+                Text("TextOnAccent Preview")
+                    .font(AppTheme.Typography.title2)
+
+                // Preview bubble
+                Text("Sample message text")
+					.padding(.horizontal, AppTheme.Spacing.medium)
+					.padding(.vertical, AppTheme.Spacing.small)
+					.background(accentColor)
+					.cornerRadius(AppTheme.CornerRadius.control)
+						.foregroundStyle(computedTextColor)
+                    
+
+                // Color readout
+                HStack(spacing: AppTheme.Spacing.medium) {
+                    Circle()
+                        .fill(accentColor)
+                        .frame(width: 40, height: 40)
+                        .overlay(
+                            Circle()
+                                .stroke(AppTheme.ColorToken.divider, lineWidth: 1)
+                        )
+
+                    VStack(alignment: .leading) {
+                        Text("Accent: \(String(format: "%.0f", hue * 360))°")
+                            .font(AppTheme.Typography.body)
+                        Text("Text: \(computedTextColor == .white ? "White" : "Black")")
+                            .font(AppTheme.Typography.caption)
+                            .foregroundStyle(AppTheme.ColorToken.textSecondary)
+                    }
+                }
+
+                // Hue slider
+                VStack(alignment: .leading) {
+                    Text("Hue")
+                        .font(AppTheme.Typography.caption)
+                        .foregroundStyle(AppTheme.ColorToken.textSecondary)
+                    Slider(value: $hue, in: 0...1, step: 0.01)
+                        .frame(width: 300)
+                }
+
+                Spacer()
+            }
+            .padding(AppTheme.Spacing.screenPadding)
+            .frame(width: 400, height: 300)
+        }
+    }
+
+    return TextOnAccentPreview()
 }

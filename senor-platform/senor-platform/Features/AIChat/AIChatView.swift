@@ -130,7 +130,7 @@ struct AIChatView: View {
     private func messageBubble(_ message: ChatMessage) -> some View {
         HStack {
             VStack(alignment: message.role == .user ? .trailing : .leading, spacing: AppTheme.Spacing.xSmall) {
-				AppText(message.role == .user ? "You" : "AI", style: .caption)
+				AppText(message.role == .user ? "Me" : "Senor", style: .caption)
 					.foregroundStyle(AppTheme.ColorToken.textSecondary)
 					.padding(.horizontal, AppTheme.Spacing.xSmall)
 
@@ -139,7 +139,7 @@ struct AIChatView: View {
                     backgroundColor: message.role == .user ? AppTheme.ColorToken.accent : nil
                 ) {
                     markdownText(message.content)
-                        .foregroundStyle(AppTheme.ColorToken.textPrimary)
+						.foregroundStyle(message.role == .user ? AppTheme.ColorToken.textOnAccent : AppTheme.ColorToken.textPrimary)
                         .textSelection(.enabled)
                 }
             }
