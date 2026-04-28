@@ -111,3 +111,5 @@ extension CacheService: CacheServiceProtocol {}
 extension ContentVersioningService: ContentVersioningServiceProtocol {}
 extension ApprovalService: ApprovalServiceProtocol {}
 extension SettingsService: SettingsServiceProtocol {}
+extension DeviantArtClient: DeviantArtServiceProtocol {}
+extension PatreonClient: PatreonServiceProtocol {}
