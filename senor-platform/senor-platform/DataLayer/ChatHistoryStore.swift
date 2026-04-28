@@ -79,6 +79,8 @@ public struct ChatSession: Identifiable {
 // MARK: - Database Record
 
 private struct ChatHistoryRecord: Codable, FetchableRecord, PersistableRecord {
+    static var databaseTableName: String { "chat_history" }
+
     var id: Int64?
     let section: String
     let messagesJSON: String

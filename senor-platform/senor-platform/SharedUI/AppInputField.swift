@@ -3,14 +3,14 @@ import SwiftUI
 // MARK: - App Input Field
 
 struct AppInputField: View {
-    let title: String
+    let title: String?
     let placeholder: String
     @Binding var text: String
     let isMultiline: Bool
     let isSecure: Bool
     let height: CGFloat?
     init(
-        title: String,
+        title: String?,
         placeholder: String,
         text: Binding<String>,
         isMultiline: Bool = false,
@@ -26,9 +26,13 @@ struct AppInputField: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: AppTheme.Spacing.medium) {
-            AppText(title, style: .headline)
-
+        VStack(alignment: .leading, spacing: AppTheme.Spacing.small) {
+			if title != nil {
+				AppText(title!, style: .headline)
+					.padding(.horizontal, AppTheme.Spacing.xSmall)
+			}
+			
+			
             inputField
                 .padding(.horizontal, AppTheme.Spacing.xSmall)
                 .padding(.vertical, AppTheme.Spacing.xSmall)
@@ -154,6 +158,16 @@ struct AppTagInput: View {
     .padding()
 }
 
+#Preview("Empty Title") {
+	@Previewable @State var text = ""
+	AppInputField(
+		title: nil,
+		placeholder: "Enter title",
+		text: $text
+	)
+	.padding()
+}
+
 #Preview("Field Multiline") {
     @Previewable @State var text = ""
     AppInputField(
@@ -185,3 +199,4 @@ struct AppTagInput: View {
     )
     .padding()
 }
+

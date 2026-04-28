@@ -78,10 +78,12 @@ enum AppSurfaceStyle {
 
 struct AppSurface<Content: View>: View {
     let style: AppSurfaceStyle
+    let backgroundColor: Color?
     let content: Content
 
-    init(style: AppSurfaceStyle, @ViewBuilder content: () -> Content) {
+    init(style: AppSurfaceStyle, backgroundColor: Color? = nil, @ViewBuilder content: () -> Content) {
         self.style = style
+        self.backgroundColor = backgroundColor
         self.content = content()
     }
 
@@ -100,7 +102,7 @@ struct AppSurface<Content: View>: View {
     }
 
     private func backgroundForStyle(_ style: AppSurfaceStyle) -> Color {
-        AppTheme.ColorToken.cardBackground
+        backgroundColor ?? AppTheme.ColorToken.cardBackground
     }
 
     private func overlayForStyle(_ style: AppSurfaceStyle) -> some View {

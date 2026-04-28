@@ -7,9 +7,9 @@ public actor AIClient {
     private let session: URLSession
     private var lastResponseID: String?
 
-    public init(baseURL: String = "http://localhost:1234") {
+    public init(baseURL: String = "http://localhost:1234", session: URLSession? = nil) {
         self.baseURL = baseURL
-        self.session = URLSession.shared
+        self.session = session ?? URLSession.shared
     }
 
     public func getLastResponseID() -> String? {
@@ -50,7 +50,12 @@ public actor AIClient {
             throw AIClientError.encodingFailed(error)
         }
 
-        let (data, response) = try await session.data(for: urlRequest)
+        let (data, response): (Data, URLResponse)
+        do {
+            (data, response) = try await session.data(for: urlRequest)
+        } catch let error as NSError where error.domain == NSURLErrorDomain && error.code == NSURLErrorUnsupportedURL {
+            throw AIClientError.invalidURL
+        }
 
         guard let httpResponse = response as? HTTPURLResponse else {
             throw AIClientError.invalidResponse
@@ -73,7 +78,12 @@ public actor AIClient {
             throw AIClientError.invalidURL
         }
 
-        let (data, response) = try await session.data(from: url)
+        let (data, response): (Data, URLResponse)
+        do {
+            (data, response) = try await session.data(from: url)
+        } catch let error as NSError where error.domain == NSURLErrorDomain && error.code == NSURLErrorUnsupportedURL {
+            throw AIClientError.invalidURL
+        }
 
         guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
             throw AIClientError.invalidResponse
@@ -254,12 +264,25 @@ private struct ModelInfo: Codable {
 
 // MARK: - Errors
 
-public enum AIClientError: Error, LocalizedError {
+public enum AIClientError: Error, LocalizedError, Equatable {
     case invalidURL
     case invalidResponse
     case httpError(Int)
     case encodingFailed(Error)
     case decodingFailed(Error)
+
+    public static func == (lhs: AIClientError, rhs: AIClientError) -> Bool {
+        switch (lhs, rhs) {
+        case (.invalidURL, .invalidURL), (.invalidResponse, .invalidResponse):
+            return true
+        case (.httpError(let a), .httpError(let b)):
+            return a == b
+        case (.encodingFailed, .encodingFailed), (.decodingFailed, .decodingFailed):
+            return true
+        default:
+            return false
+        }
+    }
 
     public var errorDescription: String? {
         switch self {

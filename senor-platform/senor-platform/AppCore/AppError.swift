@@ -1,7 +1,7 @@
 import Foundation
 
 /// Global error taxonomy for SenorPlatform
-public enum AppError: Error, Sendable {
+public enum AppError: Error, LocalizedError, Sendable {
     // Database errors
     case databaseConnectionFailed(Error)
     case databaseMigrationFailed(String)
@@ -52,7 +52,7 @@ public enum AppError: Error, Sendable {
         }
     }
 
-    public var localizedDescription: String {
+    public var errorDescription: String? {
         switch self {
         case .databaseConnectionFailed(let error):
             return "Database connection failed: \(error.localizedDescription)"

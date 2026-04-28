@@ -2,15 +2,15 @@ import Foundation
 import Combine
 
 @MainActor
-public final class AIChatViewModel: ObservableObject {
-    @Published public private(set) var messages: [ChatMessage] = []
-    @Published public private(set) var isGenerating = false
+public class AIChatViewModel: ObservableObject {
+    @Published public var messages: [ChatMessage] = []
+    @Published public var isGenerating = false
     @Published public private(set) var contextSummary = ""
     @Published public private(set) var errorMessage: String?
     @Published public var selectedModel = ""
     @Published public var showHistory = false
     @Published public private(set) var historySessions: [ChatSession] = []
-    @Published public private(set) var availableModels: [String] = []
+    @Published public var availableModels: [String] = []
     public var queuedMessages: [WorkspaceModel.QueuedMessage] { workspace.messageQueue }
 
     private let aiClient: AIClient
@@ -19,12 +19,11 @@ public final class AIChatViewModel: ObservableObject {
     private let workspace: WorkspaceModel
     private let router: AppRouter
 
-    // Track stateful chat session ID (like ragtool)
     private var previousResponseID: String?
 
     private var systemPrompt: String {
         """
-        You are an AI assistant helping the user understand and work with the Senor Platform.
+        You are an AI assistant helping the user understand and work with the the application you live inside.
         You have access to the current page's state and can answer questions about it.
         Be concise and helpful. If you don't know something, say so.
         """
@@ -59,8 +58,8 @@ public final class AIChatViewModel: ObservableObject {
         do {
             let models = try await aiClient.fetchModels()
             availableModels = models
-            if selectedModel.isEmpty || !availableModels.contains(selectedModel) {
-                selectedModel = models.first ?? ""
+            if selectedModel.isEmpty || selectedModel == "Select a Model" {
+                selectedModel = "Select a Model"
             }
         } catch {
             errorMessage = "Failed to load models: \(error.localizedDescription)"
@@ -85,6 +84,7 @@ public final class AIChatViewModel: ObservableObject {
     public func sendMessage(text: String) async {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
+        guard selectedModel != "Select a Model" else { return }
 
         // If generating, queue the message instead
         if isGenerating {

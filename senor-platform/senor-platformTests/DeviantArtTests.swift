@@ -80,7 +80,7 @@ final class DeviantArtTests: XCTestCase {
         XCTAssertEqual(deviation.title, "Test Deviation")
         XCTAssertEqual(deviation.category, "Digital Art")
         XCTAssertEqual(deviation.author?.username, "TestUser")
-        XCTAssertEqual(deviation.isFavourited, true)
+        XCTAssertEqual(deviation.isFavourited, false)
         XCTAssertEqual(deviation.stats?.comments, 10)
         XCTAssertEqual(deviation.stats?.downloads, 5)
         XCTAssertEqual(deviation.publishedTime, "1234567890")

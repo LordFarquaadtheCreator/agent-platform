@@ -7,6 +7,7 @@ struct AIChatView: View {
     @FocusState private var isInputFocused: Bool
     @State private var editingQueueId: UUID?
     @State private var editingQueueText: String = ""
+    @State private var hoveredQueueId: UUID? = nil
 
     init(viewModel: AIChatViewModel) {
         self.viewModel = viewModel
@@ -41,7 +42,7 @@ struct AIChatView: View {
                 inputArea
                 modelSelector
             }
-            .padding(AppTheme.Spacing.small)
+            .padding(AppTheme.Spacing.medium)
         }
         .background(AppTheme.ColorToken.chromeBackground)
         .task {
@@ -55,14 +56,13 @@ struct AIChatView: View {
 
     private var modelSelector: some View {
         HStack {
-            AppText("Model:", style: .caption, color: AppTheme.ColorToken.textSecondary)
-
-            Picker("", selection: $viewModel.selectedModel) {
+            Picker("Model:", selection: $viewModel.selectedModel) {
+				Text("Select a Model").tag("Select a Model").id(-1)
                 ForEach(viewModel.availableModels, id: \.self) { model in
                     Text(model).tag(model)
                 }
             }
-            .pickerStyle(.menu)
+			.pickerStyle(.menu)
             .buttonStyle(.plain)
             .foregroundStyle(AppTheme.ColorToken.textSecondary)
 
@@ -88,6 +88,7 @@ struct AIChatView: View {
             .buttonStyle(.plain)
             .foregroundStyle(AppTheme.ColorToken.textSecondary)
         }
+		.padding(.horizontal, AppTheme.Spacing.small)
     }
 
     private var messageList: some View {
@@ -98,36 +99,51 @@ struct AIChatView: View {
                         messageBubble(message)
                             .id(index)
                     }
+                    if showLoadingBubble {
+                        loadingBubble
+                            .id("loading")
+                    }
                 }
                 .padding(AppTheme.Spacing.small)
             }
             .onChange(of: viewModel.messages.count) { _ in
-                if let last = viewModel.messages.indices.last {
-                    proxy.scrollTo(last, anchor: .bottom)
-                }
+                scrollToLast(proxy)
             }
+            .onChange(of: viewModel.isGenerating) { _ in
+                scrollToLast(proxy)
+            }
+        }
+    }
+
+    private var showLoadingBubble: Bool {
+        viewModel.isGenerating && viewModel.messages.last?.role != .assistant
+    }
+
+    private func scrollToLast(_ proxy: ScrollViewProxy) {
+        if viewModel.isGenerating {
+            proxy.scrollTo("loading", anchor: .bottom)
+        } else if let last = viewModel.messages.indices.last {
+            proxy.scrollTo(last, anchor: .bottom)
         }
     }
 
     private func messageBubble(_ message: ChatMessage) -> some View {
         HStack {
-            if message.role == .user {
-                Spacer()
-            }
-
             VStack(alignment: message.role == .user ? .trailing : .leading, spacing: AppTheme.Spacing.xSmall) {
-                HStack {
-                    AppText(message.role == .user ? "You" : "AI", style: .caption)
-                        .foregroundStyle(AppTheme.ColorToken.textSecondary)
-                    Spacer()
-                }
+				AppText(message.role == .user ? "You" : "AI", style: .caption)
+					.foregroundStyle(AppTheme.ColorToken.textSecondary)
+					.padding(.horizontal, AppTheme.Spacing.xSmall)
 
-                AppSurface(style: .flat) {
+                AppSurface(
+                    style: .flat,
+                    backgroundColor: message.role == .user ? AppTheme.ColorToken.accent : nil
+                ) {
                     markdownText(message.content)
                         .foregroundStyle(AppTheme.ColorToken.textPrimary)
                         .textSelection(.enabled)
                 }
             }
+			.padding(.horizontal, AppTheme.Spacing.xSmall)
             .frame(
                 maxWidth: .infinity * 0.8,
                 alignment: message.role == .user ? .trailing : .leading
@@ -142,10 +158,36 @@ struct AIChatView: View {
         }
     }
 
+    private var loadingBubble: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: AppTheme.Spacing.xSmall) {
+                AppText("AI", style: .caption)
+                    .foregroundStyle(AppTheme.ColorToken.textSecondary)
+
+                AppSurface(style: .flat) {
+                    HStack(spacing: 4) {
+                        ForEach(0..<3) { index in
+                            Circle()
+                                .fill(AppTheme.ColorToken.textSecondary)
+                                .frame(width: 6, height: 6)
+                                .offset(y: sin(Double(index) * 2 + Date().timeIntervalSince1970 * 5) * 2)
+                        }
+                    }
+                    .padding(.horizontal, AppTheme.Spacing.small)
+                    .padding(.vertical, AppTheme.Spacing.xSmall)
+                }
+            }
+            .padding(.horizontal, AppTheme.Spacing.xSmall)
+            .frame(maxWidth: .infinity * 0.8, alignment: .leading)
+
+            Spacer()
+        }
+    }
+
     private var inputArea: some View {
         HStack(alignment: .center, spacing: AppTheme.Spacing.small) {
             AppInputField(
-                title: "Input",
+                title: nil,
                 placeholder: "Ask about ...",
                 text: $inputText
             )
@@ -169,7 +211,10 @@ struct AIChatView: View {
             }
             .buttonStyle(.plain)
             .accessibilityIdentifier("sendMessageButton")
-            .disabled(inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            .disabled(
+                inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
+                viewModel.selectedModel == "Select a Model"
+            )
         }
     }
 
@@ -192,7 +237,6 @@ struct AIChatView: View {
                     viewModel.clearQueue()
                 }
                 .font(AppTheme.Typography.caption)
-                .foregroundStyle(AppTheme.ColorToken.statusError)
                 .buttonStyle(.plain)
                 .disabled(viewModel.queuedMessages.isEmpty)
             }
@@ -204,30 +248,25 @@ struct AIChatView: View {
             }
         }
         .padding(AppTheme.Spacing.small)
-        .background(AppTheme.ColorToken.accent.opacity(0.08))
-        .overlay(
-            RoundedRectangle(cornerRadius: AppTheme.CornerRadius.small)
-                .stroke(AppTheme.ColorToken.accent.opacity(0.3), lineWidth: 1)
-        )
-        .cornerRadius(AppTheme.CornerRadius.small)
     }
 
     private func queueItemRow(_ item: WorkspaceModel.QueuedMessage) -> some View {
         HStack(spacing: AppTheme.Spacing.small) {
             if editingQueueId == item.id {
-                // swiftlint:disable:next unlabeled_input_field
-                TextField("Edit message", text: $editingQueueText)
-                    .font(AppTheme.Typography.body)
-                    .textFieldStyle(.plain)
-                    .onSubmit {
-                        viewModel.updateQueuedMessage(id: item.id, text: editingQueueText)
-                        editingQueueId = nil
-                    }
+                AppInputField(
+                    title: nil,
+                    placeholder: "Edit message",
+                    text: $editingQueueText
+                )
+                .onSubmit {
+                    viewModel.updateQueuedMessage(id: item.id, text: editingQueueText)
+                    editingQueueId = nil
+                }
             } else {
                 Text(item.text)
                     .font(AppTheme.Typography.body)
                     .lineLimit(2)
-                    .foregroundStyle(AppTheme.ColorToken.textPrimary)
+                    .foregroundStyle(AppTheme.ColorToken.textSecondary)
             }
 
             Spacer()
@@ -251,7 +290,7 @@ struct AIChatView: View {
                 }
                 .buttonStyle(.plain)
                 .foregroundStyle(AppTheme.ColorToken.textSecondary)
-            } else {
+            } else if hoveredQueueId == item.id {
                 Button {
                     editingQueueId = item.id
                     editingQueueText = item.text
@@ -269,13 +308,16 @@ struct AIChatView: View {
                         .font(AppTheme.Typography.caption)
                 }
                 .buttonStyle(.plain)
-                .foregroundStyle(AppTheme.ColorToken.statusError)
+                .foregroundStyle(AppTheme.ColorToken.textSecondary)
             }
         }
         .padding(.horizontal, AppTheme.Spacing.xSmall)
         .padding(.vertical, AppTheme.Spacing.xSmall)
         .background(AppTheme.ColorToken.cardBackground)
         .cornerRadius(AppTheme.CornerRadius.small)
+        .onHover { isHovered in
+            hoveredQueueId = isHovered ? item.id : nil
+        }
     }
 
     private var historyViewer: some View {
@@ -325,39 +367,306 @@ struct AIChatView: View {
     }
 }
 
-// MARK: - Preview
+// MARK: - Preview Helpers
 
 @MainActor
-private class PreviewAIChatViewModel: ObservableObject {
-    @Published var messages: [ChatMessage] = [
-        ChatMessage(role: .user, content: "How do I publish to Patreon?"),
-        ChatMessage(
-            role: .assistant,
-            content: """
-                To publish to Patreon, navigate to the Patreon section, click 'New Post',
-                fill in the title and content, select your tiers, and click Publish.
-                """
-        )
-    ]
-    @Published var isGenerating = false
-    @Published var contextSummary = "Patreon • ~150 tokens"
-    @Published var errorMessage: String?
-    @Published var selectedModel = "model"
-    @Published var showHistory = false
-    var historySessions: [ChatSession] = []
-    var queuedMessages: [WorkspaceModel.QueuedMessage] = []
+private func makePreviewDependencies() -> (workspace: WorkspaceModel, router: AppRouter) {
+    let router = AppRouter()
+    let db = try! DatabaseManager()
+    let agentRepo = AgentRepositoryImpl(dbManager: db)
+    let taskRepo = TaskRepositoryImpl(dbManager: db)
+    let scheduleRepo = TaskScheduleRepositoryImpl(dbManager: db)
+    let runRepo = TaskRunRepositoryImpl(dbManager: db)
+    let contentRepo = GeneratedContentRepositoryImpl(dbManager: db)
+    let approvalRepo = ApprovalQueueRepositoryImpl(dbManager: db)
+    let pubRepo = PublicationTargetRepositoryImpl(dbManager: db)
+    let taskTypeRepo = TaskTypeRepositoryImpl(dbManager: db)
+    let settingsSvc = SettingsService()
+    let approvalSvc = ApprovalService(
+        approvalRepository: approvalRepo,
+        contentRepository: contentRepo,
+        publicationTargetRepository: pubRepo
+    )
+    let pubSvc = PublicationService(
+        approvalQueueRepository: approvalRepo,
+        publicationRepository: pubRepo,
+        contentRepository: contentRepo,
+        cacheService: CacheService(cacheRepository: RemotePostCacheRepositoryImpl(dbManager: db)),
+        settingsService: settingsSvc,
+        deviantArtClient: nil,
+        patreonClient: nil
+    )
+    let versionSvc = ContentVersioningService(contentRepository: contentRepo)
+    let deps = AppDependencies(
+        agentRepository: agentRepo,
+        taskRepository: taskRepo,
+        taskScheduleRepository: scheduleRepo,
+        taskRunRepository: runRepo,
+        contentRepository: contentRepo,
+        approvalRepository: approvalRepo,
+        publicationRepository: pubRepo,
+        taskTypeRepository: taskTypeRepo,
+        deviantArtClient: nil,
+        patreonClient: nil,
+        settingsService: settingsSvc,
+        approvalService: approvalSvc,
+        versioningService: versionSvc,
+        publicationService: pubSvc,
+        loadWorkspaceUseCase: LoadWorkspaceUseCase(
+            agentRepository: agentRepo,
+            taskRepository: taskRepo,
+            taskScheduleRepository: scheduleRepo,
+            taskRunRepository: runRepo,
+            contentRepository: contentRepo,
+            approvalQueueRepository: approvalRepo,
+            publicationRepository: pubRepo
+        ),
+        loadTaskCreationContextUseCase: LoadTaskCreationContextUseCase(
+            agentRepository: agentRepo,
+            taskTypeRepository: taskTypeRepo
+        ),
+        createAgentUseCase: CreateAgentUseCase(agentRepository: agentRepo),
+        createTaskUseCase: CreateTaskUseCase(
+            taskRepository: taskRepo,
+            scheduleRepository: scheduleRepo,
+            settingsService: settingsSvc
+        ),
+        approveContentUseCase: ApproveContentUseCase(approvalService: approvalSvc),
+        rejectContentUseCase: RejectContentUseCase(approvalService: approvalSvc),
+        publishContentUseCase: PublishContentUseCase(
+            publicationService: pubSvc,
+            settingsService: settingsSvc
+        ),
+        editContentUseCase: EditContentUseCase(versioningService: versionSvc),
+        loadContentEditorUseCase: LoadContentEditorUseCase(
+            contentRepository: contentRepo,
+            versioningService: versionSvc
+        ),
+        aiClient: AIClient(),
+        contextExtractor: ContextExtractor(),
+        chatHistoryStore: ChatHistoryStore(databaseManager: db)
+    )
+    return (WorkspaceModel(dependencies: deps), router)
+}
 
-    func loadHistory() async {}
-    func sendMessage(text: String) async {
+@MainActor
+private final class PreviewAIChatViewModel: AIChatViewModel {
+    init() {
+        let (workspace, router) = makePreviewDependencies()
+        super.init(
+            aiClient: AIClient(),
+            contextExtractor: ContextExtractor(),
+            chatHistoryStore: ChatHistoryStore(databaseManager: try! DatabaseManager()),
+            workspace: workspace,
+            router: router
+        )
+        messages = [
+            ChatMessage(role: .user, content: "What the dog doin?"),
+            ChatMessage(role: .assistant, content: "Ur mom lol")
+        ]
+        availableModels = ["model", "claude"]
+        selectedModel = "Select a Model"
+    }
+
+    override func fetchAvailableModels() async {}
+    override func loadHistory() async {}
+    override func sendMessage(text: String) async {
         isGenerating = true
         try? await Task.sleep(nanoseconds: 500_000_000)
         messages.append(ChatMessage(role: .assistant, content: "This is a preview response."))
         isGenerating = false
     }
-    func clearHistory() async { messages.removeAll() }
-    func loadHistorySessions() async {}
-    func loadSession(_ session: ChatSession) async {}
-    func removeQueuedMessage(id: UUID) {}
-    func updateQueuedMessage(id: UUID, text: String) {}
-    func clearQueue() {}
+    override func clearHistory() async { messages.removeAll() }
+    override func loadHistorySessions() async {}
+    override func loadSession(_ session: ChatSession) async {}
+    override func removeQueuedMessage(id: UUID) {}
+    override func updateQueuedMessage(id: UUID, text: String) {}
+    override func clearQueue() {}
 }
+
+@MainActor
+private final class PreviewAIChatLoadingViewModel: AIChatViewModel {
+    init() {
+        let (workspace, router) = makePreviewDependencies()
+        super.init(
+            aiClient: AIClient(),
+            contextExtractor: ContextExtractor(),
+            chatHistoryStore: ChatHistoryStore(databaseManager: try! DatabaseManager()),
+            workspace: workspace,
+            router: router
+        )
+        messages = [
+            ChatMessage(role: .user, content: "Summarize the DeviantArt integration docs")
+        ]
+        availableModels = ["llama-3-8b"]
+        selectedModel = "Select a Model"
+        isGenerating = true
+    }
+
+    override func fetchAvailableModels() async {}
+    override func loadHistory() async {}
+    override func sendMessage(text: String) async {}
+    override func clearHistory() async { messages.removeAll() }
+    override func loadHistorySessions() async {}
+    override func loadSession(_ session: ChatSession) async {}
+    override func removeQueuedMessage(id: UUID) {}
+    override func updateQueuedMessage(id: UUID, text: String) {}
+    override func clearQueue() {}
+}
+
+@MainActor
+private final class PreviewAIChatStreamingViewModel: AIChatViewModel {
+    private var streamTask: Task<Void, Never>?
+
+    init() {
+        let (workspace, router) = makePreviewDependencies()
+        super.init(
+            aiClient: AIClient(),
+            contextExtractor: ContextExtractor(),
+            chatHistoryStore: ChatHistoryStore(databaseManager: try! DatabaseManager()),
+            workspace: workspace,
+            router: router
+        )
+        messages = [
+            ChatMessage(role: .user, content: "Write a haiku about coding")
+        ]
+        availableModels = ["llama-3-8b"]
+        selectedModel = "Select a Model"
+        isGenerating = true
+
+        let words = ["Debug", "all", "night,", "ship", "by", "dawn.", "Code", "is", "poetry", "in", "motion."]
+        streamTask = Task { @MainActor in
+            var text = ""
+            for (index, word) in words.enumerated() {
+                try? await Task.sleep(nanoseconds: 150_000_000)
+                guard !Task.isCancelled else { break }
+                text += (index > 0 ? " " : "") + word
+                messages = messages.dropLast() + [ChatMessage(role: .assistant, content: text)]
+            }
+            isGenerating = false
+        }
+    }
+
+    override func fetchAvailableModels() async {}
+    override func loadHistory() async {}
+    override func sendMessage(text: String) async {}
+    override func clearHistory() async { messages.removeAll() }
+    override func loadHistorySessions() async {}
+    override func loadSession(_ session: ChatSession) async {}
+    override func removeQueuedMessage(id: UUID) {}
+    override func updateQueuedMessage(id: UUID, text: String) {}
+    override func clearQueue() {}
+}
+
+#Preview("AI Chat") {
+    AIChatView(viewModel: PreviewAIChatViewModel())
+        .frame(width: 400, height: 600)
+}
+
+#Preview("Loading") {
+    AIChatView(viewModel: PreviewAIChatLoadingViewModel())
+        .frame(width: 400, height: 600)
+}
+
+#Preview("Streaming") {
+    AIChatView(viewModel: PreviewAIChatStreamingViewModel())
+        .frame(width: 400, height: 600)
+}
+
+@MainActor
+private final class PreviewAIChatQueuedViewModel: AIChatViewModel {
+    private var previewQueue: [WorkspaceModel.QueuedMessage] = [
+        WorkspaceModel.QueuedMessage(text: "How do I set up DeviantArt OAuth?"),
+        WorkspaceModel.QueuedMessage(text: "What agents are currently running?"),
+        WorkspaceModel.QueuedMessage(text: "Export last week's content report")
+    ]
+
+    override var queuedMessages: [WorkspaceModel.QueuedMessage] { previewQueue }
+
+    init() {
+        let (workspace, router) = makePreviewDependencies()
+        super.init(
+            aiClient: AIClient(),
+            contextExtractor: ContextExtractor(),
+            chatHistoryStore: ChatHistoryStore(databaseManager: try! DatabaseManager()),
+            workspace: workspace,
+            router: router
+        )
+        messages = [
+            ChatMessage(role: .user, content: "What's the system status?"),
+            ChatMessage(role: .assistant, content: "All systems operational. 3 agents active, 2 tasks scheduled.")
+        ]
+        availableModels = ["llama-3-8b"]
+        selectedModel = "Select a Model"
+        isGenerating = true
+    }
+
+    override func fetchAvailableModels() async {}
+    override func loadHistory() async {}
+    override func sendMessage(text: String) async {}
+    override func clearHistory() async { messages.removeAll() }
+    override func loadHistorySessions() async {}
+    override func loadSession(_ session: ChatSession) async {}
+    override func removeQueuedMessage(id: UUID) { previewQueue.removeAll { $0.id == id } }
+    override func updateQueuedMessage(id: UUID, text: String) {
+        if let index = previewQueue.firstIndex(where: { $0.id == id }) {
+            previewQueue[index] = WorkspaceModel.QueuedMessage(id: id, text: text)
+        }
+    }
+    override func clearQueue() { previewQueue.removeAll() }
+}
+
+#Preview("Queued") {
+    AIChatView(viewModel: PreviewAIChatQueuedViewModel())
+        .frame(width: 400, height: 600)
+}
+
+@MainActor
+private final class PreviewAIChatHistoryViewModel: AIChatViewModel {
+    private var previewSessions: [ChatSession] = [
+        ChatSession(section: "Dashboard", messages: [
+            ChatMessage(role: .user, content: "What agents are running?"),
+            ChatMessage(role: .assistant, content: "3 agents active.")
+        ], createdAt: Date().addingTimeInterval(-3600), updatedAt: Date().addingTimeInterval(-3600)),
+        ChatSession(section: "Agents", messages: [
+            ChatMessage(role: .user, content: "Create a new agent"),
+            ChatMessage(role: .assistant, content: "Agent created successfully.")
+        ], createdAt: Date().addingTimeInterval(-86400), updatedAt: Date().addingTimeInterval(-86400)),
+        ChatSession(section: "Settings", messages: [
+            ChatMessage(role: .user, content: "How do I configure OAuth?")
+        ], createdAt: Date().addingTimeInterval(-172800), updatedAt: Date().addingTimeInterval(-172800))
+    ]
+
+    override var historySessions: [ChatSession] { previewSessions }
+
+    init() {
+        let (workspace, router) = makePreviewDependencies()
+        super.init(
+            aiClient: AIClient(),
+            contextExtractor: ContextExtractor(),
+            chatHistoryStore: ChatHistoryStore(databaseManager: try! DatabaseManager()),
+            workspace: workspace,
+            router: router
+        )
+        messages = []
+        availableModels = ["llama-3-8b"]
+        selectedModel = "Select a Model"
+        showHistory = true
+    }
+
+    override func fetchAvailableModels() async {}
+    override func loadHistory() async {}
+    override func sendMessage(text: String) async {}
+    override func clearHistory() async {}
+    override func loadHistorySessions() async {}
+    override func loadSession(_ session: ChatSession) async { showHistory = false }
+    override func removeQueuedMessage(id: UUID) {}
+    override func updateQueuedMessage(id: UUID, text: String) {}
+    override func clearQueue() {}
+}
+
+#Preview("History") {
+    AIChatView(viewModel: PreviewAIChatHistoryViewModel())
+        .frame(width: 400, height: 600)
+}
+

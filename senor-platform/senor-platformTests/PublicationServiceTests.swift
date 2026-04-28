@@ -693,8 +693,9 @@ final class DependencyInjectionTests: XCTestCase {
         let mockService = MockDeviantArtService()
         await sharedContainer.register(DeviantArtServiceProtocol.self, instance: mockService)
 
-        // Act - resolve as AKDeviantArtClient (which MockDeviantArtService also conforms to via extension)
-        let resolved = await sharedContainer.resolveOptional(AKDeviantArtClient.self)
+        // Act - resolve as protocol then cast, matching production usage in AppToolServiceProvider
+        let resolvedProtocol = await sharedContainer.resolveOptional(DeviantArtServiceProtocol.self)
+        let resolved = resolvedProtocol as? AKDeviantArtClient
 
         // Assert
         XCTAssertNotNil(resolved)
@@ -705,8 +706,9 @@ final class DependencyInjectionTests: XCTestCase {
         let mockService = MockPatreonService()
         await sharedContainer.register(PatreonServiceProtocol.self, instance: mockService)
 
-        // Act
-        let resolved = await sharedContainer.resolveOptional(AKPatreonClient.self)
+        // Act - resolve as protocol then cast, matching production usage in AppToolServiceProvider
+        let resolvedProtocol = await sharedContainer.resolveOptional(PatreonServiceProtocol.self)
+        let resolved = resolvedProtocol as? AKPatreonClient
 
         // Assert
         XCTAssertNotNil(resolved)
