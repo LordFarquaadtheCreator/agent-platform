@@ -36,9 +36,22 @@
 		10BDEBB82F8DE63C00AA59F6 /* TestPlan.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; name = TestPlan.xctestplan; path = "senor-platformTests/TestPlan.xctestplan"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		10BBE6F82F85C5BB00407568 /* Exceptions for "senor-platform" folder in "senor-platform" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 10BBE6F42F85C5BB00407568 /* senor-platform */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		10BBE6F72F85C5BB00407568 /* senor-platform */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				10BBE6F82F85C5BB00407568 /* Exceptions for "senor-platform" folder in "senor-platform" target */,
+			);
 			path = "senor-platform";
 			sourceTree = "<group>";
 		};

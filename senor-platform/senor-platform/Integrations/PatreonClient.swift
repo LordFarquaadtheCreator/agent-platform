@@ -151,7 +151,7 @@ public struct PatreonIncludedAttributes: Codable {
     public let title: String?
     public let url: String?
     public let amountCents: Int?
-    
+
     enum CodingKeys: String, CodingKey {
         case title
         case url

@@ -9,19 +9,22 @@ struct AIHelperField: View {
     @Binding var text: String
     let isMultiline: Bool
     let height: CGFloat?
+    let aiAction: () -> Void
 
     init(
         title: String,
         placeholder: String,
         text: Binding<String>,
         isMultiline: Bool = false,
-        height: CGFloat? = nil
+        height: CGFloat? = nil,
+        aiAction: @escaping () -> Void = {}
     ) {
         self.title = title
         self.placeholder = placeholder
         self._text = text
         self.isMultiline = isMultiline
         self.height = height
+        self.aiAction = aiAction
     }
 
     var body: some View {
@@ -30,7 +33,7 @@ struct AIHelperField: View {
 
             HStack(spacing: 0) {
                 inputField
-                AIHelperButton()
+                AIHelperButton(action: aiAction)
             }
             .padding(.horizontal, AppTheme.Spacing.xSmall)
             .padding(.vertical, AppTheme.Spacing.xSmall)
@@ -83,7 +86,14 @@ struct AIHelperField: View {
 struct AIHelperTagInput: View {
     let title: String
     @Binding var tags: [String]
+    let aiAction: () -> Void
     @State private var currentInput: String = ""
+
+    init(title: String, tags: Binding<[String]>, aiAction: @escaping () -> Void = {}) {
+        self.title = title
+        self._tags = tags
+        self.aiAction = aiAction
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: AppTheme.Spacing.small) {
@@ -125,7 +135,7 @@ struct AIHelperTagInput: View {
             .disabled(currentInput.isEmpty)
             .labelStyle(.iconOnly)
 
-            AIHelperButton()
+            AIHelperButton(action: aiAction)
         }
     }
 
@@ -141,12 +151,16 @@ struct AIHelperTagInput: View {
 // MARK: - AI Helper Button
 
 private struct AIHelperButton: View {
+    let action: () -> Void
+
+    init(action: @escaping () -> Void = {}) {
+        self.action = action
+    }
+
     var body: some View {
-        Button("AI Helper", systemImage: "sparkles") {
-            // TODO: Implement AI helper
-        }
-        .buttonStyle(.plain)
-        .labelStyle(AIHelperLabelStyle())
+        Button("AI Helper", systemImage: "sparkles", action: action)
+            .buttonStyle(.plain)
+            .labelStyle(AIHelperLabelStyle())
     }
 }
 
@@ -340,6 +354,7 @@ struct MediaPicker: View {
                     .resizable()
                     .aspectRatio(contentMode: .fit)
                     .frame(maxHeight: 200)
+
             default:
                 Image(systemName: "doc")
                     .font(.system(size: 48))
@@ -356,6 +371,7 @@ struct MediaPicker: View {
             } else if let first = urls.first {
                 selectedURL = first
             }
+
         case .failure:
             break
         }
@@ -396,7 +412,7 @@ struct MediaPicker: View {
 }
 
 #Preview("Media Picker") {
-    @Previewable @State var url: URL? = nil
+    @Previewable @State var url: URL?
     MediaPicker(
         title: "Media",
         selectedURL: $url

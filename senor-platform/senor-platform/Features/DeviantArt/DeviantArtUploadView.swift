@@ -4,13 +4,13 @@ import UniformTypeIdentifiers
 struct DeviantArtUploadView: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var viewModel: DeviantArtViewModel
-    
+
     @State private var title: String = ""
     @State private var tags: [String] = []
     @State private var artistComments: String = ""
     @State private var selectedFileURLs: [URL] = []
     @State private var isUploading = false
-    
+
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -53,14 +53,14 @@ struct DeviantArtUploadView: View {
             set: { ToastState.shared.message = $0 }
         ))
     }
-    
+
     private var fileSection: some View {
         MediaPicker(
             title: "Artwork",
             selectedURLs: $selectedFileURLs
         )
     }
-    
+
     private var titleSection: some View {
         AIHelperField(
             title: "Title",
@@ -68,14 +68,14 @@ struct DeviantArtUploadView: View {
             text: $title
         )
     }
-    
+
     private var tagsSection: some View {
         AIHelperTagInput(
             title: "Tags",
             tags: $tags
         )
     }
-    
+
     private var commentsSection: some View {
         AIHelperField(
             title: "Artist Comments",
@@ -85,14 +85,14 @@ struct DeviantArtUploadView: View {
             height: 120
         )
     }
-    
+
     private var canUpload: Bool {
         !title.isEmpty && !selectedFileURLs.isEmpty
     }
 
     private func performUpload() {
         guard let fileURL = selectedFileURLs.first else { return }
-        
+
         isUploading = true
         Task {
             do {

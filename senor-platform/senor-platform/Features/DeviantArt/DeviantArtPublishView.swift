@@ -4,14 +4,14 @@ struct DeviantArtPublishView: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var viewModel: DeviantArtViewModel
     let stashItem: DeviantArtClient.StashItem
-    
+
     @State private var title: String = ""
     @State private var category: String = ""
     @State private var isMature = false
     @State private var matureLevel: String = ""
     @State private var allowsComments = true
     @State private var isPublishing = false
-    
+
     private let categories = [
         "3d": "3D & Fractal Art",
         "admins": "Administrators",
@@ -36,13 +36,13 @@ struct DeviantArtPublishView: View {
         "streetart": "Street Art",
         "traditional": "Traditional Art"
     ]
-    
+
     private let matureLevels = [
         "",
         "strict",
         "moderate"
     ]
-    
+
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -88,7 +88,7 @@ struct DeviantArtPublishView: View {
             set: { ToastState.shared.message = $0 }
         ))
     }
-    
+
     private var stashPreview: some View {
         AppSurface(style: .card) {
             VStack(alignment: .leading, spacing: AppTheme.Spacing.small) {
@@ -97,7 +97,7 @@ struct DeviantArtPublishView: View {
                         .foregroundStyle(AppTheme.ColorToken.statusWarning)
                     AppText("Publishing from Sta.sh", style: .caption, color: AppTheme.ColorToken.textSecondary)
                 }
-                
+
                 if let thumbURL = stashItem.previewURL {
                     AsyncImage(url: thumbURL) { phase in
                         switch phase {
@@ -106,17 +106,18 @@ struct DeviantArtPublishView: View {
                                 .resizable()
                                 .aspectRatio(contentMode: .fit)
                                 .frame(maxHeight: 150)
+
                         default:
                             EmptyView()
                         }
                     }
                 }
-                
+
                 AppText(stashItem.title.isEmpty ? "Untitled" : stashItem.title, style: .headline)
             }
         }
     }
-    
+
     private var titleSection: some View {
         AIHelperField(
             title: "Deviation Title",
@@ -124,11 +125,11 @@ struct DeviantArtPublishView: View {
             text: $title
         )
     }
-    
+
     private var categorySection: some View {
         VStack(alignment: .leading, spacing: AppTheme.Spacing.small) {
             AppText("Category", style: .headline)
-            
+
             Picker("Category", selection: $category) {
                 Text("Select a category...").tag("")
                 ForEach(Array(categories.keys.sorted()), id: \.self) { key in
@@ -139,11 +140,11 @@ struct DeviantArtPublishView: View {
             .padding(AppTheme.Spacing.small)
             .background(AppTheme.ColorToken.sectionBackground)
             .clipShape(RoundedRectangle(cornerRadius: AppTheme.CornerRadius.control))
-            
+
             aiCategoryBar
         }
     }
-    
+
     private var aiCategoryBar: some View {
         HStack {
             HStack(spacing: AppTheme.Spacing.xSmall) {
@@ -156,25 +157,25 @@ struct DeviantArtPublishView: View {
             .padding(.vertical, AppTheme.Spacing.xSmall)
             .background(AppTheme.ColorToken.accent.opacity(0.1))
             .clipShape(Capsule())
-            
+
             Button {
                 ToastState.shared.message = "TODO: IMPLEMENT"
             } label: {
                 AppText("Suggest category with AI", style: .caption, color: AppTheme.ColorToken.accent)
             }
             .buttonStyle(.plain)
-            
+
             Spacer()
         }
         .padding(.horizontal, AppTheme.Spacing.small)
         .padding(.vertical, AppTheme.Spacing.xSmall)
     }
-    
+
     private var optionsSection: some View {
         AppSurface(style: .card) {
             VStack(alignment: .leading, spacing: AppTheme.Spacing.medium) {
                 Toggle("Mature Content", isOn: $isMature)
-                
+
                 if isMature {
                     Picker("Mature Level", selection: $matureLevel) {
                         Text("Default").tag("")
@@ -183,16 +184,16 @@ struct DeviantArtPublishView: View {
                     }
                     .pickerStyle(.segmented)
                 }
-                
+
                 Toggle("Allow Comments", isOn: $allowsComments)
             }
         }
     }
-    
+
     private var canPublish: Bool {
         !title.isEmpty && !category.isEmpty
     }
-    
+
     private func performPublish() {
         isPublishing = true
         Task {

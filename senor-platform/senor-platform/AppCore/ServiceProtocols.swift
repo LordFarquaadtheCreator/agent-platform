@@ -62,3 +62,48 @@ extension CacheService: CacheServiceProtocol {}
 extension ContentVersioningService: ContentVersioningServiceProtocol {}
 extension ApprovalService: ApprovalServiceProtocol {}
 extension SettingsService: SettingsServiceProtocol {}
+
+// MARK: - Integration Service Protocols
+
+/// Protocol for DeviantArt operations - enables mocking in tests
+public protocol DeviantArtServiceProtocol: Sendable {
+    func stashSubmit(
+        filename: String,
+        title: String?,
+        artistComments: String?,
+        tags: [String]?,
+        originalUrl: String?
+    ) async throws -> DeviantArtClient.StashItem
+    // swiftlint:disable:function_parameter_count
+    func stashPublish(
+        stashId: String,
+        title: String,
+        category: String?,
+        isMature: Bool,
+        matureLevel: String?,
+        allowsComments: Bool,
+        galleryIds: [String]?,
+        licenseOptions: [String: String]?
+    ) async throws -> DeviantArtClient.StashPublishResponse
+    // swiftlint:enable:function_parameter_count
+    func getDeviation(deviationId: String) async throws -> DeviantArtClient.Deviation
+}
+
+/// Protocol for Patreon operations - enables mocking in tests
+public protocol PatreonServiceProtocol: Sendable {
+    func createPost(
+        campaignId: String,
+        title: String,
+        content: String,
+        isPaid: Bool?,
+        isPublic: Bool?,
+        tiers: [String]?,
+        publishAt: Date?
+    ) async throws -> PatreonClient.Post
+    func getPublicURL(for postId: String) async throws -> String
+}
+
+// MARK: - Protocol Conformance Extensions
+
+extension DeviantArtClient: DeviantArtServiceProtocol {}
+extension PatreonClient: PatreonServiceProtocol {}

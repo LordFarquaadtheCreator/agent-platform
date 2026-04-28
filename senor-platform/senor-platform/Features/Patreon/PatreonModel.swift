@@ -74,11 +74,11 @@ public struct PatreonTier: Identifiable, Codable, Sendable {
     public let id: String
     public let type: String
     public let attributes: TierAttributes
-    
+
     public struct TierAttributes: Codable, Sendable {
         public let title: String
         public let amountCents: Int?
-        
+
         enum CodingKeys: String, CodingKey {
             case title
             case amountCents = "amount_cents"

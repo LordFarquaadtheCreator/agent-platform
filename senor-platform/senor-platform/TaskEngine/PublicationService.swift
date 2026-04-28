@@ -7,26 +7,26 @@ public final actor PublicationService {
     private let cacheService: CacheService
     private let approvalQueueRepository: ApprovalQueueRepository
     private let settingsService: SettingsService
+    private let deviantArtClient: DeviantArtServiceProtocol?
+    private let patreonClient: PatreonServiceProtocol?
     private let logger = AppLogger.general
-
-    /// DeviantArt client (injected) - nonisolated(unsafe) because clients are thread-safe actors
-    nonisolated(unsafe) public var deviantArtClient: DeviantArtClient?
-
-    /// Patreon client (injected) - nonisolated(unsafe) because clients are thread-safe actors
-    nonisolated(unsafe) public var patreonClient: PatreonClient?
 
     public init(
         approvalQueueRepository: ApprovalQueueRepository,
         publicationRepository: PublicationTargetRepository,
         contentRepository: GeneratedContentRepository,
         cacheService: CacheService,
-        settingsService: SettingsService
+        settingsService: SettingsService,
+        deviantArtClient: DeviantArtServiceProtocol? = nil,
+        patreonClient: PatreonServiceProtocol? = nil
     ) {
         self.approvalQueueRepository = approvalQueueRepository
         self.publicationRepository = publicationRepository
         self.contentRepository = contentRepository
         self.cacheService = cacheService
         self.settingsService = settingsService
+        self.deviantArtClient = deviantArtClient
+        self.patreonClient = patreonClient
     }
 
     // MARK: - Publication Execution
@@ -70,7 +70,9 @@ public final actor PublicationService {
             let stashItem = try await client.stashSubmit(
                 filename: "\(contentId).png", // Placeholder
                 title: stashTitle,
-                tags: tags
+                artistComments: nil,
+                tags: tags,
+                originalUrl: nil
             )
 
             // Step 2: Publish from stash
@@ -78,7 +80,11 @@ public final actor PublicationService {
                 stashId: stashItem.itemid,
                 title: stashTitle,
                 category: category,
-                isMature: isMature
+                isMature: isMature,
+                matureLevel: nil,
+                allowsComments: true,
+                galleryIds: nil,
+                licenseOptions: nil
             )
 
             // Update target with success
@@ -155,7 +161,8 @@ public final actor PublicationService {
                 content: description,
                 isPaid: isPaid,
                 isPublic: isPublic,
-                tiers: tiers
+                tiers: tiers,
+                publishAt: nil
             )
 
             // Get public URL
@@ -257,9 +264,8 @@ public final actor PublicationService {
                 }
 
             case "patreon":
-                if let client = patreonClient {
-                    let post = try await client.getPost(postId: remoteId)
-                    mutableTarget.remoteUrl = post.attributes.url
+                if let postId = mutableTarget.remotePostId {
+                    mutableTarget.remoteUrl = "https://www.patreon.com/posts/\(postId)"
                 }
 
             default:
