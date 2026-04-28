@@ -81,16 +81,11 @@ struct PatreonScreen: View {
                 }
                 .disabled(viewModel.isAnyLoading)
             }
-            .padding(AppTheme.Spacing.screenPadding)
 
-            // Auth state indicator
-            AppHStack(spacing: .medium) {
-                authStatePill
-                Spacer()
-            }
-            .padding(.horizontal, AppTheme.Spacing.screenPadding)
+			authStatePill
         }
-    }
+		.padding(AppTheme.Spacing.screenPadding)
+	}
 
     private var authStatePill: some View {
         let (text, color): (String, Color) = {
