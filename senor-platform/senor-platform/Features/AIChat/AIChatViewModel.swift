@@ -57,7 +57,7 @@ public class AIChatViewModel: ObservableObject {
 
     public func fetchAvailableModels() async {
         do {
-            let models = try await aiClient.fetchModels()
+            let models = try await aiClient.fetchLanguageModels()
             availableModels = models
 
             // Restore previously selected model if available

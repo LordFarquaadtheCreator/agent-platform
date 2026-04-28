@@ -468,12 +468,12 @@ private final class PreviewAIChatViewModel: AIChatViewModel {
             ChatMessage(role: .assistant, content: "Ur mom lol")
         ]
         availableModels = ["model", "claude"]
-        selectedModel = "Select a Model"
+        selectedModel = ""
     }
 
     override func fetchAvailableModels() async {}
     override func loadHistory() async {}
-    override func sendMessage() async {
+    override func sendMessage(text: String) async {
         isGenerating = true
         try? await Task.sleep(nanoseconds: 500_000_000)
         messages.append(ChatMessage(role: .assistant, content: "This is a preview response."))
@@ -502,13 +502,13 @@ private final class PreviewAIChatLoadingViewModel: AIChatViewModel {
             ChatMessage(role: .user, content: "Summarize the DeviantArt integration docs")
         ]
         availableModels = ["llama-3-8b"]
-        selectedModel = "Select a Model"
+        selectedModel = ""
         isGenerating = true
     }
 
     override func fetchAvailableModels() async {}
     override func loadHistory() async {}
-    override func sendMessage() async {}
+    override func sendMessage(text: String) async {}
     override func clearHistory() async { messages.removeAll() }
     override func loadHistorySessions() async {}
     override func loadSession(_ session: ChatSession) async {}
@@ -534,7 +534,7 @@ private final class PreviewAIChatStreamingViewModel: AIChatViewModel {
             ChatMessage(role: .user, content: "Write a haiku about coding")
         ]
         availableModels = ["llama-3-8b"]
-        selectedModel = "Select a Model"
+        selectedModel = ""
         isGenerating = true
 
         let words = ["Debug", "all", "night,", "ship", "by", "dawn.", "Code", "is", "poetry", "in", "motion."]
@@ -552,7 +552,7 @@ private final class PreviewAIChatStreamingViewModel: AIChatViewModel {
 
     override func fetchAvailableModels() async {}
     override func loadHistory() async {}
-    override func sendMessage() async {}
+    override func sendMessage(text: String) async {}
     override func clearHistory() async { messages.removeAll() }
     override func loadHistorySessions() async {}
     override func loadSession(_ session: ChatSession) async {}
@@ -600,13 +600,13 @@ private final class PreviewAIChatQueuedViewModel: AIChatViewModel {
             ChatMessage(role: .assistant, content: "All systems operational. 3 agents active, 2 tasks scheduled.")
         ]
         availableModels = ["llama-3-8b"]
-        selectedModel = "Select a Model"
+        selectedModel = ""
         isGenerating = true
     }
 
     override func fetchAvailableModels() async {}
     override func loadHistory() async {}
-    override func sendMessage() async {}
+    override func sendMessage(text: String) async {}
     override func clearHistory() async { messages.removeAll() }
     override func loadHistorySessions() async {}
     override func loadSession(_ session: ChatSession) async {}
@@ -653,13 +653,13 @@ private final class PreviewAIChatHistoryViewModel: AIChatViewModel {
         )
         messages = []
         availableModels = ["llama-3-8b"]
-        selectedModel = "Select a Model"
+        selectedModel = ""
         showHistory = true
     }
 
     override func fetchAvailableModels() async {}
     override func loadHistory() async {}
-    override func sendMessage() async {}
+    override func sendMessage(text: String) async {}
     override func clearHistory() async {}
     override func loadHistorySessions() async {}
     override func loadSession(_ session: ChatSession) async { showHistory = false }

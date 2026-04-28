@@ -93,6 +93,21 @@ public actor AIClient {
         return modelsResponse.data.map { $0.id }
     }
 
+    /// Fetch only language/chat-capable models, excluding embeddings, vision, audio, TTS.
+    public func fetchLanguageModels() async throws -> [String] {
+        let allModels = try await fetchModels()
+        let nonLanguagePatterns = [
+            "text-embedding", "embedding-",
+            "dall-e", "tts-", "whisper-",
+            "-audio-", "-vision", "-image"
+        ]
+        return allModels.filter { model in
+            !nonLanguagePatterns.contains { pattern in
+                model.lowercased().contains(pattern)
+            }
+        }
+    }
+
     /// Stream a chat response using OpenAI Responses API format.
     /// Tracks responseID internally for stateful chat continuation.
     public func chatStream(
