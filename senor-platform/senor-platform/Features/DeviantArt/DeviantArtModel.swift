@@ -129,6 +129,8 @@ public final class DeviantArtViewModel: ObservableObject {
             if let first = metadata.first {
                 deviationMetadata[deviationId] = first
             }
+        } catch is CancellationError {
+            // Task cancelled - don't overwrite metadata
         } catch {
             // Silently fail - metadata is non-critical
         }
