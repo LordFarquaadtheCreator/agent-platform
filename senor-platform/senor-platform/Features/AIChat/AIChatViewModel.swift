@@ -20,6 +20,7 @@ public class AIChatViewModel: ObservableObject {
     private let router: AppRouter
 
     private var previousResponseID: String?
+    private var generationTask: Task<Void, Never>?
 
     private var systemPrompt: String {
         """
@@ -105,7 +106,6 @@ public class AIChatViewModel: ObservableObject {
         guard !trimmed.isEmpty else { return }
         guard !selectedModel.isEmpty, availableModels.contains(selectedModel) else { return }
 
-        // If generating, queue the message instead
         if isGenerating {
             workspace.enqueueMessage(trimmed)
             return
@@ -114,76 +114,75 @@ public class AIChatViewModel: ObservableObject {
         let userMessage = ChatMessage(role: .user, content: trimmed)
         messages.append(userMessage)
 
+        await performGeneration(input: trimmed, isRedo: false)
+    }
+
+    private func performGeneration(input: String, isRedo: Bool) async {
         isGenerating = true
         errorMessage = nil
 
-        do {
-            // Build instructions with system prompt + context (ragtool style)
-            let context = contextExtractor.extractContext(
-                for: router.selectedSection,
-                workspace: workspace,
-                router: router
-            )
-            let instructions = """
-                \(systemPrompt)
+        let generationModel = selectedModel
+        let context = contextExtractor.extractContext(
+            for: router.selectedSection,
+            workspace: workspace,
+            router: router
+        )
+        let instructions = """
+            \(systemPrompt)
 
-                Current page context:
-                \(context)
-                """
+            Current page context:
+            \(context)
+            """
+        let effectiveInstructions = isRedo ? instructions : (previousResponseID == nil ? instructions : nil)
+        let generationPreviousID = isRedo ? nil : previousResponseID
 
-            // Use stateful chat: instructions only on first message, then previousResponseID
-            let effectiveInstructions = previousResponseID == nil ? instructions : nil
+        generationTask = Task { @MainActor in
+            defer {
+                isGenerating = false
+                generationTask = nil
 
-            // Stream response using ragtool-style API
-            var assistantResponse = ""
-            let stream = await aiClient.chatStream(
-                input: trimmed,
-                instructions: effectiveInstructions,
-                model: selectedModel,
-                previousResponseID: previousResponseID
-            )
-
-            for try await chunk in stream {
-                assistantResponse += chunk
-                // Update last message with streaming content
-                if messages.last?.role == .assistant {
-                    messages[messages.count - 1] = ChatMessage(role: .assistant, content: assistantResponse)
-                } else {
-                    messages.append(ChatMessage(role: .assistant, content: assistantResponse))
+                if let next = workspace.messageQueue.first {
+                    workspace.removeQueuedMessage(id: next.id)
+                    Task { await sendMessage(text: next.text) }
                 }
             }
 
-            // Capture response ID for stateful continuation
-            if let id = await aiClient.getLastResponseID() {
-                previousResponseID = id
+            do {
+                var assistantResponse = ""
+                let stream = await aiClient.chatStream(
+                    input: input,
+                    instructions: effectiveInstructions,
+                    model: generationModel,
+                    previousResponseID: generationPreviousID
+                )
+
+                for try await chunk in stream {
+                    guard !Task.isCancelled else { break }
+                    assistantResponse += chunk
+                    if messages.last?.role == .assistant {
+                        messages[messages.count - 1] = ChatMessage(role: .assistant, content: assistantResponse)
+                    } else {
+                        messages.append(ChatMessage(role: .assistant, content: assistantResponse))
+                    }
+                }
+
+                if !Task.isCancelled, let id = await aiClient.getLastResponseID() {
+                    previousResponseID = id
+                }
+
+                try await chatHistoryStore.save(for: router.selectedSection, messages: messages)
+                updateContextSummary()
+            } catch is CancellationError {
+                // User cancelled - keep partial response, no error
+            } catch {
+                errorMessage = "Failed to get AI response: \(error.localizedDescription)"
+                if !isRedo, messages.last?.role == .user {
+                    messages.removeLast()
+                }
             }
-        } catch is CancellationError {
-            isGenerating = false
-            return
-        } catch {
-            errorMessage = "Failed to get AI response: \(error.localizedDescription)"
-            // Remove user message if failed
-            if messages.last?.role == .user {
-                messages.removeLast()
-            }
-            isGenerating = false
-            return
         }
 
-        do {
-            try await chatHistoryStore.save(for: router.selectedSection, messages: messages)
-        } catch {
-            errorMessage = "Failed to save chat history for \(router.selectedSection.title): \(error.localizedDescription)"
-        }
-
-        updateContextSummary()
-        isGenerating = false
-
-        // Auto-drain queue: if messages waiting, send next one
-        if let next = workspace.messageQueue.first {
-            workspace.removeQueuedMessage(id: next.id)
-            await sendMessage(text: next.text)
-        }
+        await generationTask?.value
     }
 
     public func clearHistory() async {
@@ -209,6 +208,28 @@ public class AIChatViewModel: ObservableObject {
 
     public func clearQueue() {
         workspace.clearQueue()
+    }
+
+    public func stopGeneration() {
+        generationTask?.cancel()
+    }
+
+    public var canRedoLastResponse: Bool {
+        !isGenerating && messages.last?.role == .assistant
+    }
+
+    public func redoLastResponse() {
+        guard canRedoLastResponse else { return }
+
+        messages.removeLast()
+
+        guard let lastUserMessage = messages.last(where: { $0.role == .user }) else { return }
+
+        previousResponseID = nil
+
+        Task {
+            await performGeneration(input: lastUserMessage.content, isRedo: true)
+        }
     }
 
     private func updateContextSummary() {

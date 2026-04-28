@@ -48,20 +48,110 @@ struct PatreonMemberDetailPanel: View {
 
 // MARK: - Previews
 
-#Preview("Member Detail") {
-    let mockMember = PatreonMember(
-        id: "preview-member-1",
+#Preview("Active Patron") {
+    PatreonMemberDetailPanel(member: .previewActive)
+        .frame(width: 350)
+}
+
+#Preview("Declined Patron") {
+    PatreonMemberDetailPanel(member: .previewDeclined)
+        .frame(width: 350)
+}
+
+#Preview("Former Patron") {
+    PatreonMemberDetailPanel(member: .previewFormer)
+        .frame(width: 350)
+}
+
+#Preview("No Email") {
+    PatreonMemberDetailPanel(member: .previewNoEmail)
+        .frame(width: 350)
+}
+
+#Preview("Minimal Info") {
+    let member = PatreonMember(
+        id: "minimal",
         type: "member",
-        attributes: PatreonMember.PatreonMemberAttributes(
-            fullName: "Jane Doe",
-            email: "jane@example.com",
-            patronStatus: "active_patron",
-            lastChargeStatus: "Paid",
-            lifetimeSupportCents: 50000,
-            currentlyEntitledAmountCents: 1000
+        attributes: .init(
+            fullName: nil,
+            email: nil,
+            patronStatus: nil,
+            lastChargeStatus: nil,
+            lifetimeSupportCents: nil,
+            currentlyEntitledAmountCents: nil,
+            isFollower: nil,
+            lastChargeDate: nil,
+            pledgeRelationshipStart: nil,
+            note: nil
         ),
         relationships: nil
     )
-    PatreonMemberDetailPanel(member: mockMember)
+    PatreonMemberDetailPanel(member: member)
+        .frame(width: 350)
+}
+
+#Preview("High Lifetime") {
+    let member = PatreonMember(
+        id: "high-lifetime",
+        type: "member",
+        attributes: .init(
+            fullName: "Super Supporter",
+            email: "super@example.com",
+            patronStatus: "active_patron",
+            lastChargeStatus: "Paid",
+            lifetimeSupportCents: 999999,
+            currentlyEntitledAmountCents: 5000,
+            isFollower: true,
+            lastChargeDate: "2026-04-26T00:00:00.000Z",
+            pledgeRelationshipStart: "2020-01-01T00:00:00.000Z",
+            note: "VIP supporter since day one!"
+        ),
+        relationships: nil
+    )
+    PatreonMemberDetailPanel(member: member)
+        .frame(width: 350)
+}
+
+#Preview("Long Name") {
+    let member = PatreonMember(
+        id: "long-name",
+        type: "member",
+        attributes: .init(
+            fullName: "Very Long Full Name That Tests Layout Truncation and Text Handling in Member Detail Panel",
+            email: "long@example.com",
+            patronStatus: "active_patron",
+            lastChargeStatus: "Paid",
+            lifetimeSupportCents: 10000,
+            currentlyEntitledAmountCents: 500,
+            isFollower: true,
+            lastChargeDate: "2026-04-26T00:00:00.000Z",
+            pledgeRelationshipStart: "2025-01-01T00:00:00.000Z",
+            note: nil
+        ),
+        relationships: nil
+    )
+    PatreonMemberDetailPanel(member: member)
+        .frame(width: 350)
+}
+
+#Preview("No Pledge Info") {
+    let member = PatreonMember(
+        id: "no-pledge",
+        type: "member",
+        attributes: .init(
+            fullName: "Free Follower",
+            email: "follower@example.com",
+            patronStatus: nil,
+            lastChargeStatus: nil,
+            lifetimeSupportCents: nil,
+            currentlyEntitledAmountCents: nil,
+            isFollower: true,
+            lastChargeDate: nil,
+            pledgeRelationshipStart: nil,
+            note: nil
+        ),
+        relationships: nil
+    )
+    PatreonMemberDetailPanel(member: member)
         .frame(width: 350)
 }

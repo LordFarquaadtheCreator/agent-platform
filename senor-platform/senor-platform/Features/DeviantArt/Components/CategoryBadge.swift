@@ -21,8 +21,16 @@ struct CategoryBadge: View {
 
 // MARK: - Previews
 
-#Preview {
+#Preview("Short") {
+    CategoryBadge(category: "Art")
+}
+
+#Preview("Standard") {
     CategoryBadge(category: "Digital Art")
+}
+
+#Preview("Long") {
+    CategoryBadge(category: "3D & Fractal Art")
 }
 
 #Preview("Photography") {

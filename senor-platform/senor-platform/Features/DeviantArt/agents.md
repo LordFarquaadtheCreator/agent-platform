@@ -32,7 +32,7 @@ Quick reference:
 
 ## Design System Compliance
 
-- Uses AppText, AppCard, AppVStack from SharedUI
+- Uses AppText, AppCard from SharedUI
 - All spacing via AppTheme.Spacing
 - All fonts via AppTheme.Typography
 - No raw Color literals (use ColorToken)

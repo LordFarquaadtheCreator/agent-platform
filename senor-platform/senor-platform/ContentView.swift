@@ -61,7 +61,7 @@ struct ContentView: View {
     }
 
     private var loadingView: some View {
-        AppVStack(spacing: .medium) {
+        VStack(alignment: .center, spacing: AppTheme.Spacing.medium) {
             ProgressView()
                 .scaleEffect(1.3)
             AppText("Initializing Senor Platform…", style: .headline, color: AppTheme.ColorToken.textSecondary)

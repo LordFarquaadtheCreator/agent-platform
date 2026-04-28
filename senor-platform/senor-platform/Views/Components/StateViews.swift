@@ -65,7 +65,7 @@ public struct ErrorStateView: View {
         VStack {
             Spacer()
             AppCard {
-                AppVStack(spacing: .medium, alignment: .center) {
+                VStack(alignment: .center, spacing: AppTheme.Spacing.medium) {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .font(AppTheme.Typography.title2)
                         .foregroundStyle(AppTheme.ColorToken.statusError)

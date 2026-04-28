@@ -44,9 +44,9 @@ private struct SettingsContent: View {
     @ObservedObject var viewModel: SettingsViewModel
 
     var body: some View {
-        AppVStack(spacing: .large, alignment: .leading) {
+        VStack(alignment: .leading, spacing: AppTheme.Spacing.large) {
             AppCard {
-                AppVStack(spacing: .medium, alignment: .leading) {
+                VStack(alignment: .leading, spacing: AppTheme.Spacing.medium) {
                     AppText("General", style: .headline)
                     Toggle("Launch at Login", isOn: $viewModel.generalSettings.launchAtLogin)
                     Toggle("Show Notifications", isOn: $viewModel.generalSettings.showNotifications)
@@ -63,7 +63,7 @@ private struct SettingsContent: View {
             }
 
             AppCard {
-                AppVStack(spacing: .medium, alignment: .leading) {
+                VStack(alignment: .leading, spacing: AppTheme.Spacing.medium) {
                     AppText("Task Runtime", style: .headline)
                     AppInputField(
                         title: "Task Script Path",
@@ -78,7 +78,7 @@ private struct SettingsContent: View {
             }
 
             AppCard {
-                AppVStack(spacing: .medium, alignment: .leading) {
+                VStack(alignment: .leading, spacing: AppTheme.Spacing.medium) {
                     AppText("DeviantArt", style: .headline)
 
                     AppInputField(
@@ -102,7 +102,7 @@ private struct SettingsContent: View {
                     )
 
                     if let workspace = appState.workspace {
-                        AppHStack(spacing: .medium) {
+                        HStack(spacing: AppTheme.Spacing.medium) {
                             AppStatusPill(
                                 title: workspace.deviantArtViewModel.isAuthenticated
                                     ? "Connected"
@@ -114,7 +114,7 @@ private struct SettingsContent: View {
                             Spacer()
                         }
 
-                        AppHStack(spacing: .medium) {
+                        HStack(spacing: AppTheme.Spacing.medium) {
                             Button("Save Credentials") {
                                 do {
                                     try viewModel.saveDeviantArt()
@@ -131,11 +131,11 @@ private struct SettingsContent: View {
             }
 
             AppCard {
-                AppVStack(spacing: .medium, alignment: .leading) {
+                VStack(alignment: .leading, spacing: AppTheme.Spacing.medium) {
                     AppText("Patreon", style: .headline)
 
                     if let workspace = appState.workspace {
-                        AppHStack(spacing: .medium) {
+                        HStack(spacing: AppTheme.Spacing.medium) {
                             AppStatusPill(
                                 title: workspace.patreonViewModel.isAuthenticated
                                     ? "Connected"
@@ -187,7 +187,7 @@ private struct SettingsContent: View {
             }
 
             AppCard {
-                AppVStack(spacing: .medium, alignment: .leading) {
+                VStack(alignment: .leading, spacing: AppTheme.Spacing.medium) {
                     AppText("ComfyUI", style: .headline)
                     AppInputField(
                         title: "Server URL",
@@ -208,7 +208,7 @@ private struct SettingsContent: View {
             }
 
             AppCard {
-                AppVStack(spacing: .medium, alignment: .leading) {
+                VStack(alignment: .leading, spacing: AppTheme.Spacing.medium) {
                     AppText("AI Chat", style: .headline)
                     AppInputField(
                         title: "LM Studio URL",
@@ -242,7 +242,7 @@ private struct SettingsContent: View {
             }
 
             AppCard {
-                AppVStack(spacing: .medium, alignment: .leading) {
+                VStack(alignment: .leading, spacing: AppTheme.Spacing.medium) {
                     AppText("Danger Zone", style: .headline)
                     Button("Clear All Settings") {
                         Task {

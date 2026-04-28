@@ -16,10 +16,26 @@ struct TagPill: View {
 
 // MARK: - Previews
 
-#Preview {
-    HStack {
-        TagPill(name: "swift")
-        TagPill(name: "ui")
-        TagPill(name: "artwork")
+#Preview("Short") {
+    TagPill(name: "art")
+}
+
+#Preview("Long") {
+    TagPill(name: "verylongtagname")
+}
+
+#Preview("With Spaces") {
+    TagPill(name: "fan art")
+}
+
+#Preview("Multiple") {
+    FlowLayout {
+        TagPill(name: "digital")
+        TagPill(name: "art")
+        TagPill(name: "fantasy")
+        TagPill(name: "illustration")
+        TagPill(name: "character design")
+        TagPill(name: "portrait")
+        TagPill(name: "colorful")
     }
 }

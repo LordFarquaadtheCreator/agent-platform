@@ -32,9 +32,9 @@ struct AgentsScreen: View {
             } else {
                 List(viewModel.agents, selection: $router.selectedAgentID) { agent in
                     AppListRow {
-                        AppHStack(spacing: .medium) {
+                        HStack(spacing: AppTheme.Spacing.medium) {
                             AppIcon(AppTheme.Icon.agent, size: .medium, color: AppTheme.ColorToken.accent)
-                            AppVStack(spacing: .tight, alignment: .leading) {
+                            VStack(alignment: .leading, spacing: AppTheme.Spacing.tightGap) {
                                 AppText(agent.displayName, style: .headline)
                                 AppText(
                                     agent.status.displayName,

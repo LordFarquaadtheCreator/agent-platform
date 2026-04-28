@@ -8,7 +8,7 @@ Reusable SwiftUI components built from `Core` design tokens. Must not reach into
 |-----------|------|---------|
 | `AppText` | `AppComponents.swift` | Tokenized text with style and color |
 | `AppSurface` | `AppComponents.swift` | Card/flat/elevated container |
-| `AppVStack` / `AppHStack` | `AppComponents.swift` | Stacks with semantic spacing |
+| `VStack` / `HStack` | Native SwiftUI | Use with `AppTheme.Spacing` for semantic spacing |
 | `AppListRow` | `AppComponents.swift` | Row wrapper with tokenized padding |
 | `AppCard` | `AppComponents.swift` | Legacy alias for `AppSurface(style: .card)` |
 | `AppMetricCard` | `AppComponents.swift` | Metric display with icon, value, label |

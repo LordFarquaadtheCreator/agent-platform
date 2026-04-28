@@ -37,8 +37,8 @@ struct ContentScreen: View {
             } else {
                 List(filteredItems, selection: $router.selectedContentID) { item in
                     AppListRow {
-                        AppHStack(spacing: .medium) {
-                            AppVStack(spacing: .small, alignment: .leading) {
+                        HStack(spacing: AppTheme.Spacing.medium) {
+                            VStack(alignment: .leading, spacing: AppTheme.Spacing.small) {
                                 AppText(item.title, style: .headline)
                                 AppText(
                                     item.createdAt.formatted(.relative(presentation: .named)),
@@ -201,7 +201,7 @@ struct ContentVersionHistorySheet: View {
             } else {
                 List(versions, selection: $selectedVersion) { version in
                     AppListRow {
-                        AppVStack(spacing: .tight, alignment: .leading) {
+                        VStack(alignment: .leading, spacing: AppTheme.Spacing.tightGap) {
                             AppText("Version \(version.version)", style: .headline)
                             AppText(version.description, style: .caption, color: AppTheme.ColorToken.textSecondary)
                             AppText(version.preview, style: .monospaceCaption, color: AppTheme.ColorToken.textSecondary)

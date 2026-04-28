@@ -431,40 +431,316 @@ private extension CharacterSet {
     }
 }
 
-// MARK: - Previews
+// MARK: - Preview Factories
 
+#if DEBUG
 extension DeviantArtViewModel {
     static var preview: DeviantArtViewModel {
+        .previewManyDeviations
+    }
+
+    static var previewNotAuthenticated: DeviantArtViewModel {
+        let viewModel = DeviantArtViewModel(
+            client: nil,
+            settingsService: SettingsService(),
+            cacheService: nil
+        )
+        viewModel.isAuthenticated = false
+        return viewModel
+    }
+
+    static var previewLoading: DeviantArtViewModel {
         let viewModel = DeviantArtViewModel(
             client: nil,
             settingsService: SettingsService(),
             cacheService: nil
         )
         viewModel.isAuthenticated = true
-        viewModel.profile = DeviantArtClient.UserProfile.preview
-        viewModel.deviations = [
-            DeviantArtClient.Deviation.preview,
-            DeviantArtClient.Deviation(
-                deviationid: "2",
-                url: "https://deviantart.com/art/sample-2",
-                title: "Sample Artwork 2",
-                category: "Photography",
+        viewModel.isLoading = true
+        return viewModel
+    }
+
+    static var previewEmpty: DeviantArtViewModel {
+        let viewModel = DeviantArtViewModel(
+            client: nil,
+            settingsService: SettingsService(),
+            cacheService: nil
+        )
+        viewModel.isAuthenticated = true
+        viewModel.profile = .preview
+        viewModel.deviations = []
+        viewModel.stashStacks = []
+        viewModel.lastUpdated = Date()
+        return viewModel
+    }
+
+    static var previewError: DeviantArtViewModel {
+        let viewModel = DeviantArtViewModel(
+            client: nil,
+            settingsService: SettingsService(),
+            cacheService: nil
+        )
+        viewModel.isAuthenticated = true
+        viewModel.errorMessage = "Failed to connect to DeviantArt API"
+        return viewModel
+    }
+
+    static var previewSingleDeviation: DeviantArtViewModel {
+        let viewModel = DeviantArtViewModel(
+            client: nil,
+            settingsService: SettingsService(),
+            cacheService: nil
+        )
+        viewModel.isAuthenticated = true
+        viewModel.profile = .preview
+        viewModel.deviations = [.preview]
+        viewModel.stashStacks = []
+        viewModel.lastUpdated = Date()
+        return viewModel
+    }
+
+    static var previewManyDeviations: DeviantArtViewModel {
+        let viewModel = DeviantArtViewModel(
+            client: nil,
+            settingsService: SettingsService(),
+            cacheService: nil
+        )
+        viewModel.isAuthenticated = true
+        viewModel.profile = .preview
+        let categories = ["Digital Art", "Photography", "Traditional", "3D", "Animation"]
+        viewModel.deviations = (1...20).map { idx in
+            let category: String? = idx % 5 == 0 ? nil : categories[idx % 5]
+            let downloads: Int? = idx % 3 == 0 ? nil : idx * 2
+            let isFavourited: Bool? = idx % 2 == 0 ? true : nil
+            return DeviantArtClient.Deviation(
+                deviationid: "\(idx)",
+                url: "https://deviantart.com/art/sample-\(idx)",
+                title: "Artwork Title #\(idx) with some extra text for testing",
+                category: category,
                 author: nil,
                 stats: DeviantArtClient.Deviation.Stats(
-                    views: 500,
-                    favourites: 50,
-                    comments: 5,
-                    downloads: 10
+                    views: idx * 100,
+                    favourites: idx * 10,
+                    comments: idx,
+                    downloads: downloads
                 ),
-                publishedTime: nil,
-                allowsComments: false,
+                publishedTime: "1700000000",
+                allowsComments: idx % 3 != 0,
+                isFavourited: isFavourited,
+                isDeleted: nil,
+                thumbs: nil,
+                content: nil
+            )
+        }
+        viewModel.lastUpdated = Date()
+        return viewModel
+    }
+
+    static var previewWithStash: DeviantArtViewModel {
+        let viewModel = DeviantArtViewModel(
+            client: nil,
+            settingsService: SettingsService(),
+            cacheService: nil
+        )
+        viewModel.isAuthenticated = true
+        viewModel.profile = .preview
+        viewModel.deviations = [.preview]
+        viewModel.stashStacks = [
+            DeviantArtClient.StashStack(
+                stackid: "stack-1",
+                title: "WIP Folder",
+                items: [
+                    DeviantArtClient.StashItem(
+                        itemid: "item-1",
+                        stackid: "stack-1",
+                        title: "Draft Art",
+                        path: nil,
+                        size: nil,
+                        fileSize: 2048000,
+                        status: "draft",
+                        thumb: nil,
+                        position: 1
+                    ),
+                    DeviantArtClient.StashItem(
+                        itemid: "item-2",
+                        stackid: "stack-1",
+                        title: "Another Draft",
+                        path: nil,
+                        size: nil,
+                        fileSize: 1024000,
+                        status: "published",
+                        thumb: nil,
+                        position: 2
+                    )
+                ]
+            ),
+            DeviantArtClient.StashStack(
+                stackid: "stack-2",
+                title: "Published Works",
+                items: [
+                    DeviantArtClient.StashItem(
+                        itemid: "item-3",
+                        stackid: "stack-2",
+                        title: "Final Piece",
+                        path: nil,
+                        size: nil,
+                        fileSize: 4096000,
+                        status: "published",
+                        thumb: nil,
+                        position: 1
+                    )
+                ]
+            )
+        ]
+        viewModel.lastUpdated = Date()
+        return viewModel
+    }
+
+    static var previewEmptyStash: DeviantArtViewModel {
+        let viewModel = DeviantArtViewModel(
+            client: nil,
+            settingsService: SettingsService(),
+            cacheService: nil
+        )
+        viewModel.isAuthenticated = true
+        viewModel.profile = .preview
+        viewModel.deviations = [.preview]
+        viewModel.stashStacks = []
+        viewModel.lastUpdated = Date()
+        return viewModel
+    }
+
+    static var previewWithSelection: DeviantArtViewModel {
+        let viewModel = DeviantArtViewModel(
+            client: nil,
+            settingsService: SettingsService(),
+            cacheService: nil
+        )
+        viewModel.isAuthenticated = true
+        viewModel.profile = .preview
+        viewModel.deviations = [
+            .preview,
+            DeviantArtClient.Deviation(
+                deviationid: "preview-dev-1",
+                url: "https://deviantart.com/art/selected",
+                title: "Selected Deviation",
+                category: "Digital Art",
+                author: nil,
+                stats: DeviantArtClient.Deviation.Stats(
+                    views: 9999,
+                    favourites: 888,
+                    comments: 77,
+                    downloads: 66
+                ),
+                publishedTime: "1700000000",
+                allowsComments: true,
                 isFavourited: nil,
                 isDeleted: nil,
                 thumbs: nil,
                 content: nil
             )
         ]
-        viewModel.stashStacks = []
+        viewModel.lastUpdated = Date()
+        return viewModel
+    }
+
+    static var previewRefreshing: DeviantArtViewModel {
+        let viewModel = DeviantArtViewModel(
+            client: nil,
+            settingsService: SettingsService(),
+            cacheService: nil
+        )
+        viewModel.isAuthenticated = true
+        viewModel.profile = .preview
+        viewModel.deviations = [.preview]
+        viewModel.isRefreshing = true
+        viewModel.lastUpdated = Date().addingTimeInterval(-300)
+        return viewModel
+    }
+
+    static var previewWithTimestamp: DeviantArtViewModel {
+        let viewModel = DeviantArtViewModel(
+            client: nil,
+            settingsService: SettingsService(),
+            cacheService: nil
+        )
+        viewModel.isAuthenticated = true
+        viewModel.profile = .preview
+        viewModel.deviations = [.preview]
+        viewModel.lastUpdated = Date().addingTimeInterval(-3600)
+        return viewModel
+    }
+
+    static var previewNoStats: DeviantArtViewModel {
+        let viewModel = DeviantArtViewModel(
+            client: nil,
+            settingsService: SettingsService(),
+            cacheService: nil
+        )
+        viewModel.isAuthenticated = true
+        viewModel.profile = .preview
+        viewModel.deviations = [
+            DeviantArtClient.Deviation(
+                deviationid: "no-stats",
+                url: "https://deviantart.com/art/no-stats",
+                title: "Deviation Without Stats",
+                category: nil,
+                author: nil,
+                stats: nil,
+                publishedTime: nil,
+                allowsComments: nil,
+                isFavourited: nil,
+                isDeleted: nil,
+                thumbs: nil,
+                content: nil
+            )
+        ]
+        viewModel.lastUpdated = Date()
+        return viewModel
+    }
+
+    static var previewLongUsername: DeviantArtViewModel {
+        let viewModel = DeviantArtViewModel(
+            client: nil,
+            settingsService: SettingsService(),
+            cacheService: nil
+        )
+        viewModel.isAuthenticated = true
+        viewModel.profile = DeviantArtClient.UserProfile(
+            user: DeviantArtClient.UserProfile.UserInfo(
+                userid: "123",
+                username: "VeryLongUsernameThatTestsLayoutHandling",
+                usericon: "https://a.deviantart.net/avatars/default.png",
+                type: nil
+            ),
+            stats: DeviantArtClient.UserProfile.UserStats(
+                watchers: 1000,
+                friends: 50,
+                deviations: 200
+            )
+        )
+        viewModel.deviations = [.preview]
+        viewModel.lastUpdated = Date()
+        return viewModel
+    }
+
+    static var previewNoProfileStats: DeviantArtViewModel {
+        let viewModel = DeviantArtViewModel(
+            client: nil,
+            settingsService: SettingsService(),
+            cacheService: nil
+        )
+        viewModel.isAuthenticated = true
+        viewModel.profile = DeviantArtClient.UserProfile(
+            user: DeviantArtClient.UserProfile.UserInfo(
+                userid: "456",
+                username: "newartist",
+                usericon: nil,
+                type: nil
+            ),
+            stats: nil
+        )
+        viewModel.deviations = [.preview]
         viewModel.lastUpdated = Date()
         return viewModel
     }
@@ -475,9 +751,9 @@ extension DeviantArtClient.UserProfile {
         DeviantArtClient.UserProfile(
             user: DeviantArtClient.UserProfile.UserInfo(
                 userid: "123",
-                username: "preview_user",
+                username: "artcreator",
                 usericon: "https://a.deviantart.net/avatars/default.png",
-                type: nil
+                type: "regular"
             ),
             stats: DeviantArtClient.UserProfile.UserStats(
                 watchers: 150,
@@ -492,23 +768,38 @@ extension DeviantArtClient.Deviation {
     static var preview: DeviantArtClient.Deviation {
         DeviantArtClient.Deviation(
             deviationid: "1",
-            // swiftlint:disable:next line_length
-            url: "https://mwi.westpoint.edu/wp-content/uploads/2016/04/3264149-42-iron-man-iron-man-hd-8-free-spot-free-download-1.jpg",
+            url: "https://deviantart.com/art/sample-1",
             title: "Sample Artwork",
             category: "Digital Art",
-            author: nil,
+            author: DeviantArtClient.Deviation.User(
+                userid: "123",
+                username: "artcreator",
+                usericon: "https://a.deviantart.net/avatars/default.png"
+            ),
             stats: DeviantArtClient.Deviation.Stats(
                 views: 1200,
                 favourites: 150,
                 comments: 25,
                 downloads: 45
             ),
-            publishedTime: nil,
+            publishedTime: "1700000000",
             allowsComments: true,
-            isFavourited: nil,
-            isDeleted: nil,
-            thumbs: nil,
-            content: nil
+            isFavourited: false,
+            isDeleted: false,
+            thumbs: [
+                DeviantArtClient.Deviation.Thumb(
+                    src: "https://example.com/thumb.jpg",
+                    width: 400,
+                    height: 300
+                )
+            ],
+            content: DeviantArtClient.Deviation.ContentInfo(
+                src: "https://example.com/full.jpg",
+                width: 1920,
+                height: 1080,
+                filesize: 2048000
+            )
         )
     }
 }
+#endif

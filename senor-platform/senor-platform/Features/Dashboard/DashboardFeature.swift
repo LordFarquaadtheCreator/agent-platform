@@ -39,7 +39,7 @@ struct DashboardScreen: View {
                 }
 
                 AppCard {
-                    AppVStack(spacing: .medium, alignment: .leading) {
+                    VStack(alignment: .leading, spacing: AppTheme.Spacing.medium) {
                         AppSectionHeader(title: "Recent Activity")
                         if viewModel.snapshot.recentContent.isEmpty {
                             AppEmptyState(
@@ -49,8 +49,8 @@ struct DashboardScreen: View {
                             )
                         } else {
                             ForEach(viewModel.snapshot.recentContent) { item in
-                                AppHStack(spacing: .medium) {
-                                    AppVStack(spacing: .tight, alignment: .leading) {
+                                HStack(spacing: AppTheme.Spacing.medium) {
+                                    VStack(alignment: .leading, spacing: AppTheme.Spacing.tightGap) {
                                         AppText(item.title, style: .headline)
                                         AppText(
                                             item.createdAt.formatted(.relative(presentation: .named)),

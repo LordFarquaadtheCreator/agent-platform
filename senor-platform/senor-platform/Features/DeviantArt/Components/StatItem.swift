@@ -18,10 +18,23 @@ struct StatItem: View {
 
 // MARK: - Previews
 
-#Preview {
+#Preview("Zero") {
+    StatItem(icon: "eye", value: 0)
+}
+
+#Preview("Small") {
+    StatItem(icon: "eye", value: 5)
+}
+
+#Preview("Large") {
+    StatItem(icon: "eye", value: 999999)
+}
+
+#Preview("Multiple Icons") {
     HStack {
         StatItem(icon: "eye", value: 100)
         StatItem(icon: "star.fill", value: 50)
         StatItem(icon: "bubble.right", value: 0)
+        StatItem(icon: "arrow.down.circle", value: 25)
     }
 }

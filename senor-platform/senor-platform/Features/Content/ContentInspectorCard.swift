@@ -10,7 +10,7 @@ struct ContentInspectorCard: View {
 
     var body: some View {
         AppCard {
-            AppVStack(spacing: .medium, alignment: .leading) {
+            VStack(alignment: .leading, spacing: AppTheme.Spacing.medium) {
                 AppText(content.title, style: .title3)
                 AppStatusPill(
                     title: content.status.title,

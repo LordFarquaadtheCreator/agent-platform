@@ -239,6 +239,22 @@ private struct TierCheckbox: View {
     }
 }
 
-#Preview {
-    PatreonComposeView(viewModel: .preview, post: nil)
+#Preview("New Post") {
+    PatreonComposeView(viewModel: .previewWithTiers, post: nil)
+}
+
+#Preview("Edit Post") {
+    PatreonComposeView(viewModel: .previewWithTiers, post: .previewPaid)
+}
+
+#Preview("No Tiers") {
+    PatreonComposeView(viewModel: .previewNoTiers, post: nil)
+}
+
+#Preview("Many Tiers") {
+    PatreonComposeView(viewModel: .previewManyTiers, post: nil)
+}
+
+#Preview("Public Post Edit") {
+    PatreonComposeView(viewModel: .previewWithTiers, post: .previewPublic)
 }

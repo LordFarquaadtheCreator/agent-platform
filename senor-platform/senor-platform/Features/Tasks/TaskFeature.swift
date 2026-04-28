@@ -31,13 +31,13 @@ struct TasksScreen: View {
             } else {
                 List(viewModel.tasks) { task in
                     AppListRow {
-                        AppVStack(spacing: .small, alignment: .leading) {
-                            AppHStack(spacing: .medium) {
+                        VStack(alignment: .leading, spacing: AppTheme.Spacing.small) {
+                            HStack(spacing: AppTheme.Spacing.medium) {
                                 AppText(task.name, style: .headline)
                                 Spacer()
                                 AppStatusPill(title: task.scheduleDescription, color: AppTheme.ColorToken.statusInfo)
                             }
-                            AppHStack(spacing: .medium) {
+                            HStack(spacing: AppTheme.Spacing.medium) {
                                 if let nextRun = task.nextRun {
                                     Label(nextRun.formatted(), systemImage: AppTheme.Icon.calendar)
                                         .font(AppTheme.Typography.caption)

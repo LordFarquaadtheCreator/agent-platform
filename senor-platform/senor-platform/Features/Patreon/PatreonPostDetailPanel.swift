@@ -65,20 +65,108 @@ struct PatreonPostDetailPanel: View {
 
 // MARK: - Previews
 
-#Preview("Post Detail") {
-    let mockPost = PatreonPost(
-        id: "preview-post-1",
+#Preview("Paid Post") {
+    PatreonPostDetailPanel(post: .previewPaid)
+        .frame(width: 350)
+}
+
+#Preview("Public Post") {
+    PatreonPostDetailPanel(post: .previewPublic)
+        .frame(width: 350)
+}
+
+#Preview("Long Content") {
+    PatreonPostDetailPanel(post: .previewLongContent)
+        .frame(width: 350)
+}
+
+#Preview("No Title") {
+    let post = PatreonPost(
+        id: "no-title",
         type: "post",
-        attributes: PatreonPost.PatreonPostAttributes(
-            title: "Exclusive Art Preview",
-            content: "<p>This is a preview of exclusive content for patrons!</p>",
-            url: "https://patreon.com/posts/preview-1",
+        attributes: .init(
+            title: nil,
+            content: "<p>Post without a title</p>",
+            url: "https://patreon.com/posts/no-title",
             isPaid: true,
             isPublic: false,
             publishedAt: "2026-04-26T10:00:00.000Z"
         ),
         relationships: nil
     )
-    PatreonPostDetailPanel(post: mockPost)
+    PatreonPostDetailPanel(post: post)
+        .frame(width: 350)
+}
+
+#Preview("No Content") {
+    let post = PatreonPost(
+        id: "no-content",
+        type: "post",
+        attributes: .init(
+            title: "Title Only",
+            content: nil,
+            url: "https://patreon.com/posts/no-content",
+            isPaid: false,
+            isPublic: true,
+            publishedAt: "2026-04-26T10:00:00.000Z"
+        ),
+        relationships: nil
+    )
+    PatreonPostDetailPanel(post: post)
+        .frame(width: 350)
+}
+
+#Preview("No URL") {
+    let post = PatreonPost(
+        id: "no-url",
+        type: "post",
+        attributes: .init(
+            title: "Draft Post",
+            content: "<p>This post has no URL yet</p>",
+            url: nil,
+            isPaid: true,
+            isPublic: false,
+            publishedAt: nil
+        ),
+        relationships: nil
+    )
+    PatreonPostDetailPanel(post: post)
+        .frame(width: 350)
+}
+
+#Preview("Free Patron Post") {
+    PatreonPostDetailPanel(post: .previewFree)
+        .frame(width: 350)
+}
+
+#Preview("Complex HTML") {
+    let post = PatreonPost(
+        id: "complex-html",
+        type: "post",
+        attributes: .init(
+            title: "Rich Content Post",
+            content: """
+            <h1>Heading</h1>
+            <p>Paragraph with <strong>bold</strong>, <em>italic</em>, and <a href="https://example.com">link</a>.</p>
+            <blockquote>Blockquote for emphasis</blockquote>
+            <code>inline code</code>
+            <pre><code>code block\nwith multiple lines</code></pre>
+            <ul>
+                <li>Item one</li>
+                <li>Item two</li>
+            </ul>
+            <ol>
+                <li>First</li>
+                <li>Second</li>
+            </ol>
+            """,
+            url: "https://patreon.com/posts/complex",
+            isPaid: true,
+            isPublic: false,
+            publishedAt: "2026-04-26T10:00:00.000Z"
+        ),
+        relationships: nil
+    )
+    PatreonPostDetailPanel(post: post)
         .frame(width: 350)
 }

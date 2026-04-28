@@ -43,9 +43,9 @@ struct ApprovalsScreen: View {
             } else {
                 List(viewModel.approvals, selection: $selectedItems) { item in
                     AppListRow {
-                        AppVStack(spacing: .small, alignment: .leading) {
+                        VStack(alignment: .leading, spacing: AppTheme.Spacing.small) {
                             AppText(item.contentTitle, style: .headline)
-                            AppHStack(spacing: .small) {
+                            HStack(spacing: AppTheme.Spacing.small) {
                                 AppText(item.agentName, style: .caption, color: AppTheme.ColorToken.textSecondary)
                                 AppText("•", style: .caption, color: AppTheme.ColorToken.textSecondary)
                                 AppText(

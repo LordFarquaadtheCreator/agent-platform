@@ -37,7 +37,7 @@ Used by both screen and detail panels (no duplication).
 
 ## Design System Compliance
 
-- AppHStack, AppVStack for layout
+- VStack/HStack with AppTheme.Spacing for layout
 - AppText for all text
 - AppTheme.ColorToken for colors
 - AppTheme.Spacing for padding

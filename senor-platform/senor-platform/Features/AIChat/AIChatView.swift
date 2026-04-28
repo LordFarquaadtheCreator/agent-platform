@@ -60,7 +60,7 @@ struct AIChatView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: AppTheme.Spacing.small) {
                     ForEach(Array(viewModel.messages.enumerated()), id: \.offset) { index, message in
-                        messageBubble(message)
+                        messageBubble(message, atIndex: index)
                             .id(index)
                     }
                     if showLoadingBubble {
@@ -91,23 +91,45 @@ struct AIChatView: View {
         }
     }
 
-    private func messageBubble(_ message: ChatMessage) -> some View {
-        HStack {
+    private func messageBubble(_ message: ChatMessage, atIndex index: Int) -> some View {
+        let isLastAssistant = message.role == .assistant &&
+                              index == viewModel.messages.count - 1 &&
+                              viewModel.canRedoLastResponse
+
+        return HStack {
+            if message.role == .assistant {
+                Spacer()
+            }
+
             VStack(alignment: message.role == .user ? .trailing : .leading, spacing: AppTheme.Spacing.xSmall) {
-				AppText(message.role == .user ? "Me" : "Senor", style: .caption)
-					.foregroundStyle(AppTheme.ColorToken.textSecondary)
-					.padding(.horizontal, AppTheme.Spacing.xSmall)
+                HStack(spacing: AppTheme.Spacing.xSmall) {
+                    AppText(message.role == .user ? "Me" : "Senor", style: .caption)
+                        .foregroundStyle(AppTheme.ColorToken.textSecondary)
+
+                    if isLastAssistant {
+                        Button {
+                            viewModel.redoLastResponse()
+                        } label: {
+                            Image(systemName: "arrow.clockwise")
+                                .font(AppTheme.Typography.caption)
+                                .foregroundStyle(AppTheme.ColorToken.textSecondary)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityIdentifier("redoLastResponseButton")
+                    }
+                }
+                .padding(.horizontal, AppTheme.Spacing.xSmall)
 
                 AppSurface(
                     style: .flat,
                     backgroundColor: message.role == .user ? AppTheme.ColorToken.accent : nil
                 ) {
                     markdownText(message.content)
-						.foregroundStyle(message.role == .user ? AppTheme.ColorToken.textOnAccent : AppTheme.ColorToken.textPrimary)
+                        .foregroundStyle(message.role == .user ? AppTheme.ColorToken.textOnAccent : AppTheme.ColorToken.textPrimary)
                         .textSelection(.enabled)
                 }
             }
-			.padding(.horizontal, AppTheme.Spacing.xSmall)
+            .padding(.horizontal, AppTheme.Spacing.xSmall)
             .frame(
                 maxWidth: .infinity * 0.8,
                 alignment: message.role == .user ? .trailing : .leading
@@ -116,7 +138,7 @@ struct AIChatView: View {
             .accessibilityLabel("\(message.role == .user ? "User" : "AI"): \(message.content)")
             .accessibilityIdentifier(message.role == .user ? "userMessage" : "assistantMessage")
 
-            if message.role == .assistant {
+            if message.role == .user {
                 Spacer()
             }
         }
@@ -165,14 +187,19 @@ struct AIChatView: View {
             .accessibilityIdentifier("chatInputField")
 
             Button {
-                let trimmed = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
-                guard !trimmed.isEmpty, !viewModel.selectedModel.isEmpty else { return }
-                inputText = ""
-                Task { await viewModel.sendMessage(text: trimmed) }
+                if viewModel.isGenerating {
+                    viewModel.stopGeneration()
+                } else {
+                    let trimmed = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
+                    guard !trimmed.isEmpty, !viewModel.selectedModel.isEmpty else { return }
+                    inputText = ""
+                    Task { await viewModel.sendMessage(text: trimmed) }
+                }
             } label: {
                 if viewModel.isGenerating {
-                    ProgressView()
-                        .controlSize(.small)
+                    Image(systemName: "xmark.circle.fill")
+                        .font(AppTheme.Typography.title3)
+                        .foregroundStyle(AppTheme.ColorToken.statusError)
                 } else {
                     Image(systemName: "arrow.up.circle.fill")
                         .font(AppTheme.Typography.title3)
@@ -180,10 +207,10 @@ struct AIChatView: View {
                 }
             }
             .buttonStyle(.plain)
-            .accessibilityIdentifier("sendMessageButton")
+            .accessibilityIdentifier(viewModel.isGenerating ? "stopGenerationButton" : "sendMessageButton")
             .disabled(
-                inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
-                viewModel.selectedModel.isEmpty
+                viewModel.isGenerating ? false : (inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
+                viewModel.selectedModel.isEmpty)
             )
         }
     }
@@ -364,7 +391,7 @@ struct AIChatView: View {
             let attributedString = try AttributedString(
                 markdown: text,
                 options: AttributedString.MarkdownParsingOptions(
-                    interpretedSyntax: .inlineOnlyPreservingWhitespace
+                    interpretedSyntax: .full
                 )
             )
             return Text(attributedString)

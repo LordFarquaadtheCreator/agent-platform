@@ -131,7 +131,7 @@ public struct PublishButton: View {
 }
 
 #Preview {
-    AppVStack(spacing: .large) {
+    VStack(alignment: .center, spacing: AppTheme.Spacing.large) {
         AsyncActionButton(title: "Save", systemImage: AppTheme.Icon.save) {
             try await Task.sleep(nanoseconds: 1_000_000_000)
         }

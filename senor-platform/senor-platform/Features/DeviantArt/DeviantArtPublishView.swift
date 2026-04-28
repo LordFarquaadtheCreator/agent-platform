@@ -221,3 +221,80 @@ struct DeviantArtPublishView: View {
         }
     }
 }
+
+// MARK: - Previews
+
+#Preview("Standard Stash Item") {
+    let stashItem = DeviantArtClient.StashItem(
+        itemid: "item-1",
+        stackid: "stack-1",
+        title: "My Artwork",
+        path: nil,
+        size: nil,
+        fileSize: 2048000,
+        status: "draft",
+        thumb: nil,
+        position: 1
+    )
+    DeviantArtPublishView(viewModel: .preview, stashItem: stashItem)
+}
+
+#Preview("Long Title") {
+    let stashItem = DeviantArtClient.StashItem(
+        itemid: "item-2",
+        stackid: "stack-1",
+        title: "This is a Very Long Title That Tests How the UI Handles Long Text in the Publish View",
+        path: nil,
+        size: nil,
+        fileSize: 4096000,
+        status: "draft",
+        thumb: nil,
+        position: 1
+    )
+    DeviantArtPublishView(viewModel: .preview, stashItem: stashItem)
+}
+
+#Preview("Empty Title") {
+    let stashItem = DeviantArtClient.StashItem(
+        itemid: "item-3",
+        stackid: "stack-1",
+        title: "",
+        path: nil,
+        size: nil,
+        fileSize: 1024000,
+        status: "draft",
+        thumb: nil,
+        position: 1
+    )
+    DeviantArtPublishView(viewModel: .preview, stashItem: stashItem)
+}
+
+#Preview("Large File") {
+    let stashItem = DeviantArtClient.StashItem(
+        itemid: "item-4",
+        stackid: "stack-1",
+        title: "High Resolution Art",
+        path: nil,
+        size: nil,
+        fileSize: 52428800,
+        status: "draft",
+        thumb: nil,
+        position: 1
+    )
+    DeviantArtPublishView(viewModel: .preview, stashItem: stashItem)
+}
+
+#Preview("Published Status") {
+    let stashItem = DeviantArtClient.StashItem(
+        itemid: "item-5",
+        stackid: "stack-1",
+        title: "Already Published",
+        path: nil,
+        size: nil,
+        fileSize: 1024000,
+        status: "published",
+        thumb: nil,
+        position: 1
+    )
+    DeviantArtPublishView(viewModel: .preview, stashItem: stashItem)
+}

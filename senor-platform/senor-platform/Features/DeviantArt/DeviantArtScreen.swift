@@ -486,6 +486,61 @@ private struct ThumbnailGrid: View {
 }
 
 // MARK: - Previews
-#Preview {
-    DeviantArtScreen(viewModel: DeviantArtViewModel.preview, router: AppRouter())
+
+#Preview("Not Authenticated") {
+    DeviantArtScreen(viewModel: .previewNotAuthenticated, router: AppRouter())
+}
+
+#Preview("Loading") {
+    DeviantArtScreen(viewModel: .previewLoading, router: AppRouter())
+}
+
+#Preview("Empty Data") {
+    DeviantArtScreen(viewModel: .previewEmpty, router: AppRouter())
+}
+
+#Preview("Error") {
+    DeviantArtScreen(viewModel: .previewError, router: AppRouter())
+}
+
+#Preview("Single Deviation") {
+    DeviantArtScreen(viewModel: .previewSingleDeviation, router: AppRouter())
+}
+
+#Preview("Many Deviations") {
+    DeviantArtScreen(viewModel: .previewManyDeviations, router: AppRouter())
+}
+
+#Preview("With Stash") {
+    DeviantArtScreen(viewModel: .previewWithStash, router: AppRouter())
+}
+
+#Preview("Empty Stash") {
+    DeviantArtScreen(viewModel: .previewEmptyStash, router: AppRouter())
+}
+
+#Preview("Selected Deviation") {
+    let router = AppRouter()
+    router.selectedDeviationID = "preview-dev-1"
+    return DeviantArtScreen(viewModel: .previewWithSelection, router: router)
+}
+
+#Preview("Refreshing") {
+    DeviantArtScreen(viewModel: .previewRefreshing, router: AppRouter())
+}
+
+#Preview("Last Updated") {
+    DeviantArtScreen(viewModel: .previewWithTimestamp, router: AppRouter())
+}
+
+#Preview("No Stats") {
+    DeviantArtScreen(viewModel: .previewNoStats, router: AppRouter())
+}
+
+#Preview("Long Username") {
+    DeviantArtScreen(viewModel: .previewLongUsername, router: AppRouter())
+}
+
+#Preview("No Profile Stats") {
+    DeviantArtScreen(viewModel: .previewNoProfileStats, router: AppRouter())
 }

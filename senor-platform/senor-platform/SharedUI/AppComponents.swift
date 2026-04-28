@@ -119,78 +119,6 @@ struct AppSurface<Content: View>: View {
     }
 }
 
-// MARK: - AppStack
-// V/H/ZStack with semantic spacing. Replaces raw VStack(spacing: 4).
-
-enum AppStackSpacing {
-    case tight
-    case small
-    case medium
-    case large
-}
-
-struct AppVStack<Content: View>: View {
-    let spacing: AppStackSpacing
-    let alignment: HorizontalAlignment
-    let content: Content
-
-    init(
-        spacing: AppStackSpacing = .medium,
-        alignment: HorizontalAlignment = .leading,
-        @ViewBuilder content: () -> Content
-    ) {
-        self.spacing = spacing
-        self.alignment = alignment
-        self.content = content()
-    }
-
-    var body: some View {
-        VStack(alignment: alignment, spacing: valueForSpacing(spacing)) {
-            content
-        }
-    }
-
-    private func valueForSpacing(_ spacing: AppStackSpacing) -> CGFloat {
-        switch spacing {
-        case .tight: return AppTheme.Spacing.tightGap
-        case .small: return AppTheme.Spacing.small
-        case .medium: return AppTheme.Spacing.medium
-        case .large: return AppTheme.Spacing.large
-        }
-    }
-}
-
-struct AppHStack<Content: View>: View {
-    let spacing: AppStackSpacing
-    let alignment: VerticalAlignment
-    let content: Content
-
-    init(
-        spacing: AppStackSpacing = .medium,
-        alignment: VerticalAlignment = .center,
-        @ViewBuilder content: () -> Content
-    ) {
-        self.spacing = spacing
-        self.alignment = alignment
-        self.content = content()
-    }
-
-    var body: some View {
-        HStack(alignment: alignment, spacing: valueForSpacing(spacing)) {
-            content
-        }
-    }
-
-    private func valueForSpacing(_ spacing: AppStackSpacing) -> CGFloat {
-        switch spacing {
-        case .tight: return AppTheme.Spacing.tightGap
-        case .small: return AppTheme.Spacing.small
-        case .medium: return AppTheme.Spacing.medium
-        case .large: return AppTheme.Spacing.large
-        }
-    }
-}
-
 // MARK: - AppListRow
 // Row wrapper with tokenized padding. Replaces raw .padding(.vertical, 4).
 
@@ -235,7 +163,7 @@ struct AppMetricCard: View {
 
     var body: some View {
         AppSurface(style: .card) {
-            AppVStack(spacing: .small) {
+            VStack(alignment: .center, spacing: AppTheme.Spacing.small) {
                 Image(systemName: icon)
                     .font(AppTheme.Typography.title3)
                     .foregroundStyle(tint)
@@ -279,8 +207,8 @@ struct AppSectionHeader: View {
     }
 
     var body: some View {
-        AppHStack(spacing: .small, alignment: .center) {
-            AppVStack(spacing: .tight, alignment: .leading) {
+        HStack(spacing: AppTheme.Spacing.small) {
+            VStack(alignment: .leading, spacing: AppTheme.Spacing.tightGap) {
                 AppText(title, style: .title3)
                 if let detail {
                     AppText(detail, style: .caption, color: AppTheme.ColorToken.textSecondary)

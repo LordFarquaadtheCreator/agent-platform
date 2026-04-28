@@ -5,7 +5,7 @@ struct AgentInspectorCard: View {
 
     var body: some View {
         AppCard {
-            AppVStack(spacing: .medium, alignment: .leading) {
+            VStack(alignment: .leading, spacing: AppTheme.Spacing.medium) {
                 AppText(agent.displayName, style: .title3)
                 AppStatusPill(
                     title: agent.status.displayName,

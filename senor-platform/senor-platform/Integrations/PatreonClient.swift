@@ -1,5 +1,19 @@
 import Foundation
 
+// MARK: - Webhook Trigger Constants
+
+public enum PatreonWebhookTrigger: String, CaseIterable, Sendable {
+    case membersCreate = "members:create"
+    case membersUpdate = "members:update"
+    case membersDelete = "members:delete"
+    case membersPledgeCreate = "members:pledge:create"
+    case membersPledgeUpdate = "members:pledge:update"
+    case membersPledgeDelete = "members:pledge:delete"
+    case postsPublish = "posts:publish"
+    case postsUpdate = "posts:update"
+    case postsDelete = "posts:delete"
+}
+
 // MARK: - Response Types (defined outside class to avoid main actor isolation issues)
 
 public struct PatreonCampaign: Codable, Identifiable {
@@ -8,6 +22,7 @@ public struct PatreonCampaign: Codable, Identifiable {
     public let attributes: PatreonCampaignAttributes
 
     public struct PatreonCampaignAttributes: Codable, Sendable {
+        // Existing
         public let summary: String?
         public let creationName: String?
         public let payPerName: String?
@@ -19,6 +34,21 @@ public struct PatreonCampaign: Codable, Identifiable {
         public let patronCount: Int?
         public let pledgeSum: Int?
         public let pledgeSumCurrency: String?
+        // NEW FIELDS
+        public let isMonthly: Bool?
+        public let isChargedImmediately: Bool?
+        public let isNsfw: Bool?
+        public let mainVideoEmbed: String?
+        public let mainVideoUrl: String?
+        public let oneLiner: String?
+        public let pledgeUrl: String?
+        public let thanksEmbed: String?
+        public let hasRss: Bool?
+        public let rssFeedTitle: String?
+        public let rssArtworkUrl: String?
+        public let googleAnalyticsId: String?
+        public let discordServerId: String?
+        public let createdAt: String?
 
         enum CodingKeys: String, CodingKey {
             case summary
@@ -32,6 +62,21 @@ public struct PatreonCampaign: Codable, Identifiable {
             case patronCount = "patron_count"
             case pledgeSum = "pledge_sum"
             case pledgeSumCurrency = "pledge_sum_currency"
+            // NEW
+            case isMonthly = "is_monthly"
+            case isChargedImmediately = "is_charged_immediately"
+            case isNsfw = "is_nsfw"
+            case mainVideoEmbed = "main_video_embed"
+            case mainVideoUrl = "main_video_url"
+            case oneLiner = "one_liner"
+            case pledgeUrl = "pledge_url"
+            case thanksEmbed = "thanks_embed"
+            case hasRss = "has_rss"
+            case rssFeedTitle = "rss_feed_title"
+            case rssArtworkUrl = "rss_artwork_url"
+            case googleAnalyticsId = "google_analytics_id"
+            case discordServerId = "discord_server_id"
+            case createdAt = "created_at"
         }
     }
 }
@@ -104,6 +149,11 @@ public struct PatreonMember: Codable, Identifiable {
         public let lastChargeStatus: String?
         public let lifetimeSupportCents: Int?
         public let currentlyEntitledAmountCents: Int?
+        // NEW FIELDS
+        public let isFollower: Bool?
+        public let lastChargeDate: String?
+        public let pledgeRelationshipStart: String?
+        public let note: String?
 
         enum CodingKeys: String, CodingKey {
             case fullName = "full_name"
@@ -112,6 +162,11 @@ public struct PatreonMember: Codable, Identifiable {
             case lastChargeStatus = "last_charge_status"
             case lifetimeSupportCents = "lifetime_support_cents"
             case currentlyEntitledAmountCents = "currently_entitled_amount_cents"
+            // NEW
+            case isFollower = "is_follower"
+            case lastChargeDate = "last_charge_date"
+            case pledgeRelationshipStart = "pledge_relationship_start"
+            case note
         }
     }
 
@@ -151,11 +206,64 @@ public struct PatreonIncludedAttributes: Codable {
     public let title: String?
     public let url: String?
     public let amountCents: Int?
+    // Add address fields when type == "address"
+    public let addressee: String?
+    public let line1: String?
+    public let line2: String?
+    public let city: String?
+    public let state: String?
+    public let postalCode: String?
+    public let country: String?
+    public let phoneNumber: String?
+    // Add tier fields
+    public let description: String?
+    public let discordRoleIds: [String]?
+    public let editedAt: String?
+    public let patronCount: Int?
+    public let published: Bool?
+    public let publishedAt: String?
+    public let requiresShipping: Bool?
+    public let createdAt: String?
+    // Add user fields
+    public let email: String?
+    public let fullName: String?
+    public let firstName: String?
+    public let lastName: String?
+    public let imageUrl: String?
+    public let thumbUrl: String?
+    public let vanity: String?
+    public let about: String?
+    public let created: String?
 
     enum CodingKeys: String, CodingKey {
         case title
         case url
         case amountCents = "amount_cents"
+        case addressee
+        case line1 = "line_1"
+        case line2 = "line_2"
+        case city
+        case state
+        case postalCode = "postal_code"
+        case country
+        case phoneNumber = "phone_number"
+        case description
+        case discordRoleIds = "discord_role_ids"
+        case editedAt = "edited_at"
+        case patronCount = "patron_count"
+        case published
+        case publishedAt = "published_at"
+        case requiresShipping = "requires_shipping"
+        case createdAt = "created_at"
+        case email
+        case fullName = "full_name"
+        case firstName = "first_name"
+        case lastName = "last_name"
+        case imageUrl = "image_url"
+        case thumbUrl = "thumb_url"
+        case vanity
+        case about
+        case created
     }
 }
 
@@ -187,8 +295,133 @@ public struct PatreonIdentityResponse: Codable {
             public let thumbUrl: String?
             public let url: String?
             public let vanity: String?
+            // NEW FIELDS
+            public let about: String?
+            public let created: String?
+            public let lastName: String?
+            public let socialConnections: SocialConnections?
+
+            enum CodingKeys: String, CodingKey {
+                case email
+                case firstName = "first_name"
+                case fullName = "full_name"
+                case imageUrl = "image_url"
+                case thumbUrl = "thumb_url"
+                case url
+                case vanity
+                case about
+                case created
+                case lastName = "last_name"
+                case socialConnections = "social_connections"
+            }
         }
     }
+}
+
+// NEW: Social connections struct
+public struct SocialConnections: Codable, Sendable {
+    public let discord: SocialConnection?
+    public let twitter: SocialConnection?
+    public let youtube: SocialConnection?
+    public let spotify: SocialConnection?
+
+    public struct SocialConnection: Codable, Sendable {
+        public let userId: String?
+        public let url: String?
+
+        enum CodingKeys: String, CodingKey {
+            case userId = "user_id"
+            case url
+        }
+    }
+}
+
+// MARK: - Address Model
+
+public struct PatreonAddress: Codable, Identifiable, Sendable {
+    public let id: String
+    public let type: String
+    public let attributes: AddressAttributes
+
+    public struct AddressAttributes: Codable, Sendable {
+        public let addressee: String?
+        public let line1: String?
+        public let line2: String?
+        public let city: String?
+        public let state: String?
+        public let postalCode: String?
+        public let country: String?
+        public let phoneNumber: String?
+        public let createdAt: String?
+
+        enum CodingKeys: String, CodingKey {
+            case addressee
+            case line1 = "line_1"
+            case line2 = "line_2"
+            case city
+            case state
+            case postalCode = "postal_code"
+            case country
+            case phoneNumber = "phone_number"
+            case createdAt = "created_at"
+        }
+    }
+}
+
+// MARK: - Pledge Event Model
+
+public struct PatreonPledgeEvent: Codable, Identifiable, Sendable {
+    public let id: String
+    public let type: String
+    public let attributes: PledgeEventAttributes
+
+    public struct PledgeEventAttributes: Codable, Sendable {
+        public let type: String?
+        public let date: String?
+        public let paymentStatus: String?
+        public let amountCents: Int?
+        public let currency: String?
+        public let tierId: String?
+
+        enum CodingKeys: String, CodingKey {
+            case type
+            case date
+            case paymentStatus = "payment_status"
+            case amountCents = "amount_cents"
+            case currency
+            case tierId = "tier_id"
+        }
+    }
+}
+
+// MARK: - Webhook Models
+
+public struct PatreonWebhook: Codable, Identifiable, Sendable {
+    public let id: String
+    public let type: String
+    public let attributes: WebhookAttributes
+
+    public struct WebhookAttributes: Codable, Sendable {
+        public let lastAttemptedAt: String?
+        public let numConsecutiveTimesFailed: Int?
+        public let paused: Bool?
+        public let secret: String?
+        public let triggers: [String]?
+        public let uri: String?
+
+        enum CodingKeys: String, CodingKey {
+            case lastAttemptedAt = "last_attempted_at"
+            case numConsecutiveTimesFailed = "num_consecutive_times_failed"
+            case paused
+            case secret
+            case triggers
+            case uri
+        }
+    }
+}
+
+public struct PatreonWebhooksResponse: Codable {
+    public let data: [PatreonWebhook]
 }
 
 // MARK: - Patreon Client
@@ -228,6 +461,9 @@ public final class PatreonClient {
         static func campaignTiers(campaignId: String) -> String { "\(base)/campaigns/\(campaignId)/tiers" }
         static func post(postId: String) -> String { "\(base)/posts/\(postId)" }
         static let posts = "\(base)/posts"
+        static func member(memberId: String) -> String { "\(base)/members/\(memberId)" }
+        static let webhooks = "\(base)/webhooks"
+        static func webhook(webhookId: String) -> String { "\(base)/webhooks/\(webhookId)" }
     }
 
     // MARK: - Type Aliases for Response Types
@@ -238,6 +474,8 @@ public final class PatreonClient {
     public typealias PostsResponse = PatreonPostsResponse
     public typealias Member = PatreonMember
     public typealias MembersResponse = PatreonMembersResponse
+    public typealias Webhook = PatreonWebhook
+    public typealias WebhooksResponse = PatreonWebhooksResponse
 
     // MARK: - Initialization
 
@@ -267,7 +505,16 @@ public final class PatreonClient {
 
     /// Generate authorization URL for OAuth flow
     public func authorizationURL(
-        scopes: [String] = ["identity", "identity.memberships", "campaigns", "w:campaigns.post"],
+        scopes: [String] = [
+            "identity",
+            "identity[email]",
+            "identity.memberships",
+            "campaigns",
+            "campaigns.members",
+            "campaigns.members.address",
+            "w:campaigns.post",
+            "w:campaigns.webhook"
+        ],
         state: String = UUID().uuidString
     ) async throws -> URL {
         try await oauthHelper.authorizationURL(scopes: scopes, state: state)
@@ -303,13 +550,20 @@ public final class PatreonClient {
 
     /// Get current user's identity
     public func getIdentity(
-        fields: [String] = ["email", "first_name", "full_name", "image_url", "url", "vanity"]
+        fields: [String] = [
+            "about", "created", "email", "first_name", "full_name",
+            "image_url", "last_name", "social_connections",
+            "thumb_url", "url", "vanity"
+        ],
+        include: [String] = ["memberships", "campaign"]
     ) async throws -> IdentityResponse {
         try ensureAuthenticated()
 
         let fieldsParam = fields.joined(separator: ",")
+        let includeParam = include.joined(separator: ",")
         let queryItems: [URLQueryItem] = [
-            URLQueryItem(name: "fields[user]", value: fieldsParam)
+            URLQueryItem(name: "fields[user]", value: fieldsParam),
+            URLQueryItem(name: "include", value: includeParam)
         ]
 
         if URL(string: Endpoints.identity) != nil {
@@ -330,13 +584,24 @@ public final class PatreonClient {
 
     /// Get all campaigns for the current user
     public func getCampaigns(
-        includeFields: [String] = ["creation_name", "patron_count"]
+        includeFields: [String] = [
+            "created_at", "creation_name", "discord_server_id",
+            "google_analytics_id", "has_rss", "has_sent_rss_notify",
+            "image_small_url", "image_url", "is_charged_immediately",
+            "is_monthly", "is_nsfw", "main_video_embed", "main_video_url",
+            "one_liner", "patron_count", "pay_per_name", "pledge_url",
+            "published_at", "summary", "thanks_embed", "thanks_msg",
+            "thanks_video_url", "rss_feed_title", "rss_artwork_url"
+        ],
+        include: [String] = ["tiers", "creator", "benefits", "goals"]
     ) async throws -> CampaignsResponse {
         try ensureAuthenticated()
 
         let fieldsParam = includeFields.joined(separator: ",")
+        let includeParam = include.joined(separator: ",")
         let queryItems: [URLQueryItem] = [
-            URLQueryItem(name: "fields[campaign]", value: fieldsParam)
+            URLQueryItem(name: "fields[campaign]", value: fieldsParam),
+            URLQueryItem(name: "include", value: includeParam)
         ]
 
         let response = try await httpClient.request(
@@ -358,13 +623,24 @@ public final class PatreonClient {
     /// Get a specific campaign by ID
     public func getCampaign(
         campaignId: String,
-        includeFields: [String] = ["summary", "creation_name", "image_url", "url", "published_at"]
+        includeFields: [String] = [
+            "created_at", "creation_name", "discord_server_id",
+            "google_analytics_id", "has_rss", "has_sent_rss_notify",
+            "image_small_url", "image_url", "is_charged_immediately",
+            "is_monthly", "is_nsfw", "main_video_embed", "main_video_url",
+            "one_liner", "patron_count", "pay_per_name", "pledge_url",
+            "published_at", "summary", "thanks_embed", "thanks_msg",
+            "thanks_video_url", "rss_feed_title", "rss_artwork_url"
+        ],
+        include: [String] = ["tiers", "creator", "benefits", "goals"]
     ) async throws -> Campaign {
         try ensureAuthenticated()
 
         let fieldsParam = includeFields.joined(separator: ",")
+        let includeParam = include.joined(separator: ",")
         let queryItems: [URLQueryItem] = [
-            URLQueryItem(name: "fields[campaign]", value: fieldsParam)
+            URLQueryItem(name: "fields[campaign]", value: fieldsParam),
+            URLQueryItem(name: "include", value: includeParam)
         ]
 
         let response = try await httpClient.request(
@@ -381,7 +657,12 @@ public final class PatreonClient {
     /// Get tiers for a campaign
     public func getCampaignTiers(
         campaignId: String,
-        includeFields: [String] = ["title", "amount_cents"]
+        includeFields: [String] = [
+            "amount_cents", "created_at", "description",
+            "discord_role_ids", "edited_at", "patron_count",
+            "published", "published_at", "requires_shipping",
+            "title", "url"
+        ]
     ) async throws -> [PatreonTier] {
         try ensureAuthenticated()
 
@@ -405,7 +686,16 @@ public final class PatreonClient {
                 type: resource.type,
                 attributes: .init(
                     title: resource.attributes?.title ?? "Untitled",
-                    amountCents: resource.attributes?.amountCents
+                    amountCents: resource.attributes?.amountCents,
+                    description: resource.attributes?.description,
+                    discordRoleIds: resource.attributes?.discordRoleIds,
+                    editedAt: resource.attributes?.editedAt,
+                    patronCount: resource.attributes?.patronCount,
+                    published: resource.attributes?.published,
+                    publishedAt: resource.attributes?.publishedAt,
+                    requiresShipping: resource.attributes?.requiresShipping,
+                    url: resource.attributes?.url,
+                    createdAt: resource.attributes?.createdAt
                 )
             )
         } ?? []
@@ -585,16 +875,24 @@ public final class PatreonClient {
         includeFields: [String] = [
             "full_name", "email", "patron_status",
             "last_charge_status", "lifetime_support_cents",
-            "currently_entitled_amount_cents"
+            "currently_entitled_amount_cents", "is_follower",
+            "last_charge_date", "pledge_relationship_start",
+            "note", "currently_entitled_tiers",
+            "unread_count", "access_expires_at",
+            "pledge_cadence", "lifetime_support_cents"
+        ],
+        include: [String] = [
+            "currently_entitled_tiers", "address", "user", "pledge_history"
         ],
         cursor: String? = nil
     ) async throws -> MembersResponse {
         try ensureAuthenticated()
 
         let fieldsParam = includeFields.joined(separator: ",")
+        let includeParam = include.joined(separator: ",")
         var queryItems: [URLQueryItem] = [
             URLQueryItem(name: "fields[member]", value: fieldsParam),
-            URLQueryItem(name: "include", value: "currently_entitled_tiers")
+            URLQueryItem(name: "include", value: includeParam)
         ]
 
         if let cursor = cursor {
@@ -611,6 +909,192 @@ public final class PatreonClient {
 
         return response.data
     }
+
+    /// Get a specific member by ID
+    public func getMember(
+        memberId: String,
+        includeFields: [String] = [
+            "full_name", "email", "patron_status",
+            "last_charge_status", "lifetime_support_cents",
+            "currently_entitled_amount_cents", "is_follower",
+            "last_charge_date", "pledge_relationship_start",
+            "note"
+        ],
+        include: [String] = [
+            "currently_entitled_tiers", "address", "user", "pledge_history"
+        ]
+    ) async throws -> Member {
+        try ensureAuthenticated()
+
+        let fieldsParam = includeFields.joined(separator: ",")
+        let includeParam = include.joined(separator: ",")
+        let queryItems: [URLQueryItem] = [
+            URLQueryItem(name: "fields[member]", value: fieldsParam),
+            URLQueryItem(name: "include", value: includeParam)
+        ]
+
+        let response = try await httpClient.request(
+            method: .get,
+            path: Endpoints.member(memberId: memberId),
+            queryItems: queryItems,
+            authToken: authToken,
+            decodeAs: Member.self
+        )
+
+        return response.data
+    }
+
+    /// Get paginated iterator for campaign members
+    public func membersIterator(campaignId: String) -> PaginatedIterator<Member> {
+        PaginatedIterator { [weak self] cursor in
+            guard let self = self else {
+                throw AppError.apiRequestFailed("members", NSError(domain: "PatreonClient", code: -1))
+            }
+
+            let response = try await self.getCampaignMembers(campaignId: campaignId, cursor: cursor)
+
+            return HTTPClient.APIResponse<PaginatedIterator<Member>.PaginatedPage<Member>>(
+                data: PaginatedIterator<Member>.PaginatedPage(
+                    items: response.data,
+                    nextCursor: response.meta?.pagination?.cursors?.next,
+                    hasMore: response.meta?.pagination?.cursors?.next != nil
+                ),
+                statusCode: 200,
+                headers: [:]
+            )
+        }
+    }
+
+    // MARK: - Webhook Operations
+
+    /// Get all webhooks for the current user
+    public func getWebhooks(
+        fields: [String] = [
+            "last_attempted_at", "num_consecutive_times_failed",
+            "paused", "secret", "triggers", "uri"
+        ]
+    ) async throws -> [Webhook] {
+        try ensureAuthenticated()
+
+        let fieldsParam = fields.joined(separator: ",")
+        let queryItems: [URLQueryItem] = [
+            URLQueryItem(name: "fields[webhook]", value: fieldsParam)
+        ]
+
+        let response = try await httpClient.request(
+            method: .get,
+            path: Endpoints.webhooks,
+            queryItems: queryItems,
+            authToken: authToken,
+            decodeAs: WebhooksResponse.self
+        )
+
+        return response.data.data
+    }
+
+    /// Create a new webhook
+    public func createWebhook(
+        campaignId: String,
+        uri: String,
+        triggers: [PatreonWebhookTrigger],
+        secret: String? = nil
+    ) async throws -> Webhook {
+        try ensureAuthenticated()
+
+        let body: [String: Any] = [
+            "data": [
+                "type": "webhook",
+                "attributes": [
+                    "uri": uri,
+                    "triggers": triggers.map { $0.rawValue },
+                    "secret": secret as Any
+                ] as [String: Any],
+                "relationships": [
+                    "campaign": [
+                        "data": [
+                            "type": "campaign",
+                            "id": campaignId
+                        ]
+                    ]
+                ]
+            ]
+        ]
+
+        let bodyData = try JSONSerialization.data(withJSONObject: body)
+
+        let response = try await httpClient.request(
+            method: .post,
+            path: Endpoints.webhooks,
+            bodyData: bodyData,
+            contentType: "application/vnd.api+json",
+            authToken: authToken,
+            decodeAs: Webhook.self
+        )
+
+        return response.data
+    }
+
+    /// Update an existing webhook
+    public func updateWebhook(
+        webhookId: String,
+        uri: String? = nil,
+        triggers: [PatreonWebhookTrigger]? = nil,
+        paused: Bool? = nil,
+        secret: String? = nil
+    ) async throws -> Webhook {
+        try ensureAuthenticated()
+
+        var attributes: [String: Any] = [:]
+
+        if let uri = uri {
+            attributes["uri"] = uri
+        }
+        if let triggers = triggers {
+            attributes["triggers"] = triggers.map { $0.rawValue }
+        }
+        if let paused = paused {
+            attributes["paused"] = paused
+        }
+        if let secret = secret {
+            attributes["secret"] = secret
+        }
+
+        let body: [String: Any] = [
+            "data": [
+                "type": "webhook",
+                "id": webhookId,
+                "attributes": attributes
+            ]
+        ]
+
+        let bodyData = try JSONSerialization.data(withJSONObject: body)
+
+        let response = try await httpClient.request(
+            method: .patch,
+            path: Endpoints.webhook(webhookId: webhookId),
+            bodyData: bodyData,
+            contentType: "application/vnd.api+json",
+            authToken: authToken,
+            decodeAs: Webhook.self
+        )
+
+        return response.data
+    }
+
+    /// Delete a webhook
+    public func deleteWebhook(webhookId: String) async throws {
+        try ensureAuthenticated()
+
+        _ = try await httpClient.request(
+            method: .delete,
+            path: Endpoints.webhook(webhookId: webhookId),
+            authToken: authToken,
+            decodeAs: EmptyResponse.self
+        )
+    }
+
+    // MARK: - Empty Response Helper
+    private struct EmptyResponse: Codable {}
 
     /// Get paginated iterator for campaign posts
     public func postsIterator(campaignId: String) -> PaginatedIterator<Post> {

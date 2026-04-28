@@ -144,7 +144,7 @@ public extension View {
     @Previewable @State var showDelete = false
     @Previewable @State var showReset = false
 
-    AppVStack(spacing: .large) {
+    VStack(alignment: .center, spacing: AppTheme.Spacing.large) {
         Button("Show Delete Dialog") { showDelete = true }
         Button("Show Reset Dialog") { showReset = true }
     }

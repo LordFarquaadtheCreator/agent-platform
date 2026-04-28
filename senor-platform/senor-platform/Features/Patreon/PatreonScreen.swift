@@ -52,8 +52,8 @@ struct PatreonScreen: View {
     // MARK: - Header
 
     private var header: some View {
-        AppVStack(spacing: .small, alignment: .leading) {
-            AppHStack(spacing: .medium) {
+        VStack(alignment: .leading, spacing: AppTheme.Spacing.small) {
+            HStack(spacing: AppTheme.Spacing.medium) {
                 AppSectionHeader(
                     title: "Patreon",
                     detail: viewModel.identity?.data.attributes.fullName ?? viewModel.identity?.data.attributes.vanity
@@ -150,7 +150,7 @@ struct PatreonScreen: View {
 
     private func profileCard(_ identity: PatreonIdentityResponse) -> some View {
         AppCard {
-            AppVStack(spacing: .medium, alignment: .leading) {
+            VStack(alignment: .leading, spacing: AppTheme.Spacing.medium) {
                 HStack {
                     AppText(identity.data.attributes.fullName ?? "Patreon Creator", style: .title2)
                     Spacer()
@@ -176,7 +176,7 @@ struct PatreonScreen: View {
 
     private func campaignStatsCard(_ campaign: PatreonCampaign) -> some View {
         AppCard {
-            AppVStack(spacing: .medium, alignment: .leading) {
+            VStack(alignment: .leading, spacing: AppTheme.Spacing.medium) {
                 AppText(campaign.attributes.creationName ?? "Campaign", style: .headline)
 
                 if let summary = campaign.attributes.summary {
@@ -239,7 +239,7 @@ struct PatreonScreen: View {
 
     private func postCard(_ post: PatreonPost) -> some View {
         AppCard {
-            AppVStack(spacing: .small, alignment: .leading) {
+            VStack(alignment: .leading, spacing: AppTheme.Spacing.small) {
                 HStack {
                     AppText(post.attributes.title ?? "Untitled", style: .headline)
                     Spacer()
@@ -312,7 +312,7 @@ struct PatreonScreen: View {
 
     private func memberCard(_ member: PatreonMember) -> some View {
         AppCard {
-            AppVStack(spacing: .small, alignment: .leading) {
+            VStack(alignment: .leading, spacing: AppTheme.Spacing.small) {
                 AppText(member.attributes?.fullName ?? "Patron", style: .headline)
 
                 if let status = member.attributes?.patronStatus {
@@ -349,7 +349,7 @@ struct PatreonScreen: View {
         retryAction: @escaping () -> Void
     ) -> some View {
         AppCard {
-            AppVStack(spacing: .medium, alignment: .center) {
+            VStack(alignment: .center, spacing: AppTheme.Spacing.medium) {
                 Image(systemName: "exclamationmark.triangle.fill")
                     .font(AppTheme.Typography.title2)
                     .foregroundStyle(AppTheme.ColorToken.statusError)
@@ -370,7 +370,7 @@ struct PatreonScreen: View {
 
     private func emptySectionCard(title: String, message: String) -> some View {
         AppCard {
-            AppVStack(spacing: .medium, alignment: .center) {
+            VStack(alignment: .center, spacing: AppTheme.Spacing.medium) {
                 Image(systemName: "doc.plaintext")
                     .font(AppTheme.Typography.title2)
                     .foregroundStyle(AppTheme.ColorToken.textSecondary)
@@ -403,7 +403,91 @@ struct PatreonScreen: View {
 // MARK: - Previews
 
 #Preview("Not Configured") {
-    PatreonScreen(viewModel: .preview, router: AppRouter())
+    PatreonScreen(viewModel: .previewNotConfigured, router: AppRouter())
+}
+
+#Preview("Unauthenticated") {
+    PatreonScreen(viewModel: .previewUnauthenticated, router: AppRouter())
+}
+
+#Preview("Session Expired") {
+    PatreonScreen(viewModel: .previewSessionExpired, router: AppRouter())
+}
+
+#Preview("Loading Initial") {
+    PatreonScreen(viewModel: .previewLoadingInitial, router: AppRouter())
+}
+
+#Preview("Loading Refreshing") {
+    PatreonScreen(viewModel: .previewRefreshing, router: AppRouter())
+}
+
+#Preview("Profile Error") {
+    PatreonScreen(viewModel: .previewProfileError, router: AppRouter())
+}
+
+#Preview("Posts Error") {
+    PatreonScreen(viewModel: .previewPostsError, router: AppRouter())
+}
+
+#Preview("Members Error") {
+    PatreonScreen(viewModel: .previewMembersError, router: AppRouter())
+}
+
+#Preview("Empty Posts") {
+    PatreonScreen(viewModel: .previewEmptyPosts, router: AppRouter())
+}
+
+#Preview("Empty Members") {
+    PatreonScreen(viewModel: .previewEmptyMembers, router: AppRouter())
+}
+
+#Preview("Single Post") {
+    PatreonScreen(viewModel: .previewSinglePost, router: AppRouter())
+}
+
+#Preview("Many Posts") {
+    PatreonScreen(viewModel: .previewManyPosts, router: AppRouter())
+}
+
+#Preview("Selected Post") {
+    let router = AppRouter()
+    router.selectedPostID = "preview-post-1"
+    return PatreonScreen(viewModel: .previewWithSelection, router: router)
+}
+
+#Preview("Selected Member") {
+    let router = AppRouter()
+    router.selectedMemberID = "preview-member-1"
+    return PatreonScreen(viewModel: .previewWithSelection, router: router)
+}
+
+#Preview("Rate Limited") {
+    PatreonScreen(viewModel: .previewRateLimited, router: AppRouter())
+}
+
+#Preview("Network Failure") {
+    PatreonScreen(viewModel: .previewNetworkFailure, router: AppRouter())
+}
+
+#Preview("Long Campaign Name") {
+    PatreonScreen(viewModel: .previewLongCampaignName, router: AppRouter())
+}
+
+#Preview("No Campaign Summary") {
+    PatreonScreen(viewModel: .previewNoCampaignSummary, router: AppRouter())
+}
+
+#Preview("Zero Patrons") {
+    PatreonScreen(viewModel: .previewZeroPatrons, router: AppRouter())
+}
+
+#Preview("High Earnings") {
+    PatreonScreen(viewModel: .previewHighEarnings, router: AppRouter())
+}
+
+#Preview("Mixed Visibility") {
+    PatreonScreen(viewModel: .previewMixedVisibility, router: AppRouter())
 }
 
 // MARK: - AttributedString HTML Extension

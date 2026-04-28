@@ -53,7 +53,7 @@ public struct ContentThumbnail: View {
 }
 
 #Preview {
-    AppHStack(spacing: .large) {
+    HStack(spacing: AppTheme.Spacing.large) {
         ContentThumbnail(url: nil, size: AppTheme.Layout.thumbnailSize)
         ContentThumbnail(url: nil, size: 80)
         ContentThumbnail(url: nil, size: 100)
