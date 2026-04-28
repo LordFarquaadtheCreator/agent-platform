@@ -9,19 +9,22 @@ struct AIHelperField: View {
     @Binding var text: String
     let isMultiline: Bool
     let height: CGFloat?
+    let aiAction: () -> Void
 
     init(
         title: String,
         placeholder: String,
         text: Binding<String>,
         isMultiline: Bool = false,
-        height: CGFloat? = nil
+        height: CGFloat? = nil,
+        aiAction: @escaping () -> Void = {}
     ) {
         self.title = title
         self.placeholder = placeholder
         self._text = text
         self.isMultiline = isMultiline
         self.height = height
+        self.aiAction = aiAction
     }
 
     var body: some View {
@@ -30,7 +33,7 @@ struct AIHelperField: View {
 
             HStack(spacing: 0) {
                 inputField
-                AIHelperButton()
+                AIHelperButton(action: aiAction)
             }
             .padding(.horizontal, AppTheme.Spacing.xSmall)
             .padding(.vertical, AppTheme.Spacing.xSmall)
@@ -85,7 +88,14 @@ struct AIHelperField: View {
 struct AIHelperTagInput: View {
     let title: String
     @Binding var tags: [String]
+    let aiAction: () -> Void
     @State private var currentInput: String = ""
+
+    init(title: String, tags: Binding<[String]>, aiAction: @escaping () -> Void = {}) {
+        self.title = title
+        self._tags = tags
+        self.aiAction = aiAction
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: AppTheme.Spacing.small) {
@@ -130,7 +140,7 @@ struct AIHelperTagInput: View {
             .disabled(currentInput.isEmpty)
             .labelStyle(.iconOnly)
 
-            AIHelperButton()
+            AIHelperButton(action: aiAction)
         }
     }
 
@@ -146,12 +156,16 @@ struct AIHelperTagInput: View {
 // MARK: - AI Helper Button
 
 private struct AIHelperButton: View {
+    let action: () -> Void
+
+    init(action: @escaping () -> Void = {}) {
+        self.action = action
+    }
+
     var body: some View {
-        Button("AI Helper", systemImage: "sparkles") {
-            // AI helper: see AgentKit for tool protocol
-        }
-        .appButtonStyle(.plain)
-        .labelStyle(AIHelperLabelStyle())
+        Button("AI Helper", systemImage: "sparkles", action: action)
+            .buttonStyle(.plain)
+            .labelStyle(AIHelperLabelStyle())
     }
 }
 
@@ -338,46 +352,44 @@ struct MediaPicker: View {
 		}
 	}
 
-	private func mediaThumbnail(url: URL) -> some View {
-	    AsyncImage(url: url) { phase in
-	        // swiftlint:disable vertical_whitespace_between_cases
-	        switch phase {
-	        case .empty:
-	            ProgressView()
-	                .frame(maxWidth: .infinity, maxHeight: 200)
-	        case .success(let image):
-	            image
-	                .resizable()
-	                .scaledToFit()
-	                .blur(radius: isPrivacyMode ? 20 : 0)
-	                .frame(maxHeight: 200)
-	        case .failure(let error):
-	            Image(systemName: "photo")
-	                .resizable()
-	                .scaledToFit()
-	                .foregroundStyle(AppTheme.ColorToken.textSecondary)
-	                .frame(maxHeight: 200)
-	        @unknown default:
-	            ProgressView()
-	                .frame(maxWidth: .infinity, maxHeight: 200)
-	        }
-	        // swiftlint:enable vertical_whitespace_between_cases
-	    }
-	}
+    private func mediaThumbnail(url: URL) -> some View {
+        AsyncImage(url: url) { phase in
+            switch phase {
+            case .empty:
+                ProgressView()
+                    .frame(maxWidth: .infinity, maxHeight: 200)
+            case .success(let image):
+                image
+                    .resizable()
+                    .scaledToFit()
+                    .blur(radius: isPrivacyMode ? 20 : 0)
+                    .frame(maxHeight: 200)
+            case .failure:
+                Image(systemName: "photo")
+                    .resizable()
+                    .scaledToFit()
+                    .foregroundStyle(AppTheme.ColorToken.textSecondary)
+                    .frame(maxHeight: 200)
+            @unknown default:
+                ProgressView()
+                    .frame(maxWidth: .infinity, maxHeight: 200)
+            }
+        }
+    }
 
-	private func handleFileImport(_ result: Result<[URL], Error>) {
-		switch result {
-		case .success(let urls):
-			if allowsMultiple {
-				selectedURLs = urls
-			} else if let first = urls.first {
-				selectedURL = first
-			}
+    private func handleFileImport(_ result: Result<[URL], Error>) {
+        switch result {
+        case .success(let urls):
+            if allowsMultiple {
+                selectedURLs = urls
+            } else if let first = urls.first {
+                selectedURL = first
+            }
 
-		case .failure:
-			break
-		}
-	}
+        case .failure:
+            break
+        }
+    }
 }
 
 // MARK: - Previews

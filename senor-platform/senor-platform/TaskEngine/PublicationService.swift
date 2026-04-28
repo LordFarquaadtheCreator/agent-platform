@@ -7,11 +7,9 @@ public final actor PublicationService {
     private let cacheService: CacheService
     private let approvalQueueRepository: ApprovalQueueRepository
     private let settingsService: SettingsService
-    private let logger = AppLogger.general
-
     private let deviantArtClient: DeviantArtServiceProtocol?
     private let patreonClient: PatreonServiceProtocol?
-
+    private let logger = AppLogger.general
     public init(
         approvalQueueRepository: ApprovalQueueRepository,
         publicationRepository: PublicationTargetRepository,

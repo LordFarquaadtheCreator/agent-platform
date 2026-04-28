@@ -78,7 +78,6 @@ public struct PatreonTier: Identifiable, Codable, Sendable {
     public struct TierAttributes: Codable, Sendable {
         public let title: String
         public let amountCents: Int?
-        // NEW FIELDS
         public let description: String?
         public let discordRoleIds: [String]?
         public let editedAt: String?

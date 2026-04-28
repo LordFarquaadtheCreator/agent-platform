@@ -206,7 +206,6 @@ public struct PatreonIncludedAttributes: Codable {
     public let title: String?
     public let url: String?
     public let amountCents: Int?
-    // Add address fields when type == "address"
     public let addressee: String?
     public let line1: String?
     public let line2: String?
@@ -215,7 +214,6 @@ public struct PatreonIncludedAttributes: Codable {
     public let postalCode: String?
     public let country: String?
     public let phoneNumber: String?
-    // Add tier fields
     public let description: String?
     public let discordRoleIds: [String]?
     public let editedAt: String?
@@ -224,7 +222,6 @@ public struct PatreonIncludedAttributes: Codable {
     public let publishedAt: String?
     public let requiresShipping: Bool?
     public let createdAt: String?
-    // Add user fields
     public let email: String?
     public let fullName: String?
     public let firstName: String?

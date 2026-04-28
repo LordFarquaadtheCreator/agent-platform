@@ -14,7 +14,7 @@ public final class AppBootstrap {
         let repos = createRepositories(dbManager: dbManager)
         let settings = SettingsService()
         let integrations = try await setupIntegrations(settingsService: settings)
-        let services = createServices(repos: repos, integrations: integrations)
+        let services = createServices(repos: repos, settings: settings, integrations: integrations)
         let runtime = try await setupTaskRuntime(repos: repos, services: services)
 
         await registerWithLegacyBridge(repos: repos, services: services, runtime: runtime, integrations: integrations)
@@ -64,8 +64,7 @@ public final class AppBootstrap {
         let publication: PublicationService
     }
 
-    private func createServices(repos: Repositories, integrations: Integrations) -> Services {
-        let settings = SettingsService()
+    private func createServices(repos: Repositories, settings: SettingsService, integrations: Integrations) -> Services {
         let cache = CacheService(cacheRepository: repos.cache)
         let versioning = ContentVersioningService(contentRepository: repos.content)
         let approval = ApprovalService(
