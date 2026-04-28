@@ -47,9 +47,10 @@ public class AIChatViewModel: ObservableObject {
     public func loadHistory() async {
         do {
             messages = try await chatHistoryStore.load(for: router.selectedSection)
-            // Reset stateful session when loading history since we don't have the response ID
             previousResponseID = nil
             updateContextSummary()
+        } catch is CancellationError {
+            // Task cancelled by view lifecycle; not a real failure
         } catch {
             errorMessage = "Failed to load chat history: \(error.localizedDescription)"
         }
@@ -68,6 +69,8 @@ public class AIChatViewModel: ObservableObject {
                 // Default to first available model if saved not found
                 selectedModel = availableModels.first ?? ""
             }
+        } catch is CancellationError {
+            // Task cancelled by view lifecycle; not a real failure
         } catch {
             errorMessage = "Failed to load models: \(error.localizedDescription)"
         }
@@ -83,6 +86,8 @@ public class AIChatViewModel: ObservableObject {
     public func loadHistorySessions() async {
         do {
             historySessions = try await chatHistoryStore.listAllSessions()
+        } catch is CancellationError {
+            // Task cancelled by view lifecycle; not a real failure
         } catch {
             errorMessage = "Failed to load history sessions: \(error.localizedDescription)"
         }
@@ -152,18 +157,26 @@ public class AIChatViewModel: ObservableObject {
             if let id = await aiClient.getLastResponseID() {
                 previousResponseID = id
             }
-
-            // Save history
-            try await chatHistoryStore.save(for: router.selectedSection, messages: messages)
-            updateContextSummary()
+        } catch is CancellationError {
+            isGenerating = false
+            return
         } catch {
             errorMessage = "Failed to get AI response: \(error.localizedDescription)"
             // Remove user message if failed
             if messages.last?.role == .user {
                 messages.removeLast()
             }
+            isGenerating = false
+            return
         }
 
+        do {
+            try await chatHistoryStore.save(for: router.selectedSection, messages: messages)
+        } catch {
+            errorMessage = "Failed to save chat history for \(router.selectedSection.title): \(error.localizedDescription)"
+        }
+
+        updateContextSummary()
         isGenerating = false
 
         // Auto-drain queue: if messages waiting, send next one
@@ -174,10 +187,13 @@ public class AIChatViewModel: ObservableObject {
     }
 
     public func clearHistory() async {
+        guard !messages.isEmpty else { return }
         messages.removeAll()
-        previousResponseID = nil  // Reset stateful session
+        previousResponseID = nil
         do {
             try await chatHistoryStore.clear(for: router.selectedSection)
+        } catch is CancellationError {
+            // Task cancelled by view lifecycle; not a real failure
         } catch {
             errorMessage = "Failed to clear history: \(error.localizedDescription)"
         }

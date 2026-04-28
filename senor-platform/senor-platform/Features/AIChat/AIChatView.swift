@@ -157,16 +157,18 @@ struct AIChatView: View {
             )
             .focused($isInputFocused)
             .onSubmit {
-                let text = inputText
+                let trimmed = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !trimmed.isEmpty, !viewModel.selectedModel.isEmpty else { return }
                 inputText = ""
-                Task { await viewModel.sendMessage(text: text) }
+                Task { await viewModel.sendMessage(text: trimmed) }
             }
             .accessibilityIdentifier("chatInputField")
 
             Button {
-                let text = inputText
+                let trimmed = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !trimmed.isEmpty, !viewModel.selectedModel.isEmpty else { return }
                 inputText = ""
-                Task { await viewModel.sendMessage(text: text) }
+                Task { await viewModel.sendMessage(text: trimmed) }
             } label: {
                 if viewModel.isGenerating {
                     ProgressView()
@@ -358,15 +360,17 @@ struct AIChatView: View {
     }
 
     private func markdownText(_ text: String) -> Text {
-        if let attributedString = try? AttributedString(
-            markdown: text,
-            options: AttributedString.MarkdownParsingOptions(
-                interpretedSyntax: .inlineOnlyPreservingWhitespace
+        do {
+            let attributedString = try AttributedString(
+                markdown: text,
+                options: AttributedString.MarkdownParsingOptions(
+                    interpretedSyntax: .inlineOnlyPreservingWhitespace
+                )
             )
-        ) {
             return Text(attributedString)
+        } catch {
+            return Text(text)
         }
-        return Text(text)
     }
 }
 
