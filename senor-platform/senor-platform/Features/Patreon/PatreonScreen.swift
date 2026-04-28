@@ -270,7 +270,7 @@ struct PatreonScreen: View {
                     // Convert HTML to Markdown and render
                     let markdownContent = HTMLUtils.toMarkdown(content)
                     Markdown(markdownContent)
-                        .markdownTheme(.gitHub)
+                        .markdownTheme(.app)
                         .lineLimit(4)
                 }
             }

@@ -33,7 +33,7 @@ struct PatreonPostDetailPanel: View {
                         AppText("Content", style: .title3)
                         let markdownContent = HTMLUtils.toMarkdown(content)
                         Markdown(markdownContent)
-                            .markdownTheme(.gitHub)
+                            .markdownTheme(.app)
                     }
                 }
 

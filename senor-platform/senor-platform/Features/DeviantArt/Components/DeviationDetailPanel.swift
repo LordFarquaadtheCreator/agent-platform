@@ -21,7 +21,7 @@ struct DeviationDetailPanel: View {
             .appScreenPadding()
         }
         .background(AppTheme.ColorToken.chromeBackground)
-        .task {
+        .task(id: deviation.id) {
             await viewModel.loadMetadata(for: deviation.id)
         }
     }
@@ -114,7 +114,7 @@ struct DeviationDetailPanel: View {
                     AppText("Description", style: .title3)
                     let markdownContent = HTMLUtils.toMarkdown(description)
                     Markdown(markdownContent)
-                        .markdownTheme(.gitHub)
+                        .markdownTheme(.app)
                 }
             }
         }

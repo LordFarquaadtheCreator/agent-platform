@@ -1,5 +1,6 @@
 import SwiftUI
 import Combine
+import MarkdownUI
 
 struct AIChatView: View {
     @ObservedObject private var viewModel: AIChatViewModel
@@ -124,7 +125,8 @@ struct AIChatView: View {
                     style: .flat,
                     backgroundColor: message.role == .user ? AppTheme.ColorToken.accent : nil
                 ) {
-                    markdownText(message.content)
+                    Markdown(message.content)
+                        .markdownTheme(.app)
                         .foregroundStyle(message.role == .user ? AppTheme.ColorToken.textOnAccent : AppTheme.ColorToken.textPrimary)
                         .textSelection(.enabled)
                 }
@@ -386,19 +388,6 @@ struct AIChatView: View {
         }
     }
 
-    private func markdownText(_ text: String) -> Text {
-        do {
-            let attributedString = try AttributedString(
-                markdown: text,
-                options: AttributedString.MarkdownParsingOptions(
-                    interpretedSyntax: .full
-                )
-            )
-            return Text(attributedString)
-        } catch {
-            return Text(text)
-        }
-    }
 }
 
 // MARK: - Preview Helpers
