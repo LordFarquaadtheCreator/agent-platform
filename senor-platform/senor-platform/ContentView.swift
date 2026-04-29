@@ -48,6 +48,8 @@ struct ContentView: View {
         .toast(message: $appState.toastMessage)
         .environment(\.privacyMode, appState.privacyMode)
         .onOpenURL { url in
+            // Note: Version verification happens in handleCallback (DeviantArtModel.swift)
+            // State parameter contains embedded version identifier for validation
             guard url.scheme == "senorplatform" else { return }
             guard url.host == "oauth" else { return }
 

@@ -150,7 +150,8 @@ public final class DeviantArtViewModel: ObservableObject {
         defer { isConnecting = false }
 
         let pkce = generatePKCE()
-        let state = UUID().uuidString
+        // Embed app version in state to prevent wrong app version from processing callback
+        let state = "\(UUID().uuidString):\(AppVersion.identifier)"
 
         // Persist to UserDefaults in case app restarts during OAuth
         UserDefaults.standard.set(pkce.verifier, forKey: PendingKeys.codeVerifier)
@@ -198,9 +199,24 @@ public final class DeviantArtViewModel: ObservableObject {
         }
 
         guard let code = params["code"],
-              let state = params["state"],
-              state == pendingState || state == storedState else {
+              let state = params["state"] else {
+            errorMessage = "Missing code or state in callback"
+            clearPendingState()
+            return
+        }
+
+        // Verify state matches (checks UUID portion) and version identifier matches
+        let expectedStates = [pendingState, storedState].compactMap { $0 }
+        guard expectedStates.contains(where: { $0 == state }) else {
             errorMessage = "State mismatch - possible CSRF attack or session expired"
+            clearPendingState()
+            return
+        }
+
+        // Extract and verify version identifier from state
+        let stateParts = state.split(separator: ":", maxSplits: 1)
+        guard stateParts.count == 2, String(stateParts[1]) == AppVersion.identifier else {
+            errorMessage = "Version mismatch - callback intended for different app version"
             clearPendingState()
             return
         }

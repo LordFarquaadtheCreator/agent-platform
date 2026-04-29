@@ -1,4 +1,5 @@
 import SwiftUI
+import Foundation
 
 @main
 struct senor_platformApp: App {
@@ -43,3 +44,4 @@ struct senor_platformApp: App {
         }
     }
 }
+
