@@ -21,10 +21,21 @@ struct DeviantArtScreen: View {
         .background(AppTheme.ColorToken.chromeBackground)
         .task { await viewModel.load() }
         .sheet(isPresented: $showUploadSheet) {
-            DeviantArtUploadView(viewModel: viewModel)
+            DeviantArtUploadView(
+                formViewModel: DeviantArtUploadViewModel(
+                    viewModel: viewModel,
+                    onComplete: { showUploadSheet = false }
+                )
+            )
         }
         .sheet(item: $selectedStashItem) { item in
-            DeviantArtPublishView(viewModel: viewModel, stashItem: item)
+            DeviantArtPublishView(
+                formViewModel: DeviantArtPublishViewModel(
+                    viewModel: viewModel,
+                    stashItem: item,
+                    onComplete: { selectedStashItem = nil }
+                )
+            )
         }
         .onReceive(NotificationCenter.default.publisher(for: .openDeviantArtUpload)) { _ in
             showUploadSheet = true
@@ -165,7 +176,7 @@ private struct AvatarView: View {
                         EmptyView()
                     }
                 }
-                .frame(width: 80, height: 80)
+                .frame(width: AppTheme.Layout.thumbnailSize + 20, height: AppTheme.Layout.thumbnailSize + 20)
                 .clipShape(Circle())
             } else {
                 placeholder
@@ -177,7 +188,7 @@ private struct AvatarView: View {
         Circle()
             .fill(AppTheme.ColorToken.textSecondary.opacity(0.2))
             .frame(width: 80, height: 80)
-            .overlay(Image(systemName: "person.fill").foregroundColor(AppTheme.ColorToken.textSecondary))
+            .overlay(Image(systemName: "person.fill").foregroundStyle(AppTheme.ColorToken.textSecondary))
     }
 }
 
@@ -256,7 +267,7 @@ private struct ImageSection: View {
     var body: some View {
         ZStack(alignment: .topLeading) {
             DeviationImage(deviation: deviation)
-                .frame(height: 160)
+                .frame(height: AppTheme.Layout.imageSectionHeight)
                 .clipShape(RoundedRectangle(cornerRadius: AppTheme.CornerRadius.card))
             if let category = deviation.category {
                 CategoryBadge(category: category)
@@ -308,14 +319,14 @@ private struct StatusRow: View {
     var body: some View {
         HStack {
             Image(systemName: "checkmark.circle.fill")
-                .foregroundColor(AppTheme.ColorToken.statusSuccess)
+                .foregroundStyle(AppTheme.ColorToken.statusSuccess)
                 .font(AppTheme.Typography.caption)
             AppText("Published", style: .caption)
-                .foregroundColor(AppTheme.ColorToken.statusSuccess)
+                .foregroundStyle(AppTheme.ColorToken.statusSuccess)
             Spacer()
             if deviation.allowsComments == true {
                 Image(systemName: "bubble.right.fill")
-                    .foregroundColor(AppTheme.ColorToken.statusInfo)
+                    .foregroundStyle(AppTheme.ColorToken.statusInfo)
                     .font(AppTheme.Typography.caption2)
             }
         }
@@ -333,7 +344,7 @@ private struct StatsRow: View {
             StatItem(icon: "arrow.down.circle", value: stats.downloads ?? 0)
         }
         .font(AppTheme.Typography.caption)
-        .foregroundColor(AppTheme.ColorToken.textSecondary)
+        .foregroundStyle(AppTheme.ColorToken.textSecondary)
     }
 }
 
@@ -346,12 +357,12 @@ private struct StashStackCard: View {
             VStack(alignment: .leading, spacing: AppTheme.Spacing.small) {
                 if let items = stack.items, !items.isEmpty {
                     ThumbnailGrid(items: items.prefix(4))
-                        .frame(height: 100)
+                        .frame(height: AppTheme.Layout.thumbnailGridHeight)
                         .clipShape(RoundedRectangle(cornerRadius: AppTheme.CornerRadius.small))
                 }
                 HStack {
                     Image(systemName: "archivebox.fill")
-                        .foregroundColor(AppTheme.ColorToken.statusWarning)
+                        .foregroundStyle(AppTheme.ColorToken.statusWarning)
                         .font(AppTheme.Typography.caption)
                     AppText("Sta.sh Stack", style: .caption)
                         .foregroundStyle(AppTheme.ColorToken.statusWarning)
@@ -388,7 +399,7 @@ private struct StashStatusRow: View {
         let unpublishedCount = items.count - publishedCount
         let totalSize = items.compactMap { $0.fileSize }.reduce(0, +)
 
-        VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .leading, spacing: AppTheme.Spacing.xSmall) {
             HStack {
                 AppText(
                     "\(items.count) items",
@@ -487,60 +498,41 @@ private struct ThumbnailGrid: View {
 
 // MARK: - Previews
 
+#if DEBUG
 #Preview("Not Authenticated") {
-    DeviantArtScreen(viewModel: .previewNotAuthenticated, router: AppRouter())
+	DeviantArtScreen(
+		viewModel: previewDeviantArtViewModel(isAuthenticated: false),
+		router: AppRouter()
+	)
 }
 
-#Preview("Loading") {
-    DeviantArtScreen(viewModel: .previewLoading, router: AppRouter())
+#Preview("Empty") {
+	DeviantArtScreen(
+		viewModel: previewDeviantArtViewModel(deviationCount: 0, stashCount: 0),
+		router: AppRouter()
+	)
 }
 
-#Preview("Empty Data") {
-    DeviantArtScreen(viewModel: .previewEmpty, router: AppRouter())
+#Preview("Single") {
+	DeviantArtScreen(
+		viewModel: previewDeviantArtViewModel(deviationCount: 1, stashCount: 1),
+		router: AppRouter()
+	)
 }
 
-#Preview("Error") {
-    DeviantArtScreen(viewModel: .previewError, router: AppRouter())
+#Preview("Many") {
+	DeviantArtScreen(
+		viewModel: previewDeviantArtViewModel(deviationCount: 50, stashCount: 4),
+		router: AppRouter()
+	)
 }
 
-#Preview("Single Deviation") {
-    DeviantArtScreen(viewModel: .previewSingleDeviation, router: AppRouter())
+#Preview("Selected") {
+	let router = AppRouter()
+	router.selectedDeviationID = "dev-0"
+	return DeviantArtScreen(
+		viewModel: previewDeviantArtViewModel(deviationCount: 5),
+		router: router
+	)
 }
-
-#Preview("Many Deviations") {
-    DeviantArtScreen(viewModel: .previewManyDeviations, router: AppRouter())
-}
-
-#Preview("With Stash") {
-    DeviantArtScreen(viewModel: .previewWithStash, router: AppRouter())
-}
-
-#Preview("Empty Stash") {
-    DeviantArtScreen(viewModel: .previewEmptyStash, router: AppRouter())
-}
-
-#Preview("Selected Deviation") {
-    let router = AppRouter()
-    router.selectedDeviationID = "preview-dev-1"
-    return DeviantArtScreen(viewModel: .previewWithSelection, router: router)
-}
-
-#Preview("Refreshing") {
-    DeviantArtScreen(viewModel: .previewRefreshing, router: AppRouter())
-}
-
-#Preview("Last Updated") {
-    DeviantArtScreen(viewModel: .previewWithTimestamp, router: AppRouter())
-}
-
-#Preview("No Stats") {
-    DeviantArtScreen(viewModel: .previewNoStats, router: AppRouter())
-}
-
-#Preview("Long Username") {
-    DeviantArtScreen(viewModel: .previewLongUsername, router: AppRouter())
-}
-
-#Preview("No Profile Stats") {
-    DeviantArtScreen(viewModel: .previewNoProfileStats, router: AppRouter())
-}
+#endif

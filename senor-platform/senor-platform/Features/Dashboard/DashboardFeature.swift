@@ -77,9 +77,3 @@ struct DashboardScreen: View {
         .background(AppTheme.ColorToken.chromeBackground)
     }
 }
-
-// MARK: - Previews
-
-#Preview {
-    DashboardScreen(viewModel: DashboardViewModel())
-}

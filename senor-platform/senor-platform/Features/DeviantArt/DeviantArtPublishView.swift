@@ -3,15 +3,7 @@ import SwiftUI
 struct DeviantArtPublishView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.privacyMode) private var isPrivacyMode
-    @ObservedObject var viewModel: DeviantArtViewModel
-    let stashItem: DeviantArtClient.StashItem
-
-    @State private var title: String = ""
-    @State private var category: String = ""
-    @State private var isMature = false
-    @State private var matureLevel: String = ""
-    @State private var allowsComments = true
-    @State private var isPublishing = false
+    @StateObject var formViewModel: DeviantArtPublishViewModel
 
     private let categories = [
         "3d": "3D & Fractal Art",
@@ -65,29 +57,22 @@ struct DeviantArtPublishView: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Publish") {
-                        performPublish()
+                        Task { await performPublish() }
                     }
-                    .disabled(!canPublish)
+                    .disabled(!formViewModel.canPublish)
                 }
             }
         }
-        .frame(minWidth: 500, minHeight: 500)
-        .onAppear {
-            title = stashItem.title
-        }
-        .disabled(isPublishing)
+        .frame(minWidth: AppTheme.Layout.mediumSheetWidth, minHeight: AppTheme.Layout.mediumSheetHeight)
+        .disabled(formViewModel.isPublishing)
         .overlay {
-            if isPublishing {
+            if formViewModel.isPublishing {
                 ProgressView("Publishing...")
-                    .padding()
+                    .padding(AppTheme.Spacing.medium)
                     .background(AppTheme.ColorToken.cardBackground)
                     .clipShape(RoundedRectangle(cornerRadius: AppTheme.CornerRadius.card))
             }
         }
-        .toast(message: .init(
-            get: { ToastState.shared.message },
-            set: { ToastState.shared.message = $0 }
-        ))
     }
 
     private var stashPreview: some View {
@@ -99,7 +84,7 @@ struct DeviantArtPublishView: View {
                     AppText("Publishing from Sta.sh", style: .caption, color: AppTheme.ColorToken.textSecondary)
                 }
 
-                if let thumbURL = stashItem.previewURL {
+                if let thumbURL = formViewModel.stashItem.previewURL {
                     AsyncImage(url: thumbURL) { phase in
                         switch phase {
                         case .success(let image):
@@ -115,7 +100,7 @@ struct DeviantArtPublishView: View {
                     }
                 }
 
-                AppText(stashItem.title.isEmpty ? "Untitled" : stashItem.title, style: .headline)
+                AppText(formViewModel.stashItem.title.isEmpty ? "Untitled" : formViewModel.stashItem.title, style: .headline)
             }
         }
     }
@@ -124,7 +109,7 @@ struct DeviantArtPublishView: View {
         AppInputField(
             title: "Deviation Title",
             placeholder: "Enter title for your deviation",
-            text: $title
+            text: $formViewModel.title
         )
     }
 
@@ -132,7 +117,7 @@ struct DeviantArtPublishView: View {
         VStack(alignment: .leading, spacing: AppTheme.Spacing.small) {
             AppText("Category", style: .headline)
 
-            Picker("Category", selection: $category) {
+            Picker("Category", selection: $formViewModel.category) {
                 Text("Select a category...").tag("")
                 ForEach(Array(categories.keys.sorted()), id: \.self) { key in
                     Text(categories[key] ?? key).tag(key)
@@ -165,7 +150,7 @@ struct DeviantArtPublishView: View {
             } label: {
                 AppText("Suggest category with AI", style: .caption, color: AppTheme.ColorToken.accent)
             }
-            .buttonStyle(.plain)
+            .appButtonStyle(.plain)
 
             Spacer()
         }
@@ -176,10 +161,10 @@ struct DeviantArtPublishView: View {
     private var optionsSection: some View {
         AppSurface(style: .card) {
             VStack(alignment: .leading, spacing: AppTheme.Spacing.medium) {
-                Toggle("Mature Content", isOn: $isMature)
+                Toggle("Mature Content", isOn: $formViewModel.isMature)
 
-                if isMature {
-                    Picker("Mature Level", selection: $matureLevel) {
+                if formViewModel.isMature {
+                    Picker("Mature Level", selection: $formViewModel.matureLevel) {
                         Text("Default").tag("")
                         Text("Strict").tag("strict")
                         Text("Moderate").tag("moderate")
@@ -187,114 +172,47 @@ struct DeviantArtPublishView: View {
                     .pickerStyle(.segmented)
                 }
 
-                Toggle("Allow Comments", isOn: $allowsComments)
+                Toggle("Allow Comments", isOn: $formViewModel.allowsComments)
             }
         }
     }
 
-    private var canPublish: Bool {
-        !title.isEmpty && !category.isEmpty
-    }
-
-    private func performPublish() {
-        isPublishing = true
-        Task {
-            do {
-                try await viewModel.publishFromStash(
-                    stashId: stashItem.itemid,
-                    title: title,
-                    category: category.isEmpty ? nil : category,
-                    isMature: isMature,
-                    matureLevel: matureLevel.isEmpty ? nil : matureLevel,
-                    allowsComments: allowsComments
-                )
-                await MainActor.run {
-                    isPublishing = false
-                    dismiss()
-                }
-            } catch {
-                await MainActor.run {
-                    isPublishing = false
-                    ToastState.shared.message = "Publish failed: \(error.localizedDescription)"
-                }
-            }
+    private func performPublish() async {
+        let success = await formViewModel.publish()
+        if success {
+            dismiss()
         }
     }
 }
 
 // MARK: - Previews
 
-#Preview("Standard Stash Item") {
-    let stashItem = DeviantArtClient.StashItem(
-        itemid: "item-1",
-        stackid: "stack-1",
-        title: "My Artwork",
-        path: nil,
-        size: nil,
-        fileSize: 2048000,
-        status: "draft",
-        thumb: nil,
-        position: 1
-    )
-    DeviantArtPublishView(viewModel: .preview, stashItem: stashItem)
+#if DEBUG
+#Preview("DeviantArt Publish") {
+	let deviantArtVM = previewDeviantArtViewModel(deviationCount: 0)
+	
+	// Create StashItem via JSON decoding since it's Codable
+	let jsonData = """
+	{
+		"itemid": "preview-stash-1",
+		"stackid": "stack-1",
+		"title": "Preview Stash Item",
+		"path": "/path/to/file.png",
+		"size": 1024000,
+		"filesize": 1024000,
+		"status": "draft",
+		"thumb": null,
+		"position": 1
+	}
+	""".data(using: .utf8)!
+	let stashItem = try! JSONDecoder().decode(DeviantArtClient.StashItem.self, from: jsonData)
+	
+	DeviantArtPublishView(
+		formViewModel: DeviantArtPublishViewModel(
+			viewModel: deviantArtVM,
+			stashItem: stashItem,
+			onComplete: {}
+		)
+	)
 }
-
-#Preview("Long Title") {
-    let stashItem = DeviantArtClient.StashItem(
-        itemid: "item-2",
-        stackid: "stack-1",
-        title: "This is a Very Long Title That Tests How the UI Handles Long Text in the Publish View",
-        path: nil,
-        size: nil,
-        fileSize: 4096000,
-        status: "draft",
-        thumb: nil,
-        position: 1
-    )
-    DeviantArtPublishView(viewModel: .preview, stashItem: stashItem)
-}
-
-#Preview("Empty Title") {
-    let stashItem = DeviantArtClient.StashItem(
-        itemid: "item-3",
-        stackid: "stack-1",
-        title: "",
-        path: nil,
-        size: nil,
-        fileSize: 1024000,
-        status: "draft",
-        thumb: nil,
-        position: 1
-    )
-    DeviantArtPublishView(viewModel: .preview, stashItem: stashItem)
-}
-
-#Preview("Large File") {
-    let stashItem = DeviantArtClient.StashItem(
-        itemid: "item-4",
-        stackid: "stack-1",
-        title: "High Resolution Art",
-        path: nil,
-        size: nil,
-        fileSize: 52428800,
-        status: "draft",
-        thumb: nil,
-        position: 1
-    )
-    DeviantArtPublishView(viewModel: .preview, stashItem: stashItem)
-}
-
-#Preview("Published Status") {
-    let stashItem = DeviantArtClient.StashItem(
-        itemid: "item-5",
-        stackid: "stack-1",
-        title: "Already Published",
-        path: nil,
-        size: nil,
-        fileSize: 1024000,
-        status: "published",
-        thumb: nil,
-        position: 1
-    )
-    DeviantArtPublishView(viewModel: .preview, stashItem: stashItem)
-}
+#endif

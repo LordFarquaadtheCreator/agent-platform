@@ -30,7 +30,7 @@ public struct AsyncActionButton: View {
         Button(role: role) {
             performAction()
         } label: {
-            HStack(spacing: 6) {
+            HStack(spacing: AppTheme.Spacing.small) {
                 if isLoading {
                     ProgressView()
                         .scaleEffect(0.8)

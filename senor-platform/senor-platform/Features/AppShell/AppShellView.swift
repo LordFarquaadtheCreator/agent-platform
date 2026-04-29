@@ -233,34 +233,12 @@ private struct AIChatPanel: View {
     @ObservedObject var router: AppRouter
     @EnvironmentObject var appState: AppShellModel
 
-    @State private var viewModel: AIChatViewModel?
-
     var body: some View {
-        if let viewModel = viewModel {
-            AIChatView(viewModel: viewModel)
-        } else {
-            ProgressView("Loading AI Chat...")
-        }
+        AIChatView(viewModel: workspace.aiChatViewModel)
     }
 
     init(workspace: WorkspaceModel, router: AppRouter) {
         self.workspace = workspace
         self.router = router
-
-        // Initialize viewModel with dependencies
-        let dependencies = workspace.dependencies
-        self._viewModel = State(initialValue: AIChatViewModel(
-            aiClient: dependencies.aiClient,
-            contextExtractor: dependencies.contextExtractor,
-            chatHistoryStore: dependencies.chatHistoryStore,
-            workspace: workspace,
-            router: router
-        ))
     }
-}
-
-// MARK: - Preview
-
-#Preview {
-    Text("AppShellView preview requires full dependency injection")
 }

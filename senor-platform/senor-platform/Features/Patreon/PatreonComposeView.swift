@@ -5,18 +5,9 @@ import SwiftUI
 
 struct PatreonComposeView: View {
     @Environment(\.dismiss) private var dismiss
-    @ObservedObject var viewModel: PatreonViewModel
-    let post: PatreonPost? // nil for new post
+    @StateObject var formViewModel: PatreonComposeViewModel
 
-    @State private var title: String = ""
-    @State private var content: String = ""
-    @State private var isPaid = true
-    @State private var isPublic = false
-    @State private var selectedTiers: Set<String> = []
-    @State private var mediaURLs: [URL] = []
-    @State private var isSaving = false
-
-    private var isEditing: Bool { post != nil }
+    private var isEditing: Bool { formViewModel.isEditing }
 
     var body: some View {
         NavigationStack {
@@ -25,12 +16,12 @@ struct PatreonComposeView: View {
                     titleSection
                     contentSection
 
-					HStack(alignment: .top) {
-						visibilitySection
-							.frame(maxHeight: .infinity, alignment: .top)
-						tierSection
-							.frame(maxHeight: .infinity, alignment: .top)
-					}
+                    HStack(alignment: .top) {
+                        visibilitySection
+                            .frame(maxHeight: .infinity, alignment: .top)
+                        tierSection
+                            .frame(maxHeight: .infinity, alignment: .top)
+                    }
                 }
                 .appScreenPadding()
             }
@@ -44,44 +35,29 @@ struct PatreonComposeView: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button(isEditing ? "Save" : "Post") {
-                        savePost()
+                        Task { await savePost() }
                     }
-                    .disabled(!canSave)
+                    .disabled(!formViewModel.canSave)
                 }
             }
         }
-        .frame(minWidth: 800, maxHeight: 500)
-        .disabled(isSaving)
+        .frame(minWidth: AppTheme.Layout.largeSheetWidth, maxHeight: AppTheme.Layout.mediumSheetHeight)
+        .disabled(formViewModel.isSaving)
         .overlay {
-            if isSaving {
+            if formViewModel.isSaving {
                 ProgressView(isEditing ? "Updating..." : "Creating...")
-                    .padding()
+                    .padding(AppTheme.Spacing.medium)
                     .background(AppTheme.ColorToken.cardBackground)
                     .clipShape(RoundedRectangle(cornerRadius: AppTheme.CornerRadius.card))
             }
         }
-        .onAppear {
-            if let post = post {
-                title = post.attributes.title ?? ""
-                content = post.attributes.content ?? ""
-                isPaid = post.attributes.isPaid ?? true
-                isPublic = post.attributes.isPublic ?? false
-                if let tierData = post.relationships?.tiers?.data {
-                    selectedTiers = Set(tierData.map(\.id))
-                }
-            }
-        }
-        .toast(message: .init(
-            get: { ToastState.shared.message },
-            set: { ToastState.shared.message = $0 }
-        ))
     }
 
     private var titleSection: some View {
         AppInputField(
             title: "Post Title",
             placeholder: "Enter post title",
-            text: $title
+            text: $formViewModel.title
         )
     }
 
@@ -90,14 +66,14 @@ struct PatreonComposeView: View {
             AppInputField(
                 title: "Content",
                 placeholder: "Enter post content...",
-                text: $content,
+                text: $formViewModel.content,
                 isMultiline: true,
                 height: 150
             )
 
             MediaPicker(
                 title: "Media",
-                selectedURLs: $mediaURLs
+                selectedURLs: $formViewModel.mediaURLs
             )
         }
     }
@@ -107,16 +83,16 @@ struct PatreonComposeView: View {
             VStack(alignment: .leading, spacing: AppTheme.Spacing.medium) {
                 AppText("Visibility", style: .headline)
 
-                Picker("Visibility", selection: $isPublic) {
+                Picker("Visibility", selection: $formViewModel.isPublic) {
                     Text("Patrons Only").tag(false)
                     Text("Public").tag(true)
                 }
                 .pickerStyle(.segmented)
 
-                if !isPublic {
-                    Toggle("Paid Post", isOn: $isPaid)
+                if !formViewModel.isPublic {
+                    Toggle("Paid Post", isOn: $formViewModel.isPaid)
 
-                    if isPaid {
+                    if formViewModel.isPaid {
                         AppText(
                             "Paid posts are only visible to paying patrons",
                             style: .caption,
@@ -137,7 +113,7 @@ struct PatreonComposeView: View {
     private var tierSection: some View {
         AppSurface(style: .card) {
             VStack(alignment: .leading, spacing: AppTheme.Spacing.medium) {
-				AppText("Tiers", style: .headline)
+                AppText("Tiers", style: .headline)
 
                 AppText(
                     "Select which tiers can see this post",
@@ -145,19 +121,19 @@ struct PatreonComposeView: View {
                     color: AppTheme.ColorToken.textSecondary
                 )
 
-                if viewModel.tiers.isEmpty {
+                if formViewModel.viewModel.tiers.isEmpty {
                     AppText("No tiers loaded", style: .body, color: AppTheme.ColorToken.textSecondary)
                 } else {
                     VStack(alignment: .leading, spacing: AppTheme.Spacing.xSmall) {
-                        ForEach(viewModel.tiers) { tier in
+                        ForEach(formViewModel.viewModel.tiers) { tier in
                             TierCheckbox(
                                 tier: tier,
-                                isSelected: selectedTiers.contains(tier.id)
+                                isSelected: formViewModel.selectedTiers.contains(tier.id)
                             ) {
-                                if selectedTiers.contains(tier.id) {
-                                    selectedTiers.remove(tier.id)
+                                if formViewModel.selectedTiers.contains(tier.id) {
+                                    formViewModel.selectedTiers.remove(tier.id)
                                 } else {
-                                    selectedTiers.insert(tier.id)
+                                    formViewModel.selectedTiers.insert(tier.id)
                                 }
                             }
                         }
@@ -167,41 +143,10 @@ struct PatreonComposeView: View {
         }
     }
 
-    private var canSave: Bool {
-        !title.isEmpty && !content.isEmpty
-    }
-
-    private func savePost() {
-        isSaving = true
-        Task {
-            do {
-                if isEditing, let post = post {
-                    try await viewModel.updatePost(
-                        postId: post.id,
-                        title: title,
-                        content: content,
-                        isPaid: isPaid,
-                        isPublic: isPublic
-                    )
-                } else {
-                    try await viewModel.createPost(
-                        title: title,
-                        content: content,
-                        isPaid: isPaid,
-                        isPublic: isPublic,
-                        tiers: Array(selectedTiers)
-                    )
-                }
-                await MainActor.run {
-                    isSaving = false
-                    dismiss()
-                }
-            } catch {
-                await MainActor.run {
-                    isSaving = false
-                    ToastState.shared.message = "Failed: \(error.localizedDescription)"
-                }
-            }
+    private func savePost() async {
+        let success = await formViewModel.save()
+        if success {
+            dismiss()
         }
     }
 }
@@ -221,7 +166,7 @@ private struct TierCheckbox: View {
                 Image(systemName: isSelected ? "checkmark.square.fill" : "square")
                     .foregroundStyle(isSelected ? AppTheme.ColorToken.accent : AppTheme.ColorToken.textSecondary)
 
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: AppTheme.Spacing.xSmall) {
                     AppText(tier.attributes.title, style: .body)
                     if let cents = tier.attributes.amountCents {
                         let price = String(format: "$%.2f/month", Double(cents) / 100)
@@ -239,22 +184,14 @@ private struct TierCheckbox: View {
     }
 }
 
-#Preview("New Post") {
-    PatreonComposeView(viewModel: .previewWithTiers, post: nil)
+#if DEBUG
+#Preview("Patreon Compose") {
+	let patreonVM = previewPatreonViewModel(postCount: 5, memberCount: 3)
+	PatreonComposeView(
+		formViewModel: PatreonComposeViewModel(
+			viewModel: patreonVM,
+			onComplete: {}
+		)
+	)
 }
-
-#Preview("Edit Post") {
-    PatreonComposeView(viewModel: .previewWithTiers, post: .previewPaid)
-}
-
-#Preview("No Tiers") {
-    PatreonComposeView(viewModel: .previewNoTiers, post: nil)
-}
-
-#Preview("Many Tiers") {
-    PatreonComposeView(viewModel: .previewManyTiers, post: nil)
-}
-
-#Preview("Public Post Edit") {
-    PatreonComposeView(viewModel: .previewWithTiers, post: .previewPublic)
-}
+#endif

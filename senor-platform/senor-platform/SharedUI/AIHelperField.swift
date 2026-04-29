@@ -135,7 +135,7 @@ struct AIHelperTagInput: View {
                 Text("Add Tag")
                     .font(AppTheme.Typography.caption)
                     .fontWeight(.medium)
-                    .foregroundColor(AppTheme.ColorToken.accent)
+                    .foregroundStyle(AppTheme.ColorToken.accent)
             }
             .disabled(currentInput.isEmpty)
             .labelStyle(.iconOnly)
@@ -164,7 +164,7 @@ private struct AIHelperButton: View {
 
     var body: some View {
         Button("AI Helper", systemImage: "sparkles", action: action)
-            .buttonStyle(.plain)
+            .appButtonStyle(.plain)
             .labelStyle(AIHelperLabelStyle())
     }
 }
@@ -344,9 +344,9 @@ struct MediaPicker: View {
 	}
 
 	private func mediaItem(url: URL) -> some View {
-		VStack(spacing: 2) {
+		VStack(spacing: AppTheme.Spacing.xSmall) {
 			mediaThumbnail(url: url)
-				.frame(width: 80, height: 80)
+				.frame(width: AppTheme.Layout.thumbnailSize + 20, height: AppTheme.Layout.thumbnailSize + 20)
 			AppText(url.lastPathComponent, style: .caption2, color: AppTheme.ColorToken.textSecondary)
 				.lineLimit(1)
 		}

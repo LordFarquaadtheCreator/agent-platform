@@ -59,14 +59,7 @@ struct AgentsScreen: View {
 struct AgentFormSheet: View {
     @EnvironmentObject private var appState: AppShellModel
     @Environment(\.dismiss) private var dismiss
-    @ObservedObject var viewModel: AgentsViewModel
-
-    @State private var displayName = ""
-    @State private var description = ""
-    @State private var workerScriptPath = ""
-    @State private var configJSON = "{}"
-    @State private var isActive = true
-    @State private var isSaving = false
+    @StateObject var formViewModel: AgentFormViewModel
 
     var body: some View {
         NavigationStack {
@@ -75,28 +68,28 @@ struct AgentFormSheet: View {
                     AppInputField(
                         title: "Display Name",
                         placeholder: "Enter display name",
-                        text: $displayName
+                        text: $formViewModel.displayName
                     )
                     AppInputField(
                         title: "Description",
                         placeholder: "Enter description",
-                        text: $description,
+                        text: $formViewModel.description,
                         isMultiline: true,
                         height: 80
                     )
-                    Toggle("Active", isOn: $isActive)
+                    Toggle("Active", isOn: $formViewModel.isActive)
                 }
 
                 Section("Runtime") {
                     AppInputField(
                         title: "Worker Script Path",
                         placeholder: "Enter script path",
-                        text: $workerScriptPath
+                        text: $formViewModel.workerScriptPath
                     )
                     AppInputField(
                         title: "Config JSON",
                         placeholder: "Enter configuration JSON",
-                        text: $configJSON,
+                        text: $formViewModel.configJSON,
                         isMultiline: true,
                         height: 120
                     )
@@ -111,7 +104,7 @@ struct AgentFormSheet: View {
                     Button("Create") {
                         Task { await submit() }
                     }
-                    .disabled(displayName.isEmpty || workerScriptPath.isEmpty || isSaving)
+                    .disabled(!formViewModel.canSave)
                 }
             }
         }
@@ -119,25 +112,11 @@ struct AgentFormSheet: View {
     }
 
     private func submit() async {
-        isSaving = true
-        defer { isSaving = false }
-        do {
-            try await viewModel.create(
-                draft: AgentDraft(
-                    displayName: displayName,
-                    isActive: isActive,
-                    description: description,
-                    workerScriptPath: workerScriptPath,
-                    configJSON: configJSON
-                )
-            )
+        let success = await formViewModel.save()
+        if success {
             dismiss()
-        } catch {
-            appState.errorMessage = error.localizedDescription
+        } else if let error = formViewModel.errorMessage {
+            appState.errorMessage = error
         }
     }
 }
-
-// MARK: - Previews
-
-// Note: Preview requires complex dependencies - use WorkspaceView for testing

@@ -6,7 +6,7 @@ struct StatPill: View {
     let icon: String
 
     var body: some View {
-        VStack(spacing: 2) {
+        VStack(spacing: AppTheme.Spacing.xSmall) {
             HStack(spacing: AppTheme.Spacing.small) {
                 Image(systemName: icon)
                     .font(AppTheme.Typography.caption2)
@@ -16,7 +16,7 @@ struct StatPill: View {
             }
             Text(title)
                 .font(AppTheme.Typography.caption2)
-                .foregroundColor(AppTheme.ColorToken.textSecondary)
+                .foregroundStyle(AppTheme.ColorToken.textSecondary)
         }
         .padding(.vertical, AppTheme.Spacing.xSmall)
     }

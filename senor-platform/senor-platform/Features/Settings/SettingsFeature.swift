@@ -301,9 +301,3 @@ private struct DeviantArtConnectButton: View {
         }
     }
 }
-
-// MARK: - Previews
-
-#Preview {
-    SettingsScreen(viewModel: SettingsViewModel(settingsService: SettingsService()))
-}

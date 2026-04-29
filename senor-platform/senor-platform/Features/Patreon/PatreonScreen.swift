@@ -39,10 +39,22 @@ struct PatreonScreen: View {
         .background(AppTheme.ColorToken.chromeBackground)
         .task { await viewModel.load() }
         .sheet(isPresented: $showComposeSheet) {
-            PatreonComposeView(viewModel: viewModel, post: nil)
+            PatreonComposeView(
+                formViewModel: PatreonComposeViewModel(
+                    viewModel: viewModel,
+                    editingPost: nil,
+                    onComplete: { showComposeSheet = false }
+                )
+            )
         }
         .sheet(item: $editingPost) { post in
-            PatreonComposeView(viewModel: viewModel, post: post)
+            PatreonComposeView(
+                formViewModel: PatreonComposeViewModel(
+                    viewModel: viewModel,
+                    editingPost: post,
+                    onComplete: { editingPost = nil }
+                )
+            )
         }
         .onReceive(NotificationCenter.default.publisher(for: .openPatreonCompose)) { _ in
             showComposeSheet = true
@@ -180,6 +192,8 @@ struct PatreonScreen: View {
                 AppText(campaign.attributes.creationName ?? "Campaign", style: .headline)
 
                 if let summary = campaign.attributes.summary {
+                    Markdown(message.content)
+                        .markdownTheme(.app)
                     AppText(summary, style: .body, color: AppTheme.ColorToken.textSecondary)
                         .lineLimit(3)
                 }
@@ -233,7 +247,7 @@ struct PatreonScreen: View {
                     }
                 }
             }
-            .frame(maxHeight: 400)
+            .frame(maxHeight: AppTheme.Layout.postsSectionMaxHeight)
         }
     }
 
@@ -402,93 +416,53 @@ struct PatreonScreen: View {
 
 // MARK: - Previews
 
+#if DEBUG
 #Preview("Not Configured") {
-    PatreonScreen(viewModel: .previewNotConfigured, router: AppRouter())
+	PatreonScreen(
+		viewModel: previewPatreonViewModel(isAuthenticated: false),
+		router: AppRouter()
+	)
 }
 
-#Preview("Unauthenticated") {
-    PatreonScreen(viewModel: .previewUnauthenticated, router: AppRouter())
+#Preview("Empty") {
+	PatreonScreen(
+		viewModel: previewPatreonViewModel(postCount: 0, memberCount: 0),
+		router: AppRouter()
+	)
 }
 
-#Preview("Session Expired") {
-    PatreonScreen(viewModel: .previewSessionExpired, router: AppRouter())
+#Preview("Single") {
+	PatreonScreen(
+		viewModel: previewPatreonViewModel(postCount: 1, memberCount: 1),
+		router: AppRouter()
+	)
 }
 
-#Preview("Loading Initial") {
-    PatreonScreen(viewModel: .previewLoadingInitial, router: AppRouter())
-}
-
-#Preview("Loading Refreshing") {
-    PatreonScreen(viewModel: .previewRefreshing, router: AppRouter())
-}
-
-#Preview("Profile Error") {
-    PatreonScreen(viewModel: .previewProfileError, router: AppRouter())
-}
-
-#Preview("Posts Error") {
-    PatreonScreen(viewModel: .previewPostsError, router: AppRouter())
-}
-
-#Preview("Members Error") {
-    PatreonScreen(viewModel: .previewMembersError, router: AppRouter())
-}
-
-#Preview("Empty Posts") {
-    PatreonScreen(viewModel: .previewEmptyPosts, router: AppRouter())
-}
-
-#Preview("Empty Members") {
-    PatreonScreen(viewModel: .previewEmptyMembers, router: AppRouter())
-}
-
-#Preview("Single Post") {
-    PatreonScreen(viewModel: .previewSinglePost, router: AppRouter())
-}
-
-#Preview("Many Posts") {
-    PatreonScreen(viewModel: .previewManyPosts, router: AppRouter())
+#Preview("Many") {
+	PatreonScreen(
+		viewModel: previewPatreonViewModel(postCount: 15, memberCount: 8),
+		router: AppRouter()
+	)
 }
 
 #Preview("Selected Post") {
-    let router = AppRouter()
-    router.selectedPostID = "preview-post-1"
-    return PatreonScreen(viewModel: .previewWithSelection, router: router)
+	let router = AppRouter()
+	router.selectedPostID = "post-0"
+	return PatreonScreen(
+		viewModel: previewPatreonViewModel(postCount: 5),
+		router: router
+	)
 }
 
 #Preview("Selected Member") {
-    let router = AppRouter()
-    router.selectedMemberID = "preview-member-1"
-    return PatreonScreen(viewModel: .previewWithSelection, router: router)
+	let router = AppRouter()
+	router.selectedMemberID = "member-0"
+	return PatreonScreen(
+		viewModel: previewPatreonViewModel(memberCount: 5),
+		router: router
+	)
 }
-
-#Preview("Rate Limited") {
-    PatreonScreen(viewModel: .previewRateLimited, router: AppRouter())
-}
-
-#Preview("Network Failure") {
-    PatreonScreen(viewModel: .previewNetworkFailure, router: AppRouter())
-}
-
-#Preview("Long Campaign Name") {
-    PatreonScreen(viewModel: .previewLongCampaignName, router: AppRouter())
-}
-
-#Preview("No Campaign Summary") {
-    PatreonScreen(viewModel: .previewNoCampaignSummary, router: AppRouter())
-}
-
-#Preview("Zero Patrons") {
-    PatreonScreen(viewModel: .previewZeroPatrons, router: AppRouter())
-}
-
-#Preview("High Earnings") {
-    PatreonScreen(viewModel: .previewHighEarnings, router: AppRouter())
-}
-
-#Preview("Mixed Visibility") {
-    PatreonScreen(viewModel: .previewMixedVisibility, router: AppRouter())
-}
+#endif
 
 // MARK: - AttributedString HTML Extension
 

@@ -3,9 +3,6 @@ import SwiftUI
 struct ApprovalsScreen: View {
     @EnvironmentObject private var appState: AppShellModel
     @ObservedObject var viewModel: ApprovalsViewModel
-    @State private var selectedItems = Set<String>()
-    @State private var rejectReason = ""
-    @State private var showRejectDialog = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -18,13 +15,13 @@ struct ApprovalsScreen: View {
                             Task { await approveSelected() }
                         }
                         .appButtonStyle(.borderedProminent)
-                        .disabled(selectedItems.isEmpty)
+                        .disabled(!viewModel.canApproveOrReject)
 
                         Button("Reject") {
-                            showRejectDialog = true
+                            viewModel.showRejectDialog = true
                         }
                         .appButtonStyle(.borderedDestructive)
-                        .disabled(selectedItems.isEmpty)
+                        .disabled(!viewModel.canApproveOrReject)
                     }
                 )
             )
@@ -41,7 +38,7 @@ struct ApprovalsScreen: View {
                 )
                 Spacer()
             } else {
-                List(viewModel.approvals, selection: $selectedItems) { item in
+                List(viewModel.approvals, selection: $viewModel.selectedItems) { item in
                     AppListRow {
                         VStack(alignment: .leading, spacing: AppTheme.Spacing.small) {
                             AppText(item.contentTitle, style: .headline)
@@ -60,10 +57,10 @@ struct ApprovalsScreen: View {
                 .listStyle(.plain)
             }
         }
-        .alert("Reject Selected", isPresented: $showRejectDialog) {
+        .alert("Reject Selected", isPresented: $viewModel.showRejectDialog) {
             // Alert title serves as the field label
             // swiftlint:disable:next unlabeled_input_field
-            TextField("Reason", text: $rejectReason)
+            TextField("Reason", text: $viewModel.rejectReason)
             Button("Cancel", role: .cancel) {}
             Button("Reject", role: .destructive) {
                 Task { await rejectSelected() }
@@ -75,10 +72,7 @@ struct ApprovalsScreen: View {
 
     private func approveSelected() async {
         do {
-            for id in selectedItems {
-                try await viewModel.approve(contentId: id)
-            }
-            selectedItems.removeAll()
+            try await viewModel.approveSelected()
         } catch {
             appState.errorMessage = error.localizedDescription
         }
@@ -86,17 +80,9 @@ struct ApprovalsScreen: View {
 
     private func rejectSelected() async {
         do {
-            for id in selectedItems {
-                try await viewModel.reject(contentId: id, reason: rejectReason.isEmpty ? nil : rejectReason)
-            }
-            rejectReason = ""
-            selectedItems.removeAll()
+            try await viewModel.rejectSelected()
         } catch {
             appState.errorMessage = error.localizedDescription
         }
     }
 }
-
-// MARK: - Previews
-
-// Note: Preview requires complex dependencies - use WorkspaceView for testing

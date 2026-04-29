@@ -115,7 +115,7 @@ struct AIChatView: View {
                                 .font(AppTheme.Typography.caption)
                                 .foregroundStyle(AppTheme.ColorToken.textSecondary)
                         }
-                        .buttonStyle(.plain)
+                        .appButtonStyle(.plain)
                         .accessibilityIdentifier("redoLastResponseButton")
                     }
                 }
@@ -153,7 +153,7 @@ struct AIChatView: View {
                     .foregroundStyle(AppTheme.ColorToken.textSecondary)
 
                 AppSurface(style: .flat) {
-                    HStack(spacing: 4) {
+                    HStack(spacing: AppTheme.Spacing.xSmall) {
                         ForEach(0..<3) { index in
                             Circle()
                                 .fill(AppTheme.ColorToken.textSecondary)
@@ -208,7 +208,7 @@ struct AIChatView: View {
                         .foregroundStyle(AppTheme.ColorToken.accent)
                 }
             }
-            .buttonStyle(.plain)
+            .appButtonStyle(.plain)
             .accessibilityIdentifier(viewModel.isGenerating ? "stopGenerationButton" : "sendMessageButton")
             .disabled(
                 viewModel.isGenerating ? false : (inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
@@ -245,14 +245,14 @@ struct AIChatView: View {
 				}
 			}
 			.accessibilityIdentifier("viewHistoryButton")
-			.buttonStyle(.plain)
+			.appButtonStyle(.plain)
 			.foregroundStyle(AppTheme.ColorToken.textSecondary)
 
 			Button("", systemImage: "trash") {
 				Task { await viewModel.clearHistory() }
 			}
 			.accessibilityIdentifier("clearHistoryButton")
-			.buttonStyle(.plain)
+			.appButtonStyle(.plain)
 			.foregroundStyle(AppTheme.ColorToken.textSecondary)
 		}
 	}

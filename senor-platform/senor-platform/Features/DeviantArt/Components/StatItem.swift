@@ -5,7 +5,7 @@ struct StatItem: View {
     let value: Int
 
     var body: some View {
-        HStack(spacing: 2) {
+        HStack(spacing: AppTheme.Spacing.xSmall) {
             Image(systemName: icon)
                 .font(AppTheme.Typography.caption2)
             if value > 0 {

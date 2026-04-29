@@ -9,7 +9,7 @@ struct TagPill: View {
             .padding(.horizontal, AppTheme.Spacing.tagHorizontalPadding)
             .padding(.vertical, AppTheme.Spacing.tagVerticalPadding)
             .background(AppTheme.ColorToken.textSecondary.opacity(0.15))
-            .foregroundColor(AppTheme.ColorToken.textPrimary)
+            .foregroundStyle(AppTheme.ColorToken.textPrimary)
             .clipShape(Capsule())
     }
 }

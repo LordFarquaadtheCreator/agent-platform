@@ -36,3 +36,23 @@ Quick reference:
 - All spacing via AppTheme.Spacing
 - All fonts via AppTheme.Typography
 - No raw Color literals (use ColorToken)
+
+## Previews
+
+All DeviantArt previews use dependency injection with mock clients.
+
+### Mock Client Configuration
+
+```swift
+let viewModel = previewDeviantArtViewModel(deviationCount: 5)
+```
+
+### Available Preview States
+
+| Preview | State | Mock Configuration |
+|---------|-------|---------------------|
+| "Not Authenticated" | Unauthenticated | `client = nil` |
+| "Empty" | No data | `mockDeviations = []` |
+| "Single" | 1 item | `mockDeviations = [1 item]` |
+| "Many" | 50 items | `mockDeviations = [50 items]` |
+| "Selected" | Item selected | Set `router.selectedDeviationID` |

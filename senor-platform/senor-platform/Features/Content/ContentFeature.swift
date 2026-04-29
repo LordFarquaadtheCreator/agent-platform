@@ -3,12 +3,6 @@ import SwiftUI
 struct ContentScreen: View {
     @ObservedObject var viewModel: ContentViewModel
     @ObservedObject var router: AppRouter
-    @State private var searchText = ""
-
-    var filteredItems: [ContentSummary] {
-        guard !searchText.isEmpty else { return viewModel.contentItems }
-        return viewModel.contentItems.filter { $0.title.localizedCaseInsensitiveContains(searchText) }
-    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -21,12 +15,12 @@ struct ContentScreen: View {
             AppDivider()
 
             // swiftlint:disable:next unlabeled_input_field
-            TextField("Search content", text: $searchText)
+            TextField("Search content", text: $viewModel.searchText)
                 .textFieldStyle(.roundedBorder)
                 .padding(.horizontal, AppTheme.Spacing.screenPadding)
                 .padding(.vertical, AppTheme.Spacing.medium)
 
-            if filteredItems.isEmpty {
+            if viewModel.filteredItems.isEmpty {
                 Spacer()
                 AppEmptyState(
                     title: "No Content Yet",
@@ -35,7 +29,7 @@ struct ContentScreen: View {
                 )
                 Spacer()
             } else {
-                List(filteredItems, selection: $router.selectedContentID) { item in
+                List(viewModel.filteredItems, selection: $router.selectedContentID) { item in
                     AppListRow {
                         HStack(spacing: AppTheme.Spacing.medium) {
                             VStack(alignment: .leading, spacing: AppTheme.Spacing.small) {
@@ -249,7 +243,3 @@ struct ContentVersionHistorySheet: View {
         }
     }
 }
-
-// MARK: - Previews
-
-// Note: Preview requires complex dependencies - use WorkspaceView for testing

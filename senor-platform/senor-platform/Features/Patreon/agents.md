@@ -41,3 +41,23 @@ Used by both screen and detail panels (no duplication).
 - AppText for all text
 - AppTheme.ColorToken for colors
 - AppTheme.Spacing for padding
+
+## Previews
+
+All Patreon previews use dependency injection with mock clients.
+
+### Mock Client Configuration
+
+```swift
+let viewModel = previewPatreonViewModel(postCount: 5, memberCount: 3)
+```
+
+### Available Preview States
+
+| Preview | State | Mock Configuration |
+|---------|-------|---------------------|
+| "Not Configured" | No credentials | `client = nil` |
+| "Empty" | No posts/members | `mockPosts = [], mockMembers = []` |
+| "Single" | 1 post, 1 member | `mockPosts = [1], mockMembers = [1]` |
+| "Many" | 15 posts, 8 members | `mockPosts = [15], mockMembers = [8]` |
+| "Selected" | Item selected | Set `router.selectedPostID` or `selectedMemberID` |

@@ -61,20 +61,7 @@ struct TasksScreen: View {
 struct TaskFormSheet: View {
     @EnvironmentObject private var appState: AppShellModel
     @Environment(\.dismiss) private var dismiss
-    @ObservedObject var viewModel: TasksViewModel
-
-    @State private var taskName = ""
-    @State private var taskTypeID = ""
-    @State private var agentID = ""
-    @State private var metadataJSON = "{\n  \"prompt\": \"\",\n  \"workflow\": \"\"\n}"
-    @State private var enableSchedule = false
-    @State private var scheduleSelection: TaskScheduleSelection = .oneTime
-    @State private var oneTimeDate = Date().addingTimeInterval(3600)
-    @State private var timeOfDay = Date()
-    @State private var weekdays: Set<ScheduleSpec.Weekday> = [.monday]
-    @State private var monthDays: Set<Int> = [1]
-    @State private var timezone = TimeZone.current.identifier
-    @State private var isSaving = false
+    @StateObject var formViewModel: TaskFormViewModel
 
     var body: some View {
         NavigationStack {
@@ -83,19 +70,19 @@ struct TaskFormSheet: View {
                     AppInputField(
                         title: "Task Name",
                         placeholder: "Enter task name",
-                        text: $taskName
+                        text: $formViewModel.taskName
                     )
 
-                    Picker("Task Type", selection: $taskTypeID) {
+                    Picker("Task Type", selection: $formViewModel.taskTypeID) {
                         Text("Select Type").tag("")
-                        ForEach(viewModel.creationContext.taskTypes) { type in
+                        ForEach(formViewModel.creationContext.taskTypes) { type in
                             Text(type.name).tag(type.id)
                         }
                     }
 
-                    Picker("Agent", selection: $agentID) {
+                    Picker("Agent", selection: $formViewModel.agentID) {
                         Text("Select Agent").tag("")
-                        ForEach(viewModel.creationContext.agents) { agent in
+                        ForEach(formViewModel.creationContext.agents) { agent in
                             Text(agent.displayName).tag(agent.id)
                         }
                     }
@@ -105,40 +92,40 @@ struct TaskFormSheet: View {
                     AppInputField(
                         title: "Metadata",
                         placeholder: "Enter metadata JSON",
-                        text: $metadataJSON,
+                        text: $formViewModel.metadataJSON,
                         isMultiline: true,
                         height: 140
                     )
                 }
 
                 Section("Scheduling") {
-                    Toggle("Enable Schedule", isOn: $enableSchedule)
+                    Toggle("Enable Schedule", isOn: $formViewModel.enableSchedule)
 
-                    if enableSchedule {
-                        Picker("Schedule Type", selection: $scheduleSelection) {
+                    if formViewModel.enableSchedule {
+                        Picker("Schedule Type", selection: $formViewModel.scheduleSelection) {
                             ForEach(TaskScheduleSelection.allCases, id: \.self) { selection in
                                 Text(selection.title).tag(selection)
                             }
                         }
 
-                        switch scheduleSelection {
+                        switch formViewModel.scheduleSelection {
                         case .oneTime:
-                            DatePicker("Run At", selection: $oneTimeDate, in: Date()...)
+                            DatePicker("Run At", selection: $formViewModel.oneTimeDate, in: Date()...)
 
                         case .daily:
-                            DatePicker("Time", selection: $timeOfDay, displayedComponents: .hourAndMinute)
+                            DatePicker("Time", selection: $formViewModel.timeOfDay, displayedComponents: .hourAndMinute)
 
                         case .weekly:
-                            DatePicker("Time", selection: $timeOfDay, displayedComponents: .hourAndMinute)
+                            DatePicker("Time", selection: $formViewModel.timeOfDay, displayedComponents: .hourAndMinute)
                             HStack {
                                 ForEach(ScheduleSpec.Weekday.allCases, id: \.self) { weekday in
                                     Toggle(weekday.shortName, isOn: Binding(
-                                        get: { weekdays.contains(weekday) },
+                                        get: { formViewModel.weekdays.contains(weekday) },
                                         set: { isOn in
                                             if isOn {
-                                                weekdays.insert(weekday)
+                                                formViewModel.weekdays.insert(weekday)
                                             } else {
-                                                weekdays.remove(weekday)
+                                                formViewModel.weekdays.remove(weekday)
                                             }
                                         }
                                     ))
@@ -147,10 +134,10 @@ struct TaskFormSheet: View {
                             }
 
                         case .monthly:
-                            DatePicker("Time", selection: $timeOfDay, displayedComponents: .hourAndMinute)
+                            DatePicker("Time", selection: $formViewModel.timeOfDay, displayedComponents: .hourAndMinute)
                             Picker("Day", selection: Binding(
-                                get: { monthDays.first ?? 1 },
-                                set: { monthDays = [$0] }
+                                get: { formViewModel.monthDays.first ?? 1 },
+                                set: { formViewModel.monthDays = [$0] }
                             )) {
                                 ForEach(1...31, id: \.self) { day in
                                     Text("\(day)").tag(day)
@@ -169,20 +156,13 @@ struct TaskFormSheet: View {
                     Button("Create") {
                         Task { await submit() }
                     }
-                    .disabled(taskName.isEmpty || taskTypeID.isEmpty || agentID.isEmpty || isSaving)
+                    .disabled(!formViewModel.canSave)
                 }
             }
             .task {
-                do {
-                    try await viewModel.loadCreationContext()
-                    if taskTypeID.isEmpty {
-                        taskTypeID = viewModel.creationContext.taskTypes.first?.id ?? ""
-                    }
-                    if agentID.isEmpty {
-                        agentID = viewModel.creationContext.agents.first?.id ?? ""
-                    }
-                } catch {
-                    appState.errorMessage = error.localizedDescription
+                await formViewModel.loadCreationContext()
+                if let error = formViewModel.errorMessage {
+                    appState.errorMessage = error
                 }
             }
         }
@@ -190,38 +170,11 @@ struct TaskFormSheet: View {
     }
 
     private func submit() async {
-        isSaving = true
-        defer { isSaving = false }
-        do {
-            try await viewModel.create(
-                draft: TaskDraft(
-                    agentId: agentID,
-                    taskTypeId: taskTypeID,
-                    taskName: taskName,
-                    metadataJSON: metadataJSON,
-                    schedule: buildSchedule()
-                )
-            )
+        let success = await formViewModel.save()
+        if success {
             dismiss()
-        } catch {
-            appState.errorMessage = error.localizedDescription
-        }
-    }
-
-    private func buildSchedule() -> ScheduleDraft? {
-        guard enableSchedule else { return nil }
-        switch scheduleSelection {
-        case .oneTime:
-            return .oneTime(oneTimeDate, timezone: timezone)
-
-        case .daily:
-            return .daily(time: timeOfDay, timezone: timezone)
-
-        case .weekly:
-            return .weekly(time: timeOfDay, weekdays: weekdays, timezone: timezone)
-
-        case .monthly:
-            return .monthly(time: timeOfDay, days: monthDays, timezone: timezone)
+        } else if let error = formViewModel.errorMessage {
+            appState.errorMessage = error
         }
     }
 }
@@ -241,7 +194,3 @@ enum TaskScheduleSelection: CaseIterable {
         }
     }
 }
-
-// MARK: - Previews
-
-// Note: Preview requires complex dependencies - use WorkspaceView for testing

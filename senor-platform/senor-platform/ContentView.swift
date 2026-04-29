@@ -21,10 +21,25 @@ struct ContentView: View {
             if let workspace = appState.workspace {
                 switch sheet {
                 case .newAgent:
-                    AgentFormSheet(viewModel: workspace.agentsViewModel)
+                    AgentFormSheet(
+                        formViewModel: AgentFormViewModel(
+                            createAgentUseCase: workspace.dependencies.createAgentUseCase,
+                            onComplete: {
+                                await workspace.refreshAll()
+                            }
+                        )
+                    )
 
                 case .newTask:
-                    TaskFormSheet(viewModel: workspace.tasksViewModel)
+                    TaskFormSheet(
+                        formViewModel: TaskFormViewModel(
+                            loadContextUseCase: workspace.dependencies.loadTaskCreationContextUseCase,
+                            createTaskUseCase: workspace.dependencies.createTaskUseCase,
+                            onComplete: {
+                                await workspace.refreshAll()
+                            }
+                        )
+                    )
 
                 case .settings:
                     SettingsSheetView(viewModel: workspace.settingsViewModel)
@@ -73,7 +88,10 @@ struct ContentView: View {
     }
 }
 
-#Preview {
-    ContentView()
-        .environmentObject(AppShellModel())
+#if DEBUG
+#Preview("Content View") {
+	let appState = AppShellModel()
+	ContentView()
+		.environmentObject(appState)
 }
+#endif

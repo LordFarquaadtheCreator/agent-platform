@@ -44,12 +44,12 @@ struct PatreonPostDetailPanel: View {
                             Text("Open on Patreon")
                         }
                         .frame(maxWidth: .infinity)
-                        .padding()
+                        .padding(AppTheme.Spacing.medium)
                         .background(AppTheme.ColorToken.accent)
                         .foregroundStyle(AppTheme.ColorToken.white)
                         .clipShape(RoundedRectangle(cornerRadius: AppTheme.CornerRadius.control))
                     }
-                    .buttonStyle(.plain)
+                    .appButtonStyle(.borderedProminent)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)

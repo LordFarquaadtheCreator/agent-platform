@@ -74,6 +74,7 @@ public final class TasksViewModel: ObservableObject {
 @MainActor
 public final class ContentViewModel: ObservableObject {
     @Published public private(set) var contentItems: [ContentSummary] = []
+    @Published public var searchText: String = ""
 
     private let loadEditorUseCase: LoadContentEditorUseCase
     private let editContentUseCase: EditContentUseCase
@@ -91,6 +92,15 @@ public final class ContentViewModel: ObservableObject {
 
     func apply(_ items: [ContentSummary]) {
         self.contentItems = items
+    }
+
+    var filteredItems: [ContentSummary] {
+        guard !searchText.isEmpty else { return contentItems }
+        return contentItems.filter { $0.title.localizedCaseInsensitiveContains(searchText) }
+    }
+
+    var hasItems: Bool {
+        !contentItems.isEmpty
     }
 
     func loadEditorJSON(contentId: String) async throws -> String {
@@ -115,6 +125,9 @@ public final class ContentViewModel: ObservableObject {
 @MainActor
 public final class ApprovalsViewModel: ObservableObject {
     @Published public private(set) var approvals: [ApprovalSummary] = []
+    @Published public var selectedItems = Set<String>()
+    @Published public var rejectReason: String = ""
+    @Published public var showRejectDialog: Bool = false
 
     private let approveContentUseCase: ApproveContentUseCase
     private let rejectContentUseCase: RejectContentUseCase
@@ -150,6 +163,26 @@ public final class ApprovalsViewModel: ObservableObject {
     func publish(_ request: PublicationRequest) async throws {
         try await publishContentUseCase.execute(request)
         await refresh()
+    }
+
+    public var canApproveOrReject: Bool {
+        !selectedItems.isEmpty
+    }
+
+    public func approveSelected() async throws {
+        for id in selectedItems {
+            try await approve(contentId: id)
+        }
+        selectedItems.removeAll()
+    }
+
+    public func rejectSelected() async throws {
+        for id in selectedItems {
+            try await reject(contentId: id, reason: rejectReason.isEmpty ? nil : rejectReason)
+        }
+        rejectReason = ""
+        selectedItems.removeAll()
+        showRejectDialog = false
     }
 }
 
@@ -253,6 +286,13 @@ public final class WorkspaceModel: ObservableObject {
     ) { [weak self] in
         await self?.refreshAll()
     }
+    public lazy var aiChatViewModel = AIChatViewModel(
+        aiClient: dependencies.aiClient,
+        contextExtractor: dependencies.contextExtractor,
+        chatHistoryStore: dependencies.chatHistoryStore,
+        workspace: self,
+        router: router
+    )
 
     @Published public private(set) var isRefreshing = false
     @Published public var lastErrorMessage: String?

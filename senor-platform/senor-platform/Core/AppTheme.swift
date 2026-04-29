@@ -158,6 +158,8 @@ public enum AppTheme {
         static let minSheetHeight: CGFloat = 460
         static let mediumSheetWidth: CGFloat = 720
         static let mediumSheetHeight: CGFloat = 560
+        static let largeSheetWidth: CGFloat = 800
+        static let largeSheetHeight: CGFloat = 600
         static let sidebarMinWidth: CGFloat = 220
         static let sidebarIdealWidth: CGFloat = 250
         static let detailMinWidth: CGFloat = 300
@@ -165,6 +167,9 @@ public enum AppTheme {
         static let mainAreaMinWidth: CGFloat = 640
         static let iconSize: CGFloat = 16
         static let thumbnailSize: CGFloat = 60
+        static let imageSectionHeight: CGFloat = 160
+        static let thumbnailGridHeight: CGFloat = 100
+        static let postsSectionMaxHeight: CGFloat = 400
         static let windowMinWidth: CGFloat = 1200
         static let windowMinHeight: CGFloat = 820
     }

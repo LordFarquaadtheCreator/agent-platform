@@ -4,7 +4,7 @@ struct CategoryBadge: View {
     let category: String
 
     var body: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: AppTheme.Spacing.xSmall) {
             Image(systemName: "folder.fill")
                 .font(AppTheme.Typography.caption2)
             Text(category.capitalized)

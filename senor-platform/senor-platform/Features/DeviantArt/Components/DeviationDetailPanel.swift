@@ -70,9 +70,9 @@ struct DeviationDetailPanel: View {
 
             HStack {
                 Image(systemName: "checkmark.circle.fill")
-                    .foregroundColor(AppTheme.ColorToken.statusSuccess)
+                    .foregroundStyle(AppTheme.ColorToken.statusSuccess)
                 AppText("Published", style: .body)
-                    .foregroundColor(AppTheme.ColorToken.statusSuccess)
+                    .foregroundStyle(AppTheme.ColorToken.statusSuccess)
 
                 if let category = deviation.category {
                     AppText("·", style: .body, color: AppTheme.ColorToken.textSecondary)
@@ -162,12 +162,12 @@ struct DeviationDetailPanel: View {
                         Text("Copy Link")
                     }
                     .frame(maxWidth: .infinity)
-                    .padding()
+                    .padding(AppTheme.Spacing.medium)
                     .background(AppTheme.ColorToken.accent)
                     .foregroundStyle(AppTheme.ColorToken.white)
                     .clipShape(RoundedRectangle(cornerRadius: AppTheme.CornerRadius.control))
                 }
-                .buttonStyle(.plain)
+                .appButtonStyle(.borderedProminent)
             }
 
             if let metadata = viewModel.deviationMetadata[deviation.id],
@@ -181,7 +181,41 @@ struct DeviationDetailPanel: View {
 // MARK: - Previews
 
 #Preview("Standard Deviation") {
-    DeviationDetailPanel(deviation: .preview, viewModel: .preview)
+    let deviation = DeviantArtClient.Deviation(
+        deviationid: "preview-1",
+        url: "https://deviantart.com/art/sample-1",
+        title: "Sample Artwork",
+        category: "Digital Art",
+        author: DeviantArtClient.Deviation.User(
+            userid: "123",
+            username: "artcreator",
+            usericon: "https://a.deviantart.net/avatars/default.png"
+        ),
+        stats: DeviantArtClient.Deviation.Stats(
+            views: 1200,
+            favourites: 150,
+            comments: 25,
+            downloads: 45
+        ),
+        publishedTime: "1700000000",
+        allowsComments: true,
+        isFavourited: false,
+        isDeleted: false,
+        thumbs: [
+            DeviantArtClient.Deviation.Thumb(
+                src: "https://example.com/thumb.jpg",
+                width: 400,
+                height: 300
+            )
+        ],
+        content: DeviantArtClient.Deviation.ContentInfo(
+            src: "https://example.com/full.jpg",
+            width: 1920,
+            height: 1080,
+            filesize: 2048000
+        )
+    )
+    DeviationDetailPanel(deviation: deviation, viewModel: previewDeviantArtViewModel(deviationCount: 1))
         .environmentObject(AppShellModel())
 }
 
@@ -210,7 +244,7 @@ struct DeviationDetailPanel: View {
             filesize: 1024000
         )
     )
-    DeviationDetailPanel(deviation: deviation, viewModel: .preview)
+    DeviationDetailPanel(deviation: deviation, viewModel: previewDeviantArtViewModel(deviationCount: 1))
         .environmentObject(AppShellModel())
 }
 
@@ -236,7 +270,7 @@ struct DeviationDetailPanel: View {
         ],
         content: nil
     )
-    DeviationDetailPanel(deviation: deviation, viewModel: .preview)
+    DeviationDetailPanel(deviation: deviation, viewModel: previewDeviantArtViewModel(deviationCount: 1))
         .environmentObject(AppShellModel())
 }
 
@@ -255,7 +289,7 @@ struct DeviationDetailPanel: View {
         thumbs: nil,
         content: nil
     )
-    DeviationDetailPanel(deviation: deviation, viewModel: .preview)
+    DeviationDetailPanel(deviation: deviation, viewModel: previewDeviantArtViewModel(deviationCount: 1))
         .environmentObject(AppShellModel())
 }
 
@@ -279,13 +313,46 @@ struct DeviationDetailPanel: View {
         thumbs: nil,
         content: nil
     )
-    DeviationDetailPanel(deviation: deviation, viewModel: .preview)
+    DeviationDetailPanel(deviation: deviation, viewModel: previewDeviantArtViewModel(deviationCount: 1))
         .environmentObject(AppShellModel())
 }
 
 #Preview("With Metadata") {
-    // Uses base preview - metadata loaded via viewModel.loadMetadata() in actual use
-    DeviationDetailPanel(deviation: .preview, viewModel: .preview)
+    let deviation = DeviantArtClient.Deviation(
+        deviationid: "preview-meta",
+        url: "https://deviantart.com/art/preview-meta",
+        title: "Preview with Metadata",
+        category: "Digital Art",
+        author: DeviantArtClient.Deviation.User(
+            userid: "123",
+            username: "artcreator",
+            usericon: "https://a.deviantart.net/avatars/default.png"
+        ),
+        stats: DeviantArtClient.Deviation.Stats(
+            views: 1200,
+            favourites: 150,
+            comments: 25,
+            downloads: 45
+        ),
+        publishedTime: "1700000000",
+        allowsComments: true,
+        isFavourited: false,
+        isDeleted: false,
+        thumbs: [
+            DeviantArtClient.Deviation.Thumb(
+                src: "https://example.com/thumb.jpg",
+                width: 400,
+                height: 300
+            )
+        ],
+        content: DeviantArtClient.Deviation.ContentInfo(
+            src: "https://example.com/full.jpg",
+            width: 1920,
+            height: 1080,
+            filesize: 2048000
+        )
+    )
+    DeviationDetailPanel(deviation: deviation, viewModel: previewDeviantArtViewModel(deviationCount: 1))
         .environmentObject(AppShellModel())
 }
 
@@ -304,7 +371,7 @@ struct DeviationDetailPanel: View {
         thumbs: nil,
         content: nil
     )
-    DeviationDetailPanel(deviation: deviation, viewModel: .preview)
+    DeviationDetailPanel(deviation: deviation, viewModel: previewDeviantArtViewModel(deviationCount: 1))
         .environmentObject(AppShellModel())
 }
 
@@ -328,6 +395,6 @@ struct DeviationDetailPanel: View {
         thumbs: nil,
         content: nil
     )
-    DeviationDetailPanel(deviation: deviation, viewModel: .preview)
+    DeviationDetailPanel(deviation: deviation, viewModel: previewDeviantArtViewModel(deviationCount: 1))
         .environmentObject(AppShellModel())
 }
