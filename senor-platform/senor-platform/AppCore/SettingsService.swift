@@ -21,6 +21,7 @@ public final class SettingsService {
         static let aiModel = "ai.model"
         static let aiTemperature = "ai.temperature"
         static let aiMaxTokens = "ai.maxTokens"
+        static let aiWarmupOnLaunch = "ai.warmupOnLaunch"
     }
 
     // MARK: - Task Settings
@@ -221,17 +222,20 @@ public final class SettingsService {
         public var model: String
         public var temperature: Double
         public var maxTokens: Int
+        public var warmupOnLaunch: Bool
 
         public init(
             baseURL: String = "http://localhost:1234/v1",
             model: String = "model",
             temperature: Double = 0.7,
-            maxTokens: Int = 4096
+            maxTokens: Int = 4096,
+            warmupOnLaunch: Bool = true
         ) {
             self.baseURL = baseURL
             self.model = model
             self.temperature = temperature
             self.maxTokens = maxTokens
+            self.warmupOnLaunch = warmupOnLaunch
         }
     }
 
@@ -240,6 +244,7 @@ public final class SettingsService {
         defaults.set(settings.model, forKey: Keys.aiModel)
         defaults.set(settings.temperature, forKey: Keys.aiTemperature)
         defaults.set(settings.maxTokens, forKey: Keys.aiMaxTokens)
+        defaults.set(settings.warmupOnLaunch, forKey: Keys.aiWarmupOnLaunch)
         logger.info("Saved AI settings")
     }
 
@@ -250,7 +255,8 @@ public final class SettingsService {
             temperature: defaults.object(forKey: Keys.aiTemperature) as? Double ?? 0.7,
             maxTokens: defaults.integer(forKey: Keys.aiMaxTokens) != 0
                 ? defaults.integer(forKey: Keys.aiMaxTokens)
-                : 4096
+                : 4096,
+            warmupOnLaunch: defaults.object(forKey: Keys.aiWarmupOnLaunch) as? Bool ?? true
         )
     }
 
@@ -262,7 +268,8 @@ public final class SettingsService {
             Keys.patreonCampaignId, Keys.patreonTokenExpiry,
             Keys.comfyUIServerURL, Keys.comfyUITimeout,
             Keys.launchAtLogin, Keys.showNotifications, Keys.logLevel,
-            Keys.aiBaseURL, Keys.aiModel, Keys.aiTemperature, Keys.aiMaxTokens
+            Keys.aiBaseURL, Keys.aiModel, Keys.aiTemperature, Keys.aiMaxTokens,
+            Keys.aiWarmupOnLaunch
         ]
 
         for key in keys {
