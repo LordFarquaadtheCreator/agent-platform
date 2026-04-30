@@ -5,8 +5,8 @@ import MarkdownUI
 
 struct PatreonContentProvider: MainContentProvider {
     let section: AppSection = .patreon
-    func content(using workspace: WorkspaceModel, router: AppRouter, appState: AppShellModel) -> AnyView {
-        AnyView(PatreonScreen(viewModel: workspace.patreonViewModel, router: router))
+    @MainActor func content(using workspace: WorkspaceModel, router: AppRouter, appState: AppShellModel) -> AnyView {
+        AnyView(PatreonScreen(viewModel: workspace.patreonViewModel, router: router, connectivityService: workspace.dependencies.connectivityService))
     }
 }
 

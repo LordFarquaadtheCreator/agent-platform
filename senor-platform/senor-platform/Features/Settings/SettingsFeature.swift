@@ -234,6 +234,7 @@ private struct SettingsContent: View {
                         in: 1024...16384,
                         step: 1024
                     )
+                    Toggle("Warm up on launch", isOn: $viewModel.aiSettings.warmupOnLaunch)
                     Button("Save AI Settings") {
                         viewModel.saveAI()
                     }

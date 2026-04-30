@@ -4,8 +4,8 @@ import SwiftUI
 
 struct DeviantArtContentProvider: MainContentProvider {
     let section: AppSection = .deviantArt
-    func content(using workspace: WorkspaceModel, router: AppRouter, appState: AppShellModel) -> AnyView {
-        AnyView(DeviantArtScreen(viewModel: workspace.deviantArtViewModel, router: router))
+    @MainActor func content(using workspace: WorkspaceModel, router: AppRouter, appState: AppShellModel) -> AnyView {
+        AnyView(DeviantArtScreen(viewModel: workspace.deviantArtViewModel, router: router, connectivityService: workspace.dependencies.connectivityService))
     }
 }
 

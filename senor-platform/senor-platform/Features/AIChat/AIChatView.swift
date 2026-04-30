@@ -4,14 +4,16 @@ import MarkdownUI
 
 struct AIChatView: View {
     @ObservedObject private var viewModel: AIChatViewModel
+    @ObservedObject private var connectivityService: ConnectivityService
     @State private var inputText = ""
     @FocusState private var isInputFocused: Bool
     @State private var editingQueueId: UUID?
     @State private var editingQueueText: String = ""
     @State private var hoveredQueueId: UUID? = nil
 
-    init(viewModel: AIChatViewModel) {
+    init(viewModel: AIChatViewModel, connectivityService: ConnectivityService) {
         self.viewModel = viewModel
+        self.connectivityService = connectivityService
     }
 
     var body: some View {
@@ -50,6 +52,25 @@ struct AIChatView: View {
         .task {
             await viewModel.fetchAvailableModels()
             await viewModel.loadHistory()
+        }
+        .overlay(alignment: .top) {
+            if !connectivityService.isOnline {
+                HStack(spacing: AppTheme.Spacing.small) {
+                    Image(systemName: "wifi.exclamationmark")
+                        .foregroundStyle(AppTheme.ColorToken.statusWarning)
+                    AppText("AI Offline", style: .caption)
+                        .foregroundStyle(AppTheme.ColorToken.statusWarning)
+                    Spacer()
+                    Button {
+                        Task { await viewModel.fetchAvailableModels() }
+                    } label: {
+                        AppText("Retry", style: .caption, color: AppTheme.ColorToken.accent)
+                    }
+                    .appButtonStyle(.plain)
+                }
+                .padding(AppTheme.Spacing.small)
+                .background(AppTheme.ColorToken.statusWarning.opacity(0.1))
+            }
         }
         .sheet(isPresented: $viewModel.showHistory) {
             historyViewer
@@ -133,7 +154,7 @@ struct AIChatView: View {
             }
             .padding(.horizontal, AppTheme.Spacing.xSmall)
             .frame(
-                maxWidth: .infinity * 0.8,
+                maxWidth: 520,
                 alignment: message.role == .user ? .trailing : .leading
             )
             .accessibilityElement(children: .combine)
@@ -166,7 +187,7 @@ struct AIChatView: View {
                 }
             }
             .padding(.horizontal, AppTheme.Spacing.xSmall)
-            .frame(maxWidth: .infinity * 0.8, alignment: .leading)
+            .frame(maxWidth: 520, alignment: .leading)
 
             Spacer()
         }
@@ -467,7 +488,8 @@ private func makePreviewDependencies() -> (workspace: WorkspaceModel, router: Ap
         ),
         aiClient: AIClient(),
         contextExtractor: ContextExtractor(),
-        chatHistoryStore: ChatHistoryStore(databaseManager: db)
+        chatHistoryStore: ChatHistoryStore(databaseManager: db),
+        connectivityService: ConnectivityService()
     )
     return (WorkspaceModel(dependencies: deps), router)
 }
@@ -582,17 +604,17 @@ private final class PreviewAIChatStreamingViewModel: AIChatViewModel {
 }
 
 #Preview("AI Chat") {
-    AIChatView(viewModel: PreviewAIChatViewModel())
+    AIChatView(viewModel: PreviewAIChatViewModel(), connectivityService: ConnectivityService())
         .frame(width: 400, height: 600)
 }
 
 #Preview("Loading") {
-    AIChatView(viewModel: PreviewAIChatLoadingViewModel())
+    AIChatView(viewModel: PreviewAIChatLoadingViewModel(), connectivityService: ConnectivityService())
         .frame(width: 400, height: 600)
 }
 
 #Preview("Streaming") {
-    AIChatView(viewModel: PreviewAIChatStreamingViewModel())
+    AIChatView(viewModel: PreviewAIChatStreamingViewModel(), connectivityService: ConnectivityService())
         .frame(width: 400, height: 600)
 }
 
@@ -640,7 +662,7 @@ private final class PreviewAIChatQueuedViewModel: AIChatViewModel {
 }
 
 #Preview("Queued") {
-    AIChatView(viewModel: PreviewAIChatQueuedViewModel())
+    AIChatView(viewModel: PreviewAIChatQueuedViewModel(), connectivityService: ConnectivityService())
         .frame(width: 400, height: 600)
 }
 
@@ -689,7 +711,6 @@ private final class PreviewAIChatHistoryViewModel: AIChatViewModel {
 }
 
 #Preview("History") {
-    AIChatView(viewModel: PreviewAIChatHistoryViewModel())
+    AIChatView(viewModel: PreviewAIChatHistoryViewModel(), connectivityService: ConnectivityService())
         .frame(width: 400, height: 600)
 }
-

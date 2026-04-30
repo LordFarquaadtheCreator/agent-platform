@@ -136,12 +136,18 @@ public final class PatreonViewModel: ObservableObject {
     @Published public private(set) var memberDetailError: PatreonError?
     @Published public private(set) var webhooksError: PatreonError?
 
+    public var isOffline: Bool {
+        connectivityService?.isOnline == false
+    }
+
     private let client: PatreonClient?
+    private let connectivityService: ConnectivityService?
     private var settings: SettingsService.PatreonSettings?
     private var hasLoaded = false
 
-    init(client: PatreonClient?, settings: SettingsService.PatreonSettings? = nil) {
+    init(client: PatreonClient?, settings: SettingsService.PatreonSettings? = nil, connectivityService: ConnectivityService? = nil) {
         self.client = client
+        self.connectivityService = connectivityService
         self.settings = settings
         #if DEBUG
         if client == nil {

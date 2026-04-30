@@ -22,6 +22,10 @@ public class AIChatViewModel: ObservableObject {
     private var previousResponseID: String?
     private var generationTask: Task<Void, Never>?
 
+    public var isOffline: Bool {
+        workspace.isOffline
+    }
+
     private var systemPrompt: String {
         """
         You are an AI assistant helping the user understand and work with the the application you live inside.
@@ -49,6 +53,10 @@ public class AIChatViewModel: ObservableObject {
         do {
             messages = try await chatHistoryStore.load(for: router.selectedSection)
             previousResponseID = nil
+            // If fresh session with no history, pick up warmup response ID for continuity
+            if messages.isEmpty {
+                previousResponseID = await aiClient.getLastResponseID()
+            }
             updateContextSummary()
         } catch is CancellationError {
             // Task cancelled by view lifecycle; not a real failure

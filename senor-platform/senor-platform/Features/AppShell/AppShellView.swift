@@ -7,7 +7,7 @@ struct AppShellView: View {
     @State private var showSidebar = true
     @State private var showInspector = true
     @State private var showAIChat = false
-    @State private var inspectorWidth: CGFloat = AppTheme.Layout.detailIdealWidth
+    @State private var preferredInspectorWidth: CGFloat = AppTheme.Layout.detailIdealWidth
 
     // MARK: - Registries
 
@@ -32,38 +32,54 @@ struct AppShellView: View {
 
     var body: some View {
         let router = workspace.router
-        HStack(spacing: 0) {
-            if showSidebar {
-                AppSidebarView(router: router, approvalsViewModel: workspace.approvalsViewModel)
-                    .frame(
-                        minWidth: AppTheme.Layout.sidebarIdealWidth,
-                        idealWidth: AppTheme.Layout.sidebarIdealWidth,
-                        maxWidth: AppTheme.Layout.sidebarIdealWidth
-                    )
-                    .transition(.move(edge: .leading).combined(with: .opacity))
-            }
+        GeometryReader { geometry in
+            let metrics = ShellLayoutMetrics(width: geometry.size.width)
+            let sidebarVisible = showSidebar && metrics.canShowSidebar
+            let inspectorVisible = showInspector && metrics.canShowInspector(withSidebar: sidebarVisible)
+            let currentInspectorWidth = metrics.inspectorWidth(
+                preferredWidth: preferredInspectorWidth,
+                withSidebar: sidebarVisible
+            )
 
-            contentRegistry.view(for: router.selectedSection, using: workspace, router: router, appState: appState)
-                .frame(minWidth: AppTheme.Layout.mainAreaMinWidth)
-
-            if showInspector {
-                Group {
-                    ResizeHandle(width: $inspectorWidth, minWidth: AppTheme.Layout.detailMinWidth)
-
-                    if showAIChat {
-                        AIChatPanel(workspace: workspace, router: router)
-                            .frame(width: inspectorWidth)
-                    } else {
-                        inspectorRegistry.view(
-                            for: router.selectedSection,
-                            using: workspace,
-                            router: router,
-                            appState: appState
+            HStack(spacing: 0) {
+                if sidebarVisible {
+                    AppSidebarView(router: router, approvalsViewModel: workspace.approvalsViewModel)
+                        .frame(
+                            minWidth: AppTheme.Layout.sidebarMinWidth,
+                            idealWidth: AppTheme.Layout.sidebarIdealWidth,
+                            maxWidth: AppTheme.Layout.sidebarIdealWidth
                         )
-                        .frame(width: inspectorWidth)
-                    }
+                        .transition(.move(edge: .leading).combined(with: .opacity))
                 }
-                .transition(.move(edge: .trailing).combined(with: .opacity))
+
+                contentRegistry.view(for: router.selectedSection, using: workspace, router: router, appState: appState)
+                    .frame(minWidth: 0, maxWidth: .infinity, maxHeight: .infinity)
+                    .layoutPriority(1)
+
+                if inspectorVisible {
+                    Group {
+                        ResizeHandle(
+                            preferredWidth: $preferredInspectorWidth,
+                            currentWidth: currentInspectorWidth,
+                            minWidth: AppTheme.Layout.detailMinWidth,
+                            maxWidth: metrics.maxInspectorWidth(withSidebar: sidebarVisible)
+                        )
+
+                        if showAIChat {
+                            AIChatPanel(workspace: workspace, router: router)
+                                .frame(width: currentInspectorWidth)
+                        } else {
+                            inspectorRegistry.view(
+                                for: router.selectedSection,
+                                using: workspace,
+                                router: router,
+                                appState: appState
+                            )
+                            .frame(width: currentInspectorWidth)
+                        }
+                    }
+                    .transition(.move(edge: .trailing).combined(with: .opacity))
+                }
             }
         }
         .animation(.smooth(duration: 0.25), value: showSidebar)
@@ -136,6 +152,34 @@ struct AppShellView: View {
     }
 }
 
+// MARK: - Shell Layout
+
+private struct ShellLayoutMetrics {
+    let width: CGFloat
+
+    private var sidebarWidth: CGFloat { AppTheme.Layout.sidebarIdealWidth }
+    private var minimumMainWidth: CGFloat { AppTheme.Layout.mainAreaMinWidth }
+    private var minimumInspectorWidth: CGFloat { AppTheme.Layout.detailMinWidth }
+
+    var canShowSidebar: Bool {
+        width >= sidebarWidth + minimumMainWidth
+    }
+
+    func canShowInspector(withSidebar sidebarVisible: Bool) -> Bool {
+        let sidebarReserve = sidebarVisible ? sidebarWidth : 0
+        return width >= sidebarReserve + minimumMainWidth + minimumInspectorWidth
+    }
+
+    func maxInspectorWidth(withSidebar sidebarVisible: Bool) -> CGFloat {
+        let sidebarReserve = sidebarVisible ? sidebarWidth : 0
+        return max(minimumInspectorWidth, width - sidebarReserve - minimumMainWidth)
+    }
+
+    func inspectorWidth(preferredWidth: CGFloat, withSidebar sidebarVisible: Bool) -> CGFloat {
+        min(max(preferredWidth, minimumInspectorWidth), maxInspectorWidth(withSidebar: sidebarVisible))
+    }
+}
+
 // MARK: - Sidebar View
 
 private struct AppSidebarView: View {
@@ -187,8 +231,10 @@ private struct AppSidebarView: View {
 // MARK: - Resize Handle
 
 private struct ResizeHandle: View {
-    @Binding var width: CGFloat
+    @Binding var preferredWidth: CGFloat
+    let currentWidth: CGFloat
     let minWidth: CGFloat
+    let maxWidth: CGFloat
     @State private var startWidth: CGFloat = 0
     @State private var dragStartLocation: CGFloat = 0
 
@@ -208,11 +254,12 @@ private struct ResizeHandle: View {
                 DragGesture()
                     .onChanged { value in
                         if startWidth == 0 {
-                            startWidth = width
+                            startWidth = currentWidth
                             dragStartLocation = value.location.x
                         }
                         let delta = dragStartLocation - value.location.x
-                        width = max(minWidth, startWidth + delta)
+                        let resizedWidth = min(maxWidth, max(minWidth, startWidth + delta))
+                        preferredWidth = resizedWidth
                     }
                     .onEnded { _ in
                         startWidth = 0
@@ -234,7 +281,7 @@ private struct AIChatPanel: View {
     @EnvironmentObject var appState: AppShellModel
 
     var body: some View {
-        AIChatView(viewModel: workspace.aiChatViewModel)
+        AIChatView(viewModel: workspace.aiChatViewModel, connectivityService: workspace.dependencies.connectivityService)
     }
 
     init(workspace: WorkspaceModel, router: AppRouter) {

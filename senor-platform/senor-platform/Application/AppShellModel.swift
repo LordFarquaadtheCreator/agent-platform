@@ -256,11 +256,13 @@ public final class WorkspaceModel: ObservableObject {
     public let settingsViewModel: SettingsViewModel
     public lazy var deviantArtViewModel = DeviantArtViewModel(
         client: dependencies.deviantArtClient,
-        settingsService: dependencies.settingsService
+        settingsService: dependencies.settingsService,
+        connectivityService: dependencies.connectivityService
     )
     public lazy var patreonViewModel = PatreonViewModel(
         client: dependencies.patreonClient,
-        settings: dependencies.settingsService.loadPatreonSettings()
+        settings: dependencies.settingsService.loadPatreonSettings(),
+        connectivityService: dependencies.connectivityService
     )
     public lazy var agentsViewModel = AgentsViewModel(
         createAgentUseCase: dependencies.createAgentUseCase
@@ -296,6 +298,12 @@ public final class WorkspaceModel: ObservableObject {
 
     @Published public private(set) var isRefreshing = false
     @Published public var lastErrorMessage: String?
+
+    // MARK: - Connectivity
+
+    public var isOffline: Bool {
+        !dependencies.connectivityService.isOnline
+    }
 
     // MARK: - Global Message Queue
 

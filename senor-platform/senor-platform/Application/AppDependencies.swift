@@ -33,4 +33,7 @@ public struct AppDependencies {
     public let aiClient: AIClient
     public let contextExtractor: ContextExtractor
     public let chatHistoryStore: ChatHistoryStore
+
+    // Connectivity
+    public let connectivityService: ConnectivityService
 }

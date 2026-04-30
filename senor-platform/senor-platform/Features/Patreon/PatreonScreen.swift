@@ -8,6 +8,7 @@ extension Notification.Name {
 struct PatreonScreen: View {
     @ObservedObject var viewModel: PatreonViewModel
     @ObservedObject var router: AppRouter
+    @ObservedObject var connectivityService: ConnectivityService
     @State private var showComposeSheet = false
     @State private var editingPost: PatreonPost?
 
@@ -21,6 +22,10 @@ struct PatreonScreen: View {
                 LoadingStateView(
                     message: viewModel.isRefreshingToken ? "Refreshing session..." : nil
                 )
+            } else if !connectivityService.isOnline {
+                OfflineView(serviceName: "Patreon") {
+                    Task { await viewModel.refresh() }
+                }
             } else if case .notConfigured = viewModel.authState {
                 NotConnectedView(
                     title: "Patreon Not Configured",
@@ -192,9 +197,9 @@ struct PatreonScreen: View {
                 AppText(campaign.attributes.creationName ?? "Campaign", style: .headline)
 
                 if let summary = campaign.attributes.summary {
-                    Markdown(message.content)
+                    Markdown(summary)
                         .markdownTheme(.app)
-                    AppText(summary, style: .body, color: AppTheme.ColorToken.textSecondary)
+						.foregroundStyle(AppTheme.ColorToken.textSecondary)
                         .lineLimit(3)
                 }
 
@@ -420,28 +425,32 @@ struct PatreonScreen: View {
 #Preview("Not Configured") {
 	PatreonScreen(
 		viewModel: previewPatreonViewModel(isAuthenticated: false),
-		router: AppRouter()
+		router: AppRouter(),
+		connectivityService: ConnectivityService()
 	)
 }
 
 #Preview("Empty") {
 	PatreonScreen(
 		viewModel: previewPatreonViewModel(postCount: 0, memberCount: 0),
-		router: AppRouter()
+		router: AppRouter(),
+		connectivityService: ConnectivityService()
 	)
 }
 
 #Preview("Single") {
 	PatreonScreen(
 		viewModel: previewPatreonViewModel(postCount: 1, memberCount: 1),
-		router: AppRouter()
+		router: AppRouter(),
+		connectivityService: ConnectivityService()
 	)
 }
 
 #Preview("Many") {
 	PatreonScreen(
 		viewModel: previewPatreonViewModel(postCount: 15, memberCount: 8),
-		router: AppRouter()
+		router: AppRouter(),
+		connectivityService: ConnectivityService()
 	)
 }
 
@@ -450,7 +459,8 @@ struct PatreonScreen: View {
 	router.selectedPostID = "post-0"
 	return PatreonScreen(
 		viewModel: previewPatreonViewModel(postCount: 5),
-		router: router
+		router: router,
+		connectivityService: ConnectivityService()
 	)
 }
 
@@ -459,7 +469,8 @@ struct PatreonScreen: View {
 	router.selectedMemberID = "member-0"
 	return PatreonScreen(
 		viewModel: previewPatreonViewModel(memberCount: 5),
-		router: router
+		router: router,
+		connectivityService: ConnectivityService()
 	)
 }
 #endif

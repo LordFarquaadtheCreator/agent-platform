@@ -9,6 +9,7 @@ extension Notification.Name {
 struct DeviantArtScreen: View {
     @ObservedObject var viewModel: DeviantArtViewModel
     @ObservedObject var router: AppRouter
+    @ObservedObject var connectivityService: ConnectivityService
     @State private var showUploadSheet = false
     @State private var selectedStashItem: DeviantArtClient.StashItem?
 
@@ -85,7 +86,11 @@ struct DeviantArtScreen: View {
 
     @ViewBuilder
     private var contentView: some View {
-        if !viewModel.isAuthenticated {
+        if !connectivityService.isOnline {
+            OfflineView(serviceName: "DeviantArt") {
+                Task { await viewModel.refresh() }
+            }
+        } else if !viewModel.isAuthenticated {
             NotConnectedView(
                 title: "Not Connected",
                 systemImage: "paintbrush",
@@ -502,28 +507,32 @@ private struct ThumbnailGrid: View {
 #Preview("Not Authenticated") {
 	DeviantArtScreen(
 		viewModel: previewDeviantArtViewModel(isAuthenticated: false),
-		router: AppRouter()
+		router: AppRouter(),
+		connectivityService: ConnectivityService()
 	)
 }
 
 #Preview("Empty") {
 	DeviantArtScreen(
 		viewModel: previewDeviantArtViewModel(deviationCount: 0, stashCount: 0),
-		router: AppRouter()
+		router: AppRouter(),
+		connectivityService: ConnectivityService()
 	)
 }
 
 #Preview("Single") {
 	DeviantArtScreen(
 		viewModel: previewDeviantArtViewModel(deviationCount: 1, stashCount: 1),
-		router: AppRouter()
+		router: AppRouter(),
+		connectivityService: ConnectivityService()
 	)
 }
 
 #Preview("Many") {
 	DeviantArtScreen(
 		viewModel: previewDeviantArtViewModel(deviationCount: 50, stashCount: 4),
-		router: AppRouter()
+		router: AppRouter(),
+		connectivityService: ConnectivityService()
 	)
 }
 
@@ -532,7 +541,8 @@ private struct ThumbnailGrid: View {
 	router.selectedDeviationID = "dev-0"
 	return DeviantArtScreen(
 		viewModel: previewDeviantArtViewModel(deviationCount: 5),
-		router: router
+		router: router,
+		connectivityService: ConnectivityService()
 	)
 }
 #endif

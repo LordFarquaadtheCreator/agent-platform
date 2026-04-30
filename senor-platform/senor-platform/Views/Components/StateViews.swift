@@ -112,6 +112,46 @@ public struct EmptyDataView: View {
     }
 }
 
+/// Reusable offline state view - shown when network is unavailable
+public struct OfflineView: View {
+	let serviceName: String
+	let retryAction: (() -> Void)?
+
+	public init(serviceName: String, retryAction: (() -> Void)? = nil) {
+		self.serviceName = serviceName
+		self.retryAction = retryAction
+	}
+
+	public var body: some View {
+		VStack {
+			Spacer()
+			AppCard {
+				VStack(alignment: .center, spacing: AppTheme.Spacing.medium) {
+					Image(systemName: "wifi.exclamationmark")
+						.font(AppTheme.Typography.largeTitle)
+						.foregroundStyle(AppTheme.ColorToken.statusWarning)
+
+					AppText("\(serviceName) Offline", style: .headline)
+					AppText(
+						"Cannot reach \(serviceName). Check your internet connection and try again.",
+						style: .body,
+						color: AppTheme.ColorToken.textSecondary
+					)
+					.multilineTextAlignment(.center)
+
+					if let retryAction = retryAction {
+						Button("Retry") {
+							retryAction()
+						}
+						.appButtonStyle(.bordered)
+					}
+				}
+			}
+			Spacer()
+		}
+	}
+}
+
 // MARK: - Previews
 
 #Preview("Not Connected") {
@@ -147,4 +187,8 @@ public struct EmptyDataView: View {
         systemImage: "doc.plaintext",
         message: "No items found."
     )
+}
+
+#Preview("Offline") {
+    OfflineView(serviceName: "DeviantArt") {}
 }

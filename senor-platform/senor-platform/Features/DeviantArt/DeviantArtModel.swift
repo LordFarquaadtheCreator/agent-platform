@@ -15,11 +15,17 @@ public final class DeviantArtViewModel: ObservableObject {
     @Published public private(set) var lastUpdated: Date?
     @Published public var deviationMetadata: [String: DeviantArtClient.DeviationMetadata] = [:]
 
+    public var isOffline: Bool {
+        connectivityService?.isOnline == false
+    }
+
     private let client: DeviantArtClient?
     private let settingsService: SettingsService
     private let cacheService: CacheService?
+    private let connectivityService: ConnectivityService?
     private var pendingCodeVerifier: String?
     private var pendingState: String?
+    private var cancellables = Set<AnyCancellable>()
 
     // 3-hour cache TTL for DeviantArt
     private static let cacheTTL: TimeInterval = 3 * 3600
@@ -29,10 +35,11 @@ public final class DeviantArtViewModel: ObservableObject {
         static let state = "deviantArt.pendingState"
     }
 
-    init(client: DeviantArtClient?, settingsService: SettingsService, cacheService: CacheService? = nil) {
+    init(client: DeviantArtClient?, settingsService: SettingsService, cacheService: CacheService? = nil, connectivityService: ConnectivityService? = nil) {
         self.client = client
         self.settingsService = settingsService
         self.cacheService = cacheService
+        self.connectivityService = connectivityService
         self.isAuthenticated = client?.isAuthenticated ?? settingsService.loadDeviantArtSettings().isAuthenticated
     }
 

@@ -19,7 +19,28 @@ public final class AppBootstrap {
 
         await registerWithLegacyBridge(repos: repos, services: services, runtime: runtime, integrations: integrations)
 
-        return createDependencies(repos: repos, services: services, runtime: runtime, integrations: integrations)
+        // AI Chat dependencies - use configured base URL from settings
+        let aiSettings = settings.loadAISettings()
+        let aiBaseURL = aiSettings.baseURL.replacingOccurrences(of: "/v1", with: "")
+        let aiClient = AIClient(baseURL: aiBaseURL)
+        let contextExtractor = ContextExtractor()
+        let chatHistoryStore = ChatHistoryStore(databaseManager: repos.dbManager)
+
+        // Warm up AI model in background - don't block bootstrap
+        Task { await warmupAI(aiClient: aiClient, services: services) }
+
+        let connectivityService = ConnectivityService()
+
+        return createDependencies(
+            repos: repos,
+            services: services,
+            runtime: runtime,
+            integrations: integrations,
+            aiClient: aiClient,
+            contextExtractor: contextExtractor,
+            chatHistoryStore: chatHistoryStore,
+            connectivityService: connectivityService
+        )
     }
 
     private func setupDatabase() async throws -> DatabaseManager {
@@ -172,7 +193,11 @@ public final class AppBootstrap {
         repos: Repositories,
         services: Services,
         runtime: RuntimeComponents,
-        integrations: Integrations
+        integrations: Integrations,
+        aiClient: AIClient,
+        contextExtractor: ContextExtractor,
+        chatHistoryStore: ChatHistoryStore,
+        connectivityService: ConnectivityService
     ) -> AppDependencies {
         let loadWorkspaceUseCase = LoadWorkspaceUseCase(
             agentRepository: repos.agent,
@@ -183,11 +208,6 @@ public final class AppBootstrap {
             approvalQueueRepository: repos.approval,
             publicationRepository: repos.publication
         )
-
-        // AI Chat dependencies
-        let aiClient = AIClient()
-        let contextExtractor = ContextExtractor()
-        let chatHistoryStore = ChatHistoryStore(databaseManager: repos.dbManager)
 
         return AppDependencies(
             agentRepository: repos.agent,
@@ -228,7 +248,8 @@ public final class AppBootstrap {
             ),
             aiClient: aiClient,
             contextExtractor: contextExtractor,
-            chatHistoryStore: chatHistoryStore
+            chatHistoryStore: chatHistoryStore,
+            connectivityService: connectivityService
         )
     }
 
@@ -290,5 +311,13 @@ public final class AppBootstrap {
             client.setAuthToken(token)
         }
         return client
+    }
+
+    private func warmupAI(aiClient: AIClient, services: Services) async {
+        let warmupService = AIWarmupService(
+            aiClient: aiClient,
+            settingsService: services.settings
+        )
+        await warmupService.warmupIfNeeded()
     }
 }
