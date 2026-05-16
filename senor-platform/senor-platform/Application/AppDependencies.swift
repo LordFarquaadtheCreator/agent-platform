@@ -13,8 +13,10 @@ public struct AppDependencies {
 
     public let deviantArtClient: DeviantArtClient?
     public let patreonClient: PatreonClient?
+    public let comfyUIClient: ComfyUIClient
 
     public let settingsService: SettingsService
+    public let comfyUIExecutionRepository: ComfyUIExecutionRepository
     public let approvalService: ApprovalService
     public let versioningService: ContentVersioningService
     public let publicationService: PublicationService
@@ -36,4 +38,7 @@ public struct AppDependencies {
 
     // Connectivity
     public let connectivityService: ConnectivityService
+
+    // Database
+    public let databaseManager: DatabaseManager
 }

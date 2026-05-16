@@ -548,6 +548,72 @@ public final class RemotePostCacheRepositoryImpl: RemotePostCacheRepository {
     }
 }
 
+/// Concrete implementation of ComfyUIExecutionRepository
+public final class ComfyUIExecutionRepositoryImpl: ComfyUIExecutionRepository {
+    private let dbManager: DatabaseManager
+
+    public init(dbManager: DatabaseManager) {
+        self.dbManager = dbManager
+    }
+
+    public func create(execution: ComfyUIExecutionRecord) async throws -> ComfyUIExecutionRecord {
+        try await dbManager.asyncWrite { db in
+            let execution = execution
+            try execution.insert(db)
+            return execution
+        }
+    }
+
+    public func update(execution: ComfyUIExecutionRecord) async throws -> ComfyUIExecutionRecord {
+        try await dbManager.asyncWrite { db in
+            let execution = execution
+            try execution.update(db)
+            return execution
+        }
+    }
+
+    public func getById(id: String) async throws -> ComfyUIExecutionRecord? {
+        try await dbManager.asyncRead { db in
+            try ComfyUIExecutionRecord.fetchOne(db, key: id)
+        }
+    }
+
+    public func listByWorkflow(workflowID: String, limit: Int) async throws -> [ComfyUIExecutionRecord] {
+        try await dbManager.asyncRead { db in
+            try ComfyUIExecutionRecord
+                .filter(Column("workflow_id") == workflowID)
+                .order(Column("created_at").desc)
+                .limit(limit)
+                .fetchAll(db)
+        }
+    }
+
+    public func listRecent(limit: Int) async throws -> [ComfyUIExecutionRecord] {
+        try await dbManager.asyncRead { db in
+            try ComfyUIExecutionRecord
+                .order(Column("created_at").desc)
+                .limit(limit)
+                .fetchAll(db)
+        }
+    }
+
+    public func listByStatus(status: String, limit: Int) async throws -> [ComfyUIExecutionRecord] {
+        try await dbManager.asyncRead { db in
+            try ComfyUIExecutionRecord
+                .filter(Column("status") == status)
+                .order(Column("created_at").desc)
+                .limit(limit)
+                .fetchAll(db)
+        }
+    }
+
+    public func delete(id: String) async throws {
+        _ = try await dbManager.asyncWrite { db in
+            try ComfyUIExecutionRecord.deleteOne(db, key: id)
+        }
+    }
+}
+
 /// Concrete implementation of TaskTypeRepository
 public final class TaskTypeRepositoryImpl: TaskTypeRepository {
     private let dbManager: DatabaseManager

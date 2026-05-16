@@ -154,6 +154,12 @@ public struct PatreonMember: Codable, Identifiable {
         public let lastChargeDate: String?
         public let pledgeRelationshipStart: String?
         public let note: String?
+        public let campaignLifetimeSupportCents: Int?
+        public let willPayAmountCents: Int?
+        public let nextChargeDate: String?
+        public let pledgeCadence: Int?
+        public let isFreeTrial: Bool?
+        public let isGifted: Bool?
 
         enum CodingKeys: String, CodingKey {
             case fullName = "full_name"
@@ -167,11 +173,23 @@ public struct PatreonMember: Codable, Identifiable {
             case lastChargeDate = "last_charge_date"
             case pledgeRelationshipStart = "pledge_relationship_start"
             case note
+            case campaignLifetimeSupportCents = "campaign_lifetime_support_cents"
+            case willPayAmountCents = "will_pay_amount_cents"
+            case nextChargeDate = "next_charge_date"
+            case pledgeCadence = "pledge_cadence"
+            case isFreeTrial = "is_free_trial"
+            case isGifted = "is_gifted"
         }
     }
 
     public struct PatreonMemberRelationships: Codable, Sendable {
         public let currentlyEntitledTiers: [PatreonTierData]?
+        public let pledgeHistory: [PatreonPledgeEvent]?
+
+        enum CodingKeys: String, CodingKey {
+            case currentlyEntitledTiers = "currently_entitled_tiers"
+            case pledgeHistory = "pledge_history"
+        }
     }
 
     public struct PatreonTierData: Codable, Sendable {

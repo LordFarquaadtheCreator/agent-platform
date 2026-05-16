@@ -136,12 +136,16 @@ struct PatreonScreen: View {
                     profileCard(identity)
                 }
 
-                // Campaign stats
-                if let campaign = viewModel.campaign {
-                    campaignStatsCard(campaign)
-                }
+                // Stats Card (NEW)
+                statsCard
 
-                // Posts Section
+                // Notifications Section (NEW)
+                notificationsSection
+
+                // Messages Section (NEW - stubbed)
+                messagesSection
+
+                // Posts Section (restructured)
                 if let error = viewModel.postsError {
                     errorCard(error, title: "Posts Error") { Task { await viewModel.retryPosts() } }
                 } else if !viewModel.posts.isEmpty {
@@ -150,7 +154,7 @@ struct PatreonScreen: View {
                     emptySectionCard(title: "No Posts", message: "No posts found for this campaign.")
                 }
 
-                // Members Section
+                // Members Section (restructured)
                 if let error = viewModel.membersError {
                     errorCard(error, title: "Members Error") { Task { await viewModel.retryMembers() } }
                 } else if !viewModel.members.isEmpty {
@@ -237,7 +241,7 @@ struct PatreonScreen: View {
     private var postsSection: some View {
         VStack(alignment: .leading, spacing: AppTheme.Spacing.medium) {
             HStack {
-                AppText("Recent Posts", style: .title3)
+                AppText("Posts", style: .title3)
                 Spacer()
                 if viewModel.isLoadingPosts {
                     ProgressView()
@@ -246,13 +250,16 @@ struct PatreonScreen: View {
             }
 
             ScrollView(.vertical, showsIndicators: true) {
-                LazyVStack(spacing: AppTheme.Spacing.medium) {
+                LazyVGrid(
+                    columns: [GridItem(.flexible()), GridItem(.flexible())],
+                    spacing: AppTheme.Spacing.medium
+                ) {
                     ForEach(viewModel.posts) { post in
-                        postCard(post)
+                        postCardSquare(post)
                     }
                 }
             }
-            .frame(maxHeight: AppTheme.Layout.postsSectionMaxHeight)
+            .frame(height: 400) // Fixed height as per sketch
         }
     }
 
@@ -310,10 +317,51 @@ struct PatreonScreen: View {
         }
     }
 
+    private func postCardSquare(_ post: PatreonPost) -> some View {
+        AppCard {
+            VStack(alignment: .leading, spacing: AppTheme.Spacing.small) {
+                // Optional image placeholder
+                Rectangle()
+                    .fill(AppTheme.ColorToken.chromeBackground)
+                    .frame(height: 100)
+                    .overlay {
+                        if let _ = post.attributes.content {
+                            // Image would be extracted from content HTML
+                            // For now, placeholder
+                            Image(systemName: "photo")
+                                .foregroundStyle(AppTheme.ColorToken.textSecondary)
+                        }
+                    }
+
+                AppText(post.attributes.title ?? "Untitled", style: .headline)
+                    .lineLimit(2)
+
+                if let published = post.attributes.publishedAt {
+                    AppText(formatDate(published), style: .caption, color: AppTheme.ColorToken.textSecondary)
+                }
+            }
+        }
+        .aspectRatio(1, contentMode: .fit)
+        .overlay(
+            RoundedRectangle(cornerRadius: AppTheme.CornerRadius.card)
+                .stroke(
+                    router.selectedPostID == post.id
+                        ? AppTheme.ColorToken.accent
+                        : AppTheme.ColorToken.clear,
+                    lineWidth: 2
+                )
+        )
+        .onTapGesture {
+            router.selectedPostID = post.id
+            router.selectedMemberID = nil
+            Task { await viewModel.loadSelectedPost(postId: post.id) }
+        }
+    }
+
     private var membersSection: some View {
         VStack(alignment: .leading, spacing: AppTheme.Spacing.medium) {
             HStack {
-                AppText("Active Patrons", style: .title3)
+                AppText("Patrons", style: .title3)
                 Spacer()
                 if viewModel.isLoadingMembers {
                     ProgressView()
@@ -321,11 +369,39 @@ struct PatreonScreen: View {
                 }
             }
 
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 200))], spacing: AppTheme.Spacing.medium) {
-                ForEach(viewModel.members.prefix(8)) { member in
-                    memberCard(member)
+            // Filter tabs
+            Picker("Filter", selection: $memberFilter) {
+                Text("Active").tag(MemberFilter.active)
+                Text("Inactive").tag(MemberFilter.inactive)
+                Text("All").tag(MemberFilter.all)
+            }
+            .pickerStyle(.segmented)
+
+            ScrollView(.vertical, showsIndicators: true) {
+                LazyVStack(spacing: AppTheme.Spacing.small) {
+                    ForEach(filteredMembers) { member in
+                        memberCard(member)
+                    }
                 }
             }
+            .frame(maxHeight: 300)
+        }
+    }
+
+    @State private var memberFilter: MemberFilter = .active
+
+    private enum MemberFilter {
+        case active, inactive, all
+    }
+
+    private var filteredMembers: [PatreonMember] {
+        switch memberFilter {
+        case .active:
+            return viewModel.members.filter { $0.attributes?.patronStatus == "active_patron" }
+        case .inactive:
+            return viewModel.members.filter { $0.attributes?.patronStatus != "active_patron" }
+        case .all:
+            return viewModel.members
         }
     }
 
@@ -385,6 +461,24 @@ struct PatreonScreen: View {
                 }
             }
         }
+    }
+
+    private var statsCard: some View {
+        PatreonStatsCard(
+            totalPatrons: viewModel.totalPatrons,
+            activePatrons: viewModel.activePatrons,
+            totalRevenue: formatCents(viewModel.totalRevenueCents),
+            monthlyRevenue: formatCents(viewModel.monthlyRevenueCents),
+            statsHistory: viewModel.statsHistory
+        )
+    }
+
+    private var notificationsSection: some View {
+        PatreonNotificationsView(events: viewModel.pledgeEvents)
+    }
+
+    private var messagesSection: some View {
+        PatreonMessagesView()
     }
 
     private func emptySectionCard(title: String, message: String) -> some View {

@@ -228,6 +228,53 @@ public final class DatabaseManager: LifecycleAware, Sendable {
             try db.create(index: "idx_chat_history_section", on: "chat_history", columns: ["section"])
         }
 
+        // Migration 003: Patreon Stats and Events
+        migrator.registerMigration("003_patreon_stats") { db in
+            try db.create(table: "patreon_stats") { t in
+                t.primaryKey("id", .text).notNull()
+                t.column("timestamp", .datetime).notNull()
+                t.column("total_patrons", .integer).notNull()
+                t.column("active_patrons", .integer).notNull()
+                t.column("total_revenue_cents", .integer).notNull()
+                t.column("monthly_revenue_cents", .integer).notNull()
+            }
+            try db.create(index: "idx_patreon_stats_timestamp", on: "patreon_stats", columns: ["timestamp"])
+
+            try db.create(table: "patreon_pledge_events") { t in
+                t.primaryKey("id", .text).notNull()
+                t.column("member_id", .text).notNull()
+                t.column("event_type", .text).notNull()
+                t.column("date", .datetime).notNull()
+                t.column("amount_cents", .integer)
+                t.column("payment_status", .text)
+                t.column("tier_id", .text)
+                t.column("tier_title", .text)
+            }
+            try db.create(index: "idx_pledge_events_member", on: "patreon_pledge_events", columns: ["member_id"])
+            try db.create(index: "idx_pledge_events_date", on: "patreon_pledge_events", columns: ["date"])
+        }
+
+        // Migration 004: ComfyUI Executions
+        migrator.registerMigration("004_comfyui_executions") { db in
+            try db.create(table: "comfyui_executions") { t in
+                t.primaryKey("id", .text).notNull()
+                t.column("workflow_id", .text).notNull()
+                t.column("workflow_name", .text).notNull()
+                t.column("inputs_json", .text).notNull()
+                t.column("status", .text).notNull().defaults(to: "queued")
+                t.column("progress", .double).notNull().defaults(to: 0)
+                t.column("current_node", .text)
+                t.column("started_at", .datetime)
+                t.column("completed_at", .datetime)
+                t.column("output_paths_json", .text).notNull().defaults(to: "[]")
+                t.column("output_directory", .text).notNull().defaults(to: "")
+                t.column("error_message", .text)
+                t.column("created_at", .datetime).notNull()
+            }
+            try db.create(index: "idx_comfyui_status_created", on: "comfyui_executions", columns: ["status", "created_at"])
+            try db.create(index: "idx_comfyui_workflow", on: "comfyui_executions", columns: ["workflow_id"])
+        }
+
         return migrator
     }
 }

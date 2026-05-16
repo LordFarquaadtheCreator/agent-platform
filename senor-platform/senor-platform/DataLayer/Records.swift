@@ -422,3 +422,159 @@ public struct RemotePostCacheRecord: Codable, FetchableRecord, PersistableRecord
         self.expiresAt = expiresAt
     }
 }
+
+// MARK: - Patreon Stats Record
+/// Historical Patreon statistics for tracking trends over time
+public struct PatreonStatsRecord: Codable, FetchableRecord, PersistableRecord, Sendable, Identifiable {
+    #if canImport(GRDB)
+    public static let databaseTableName = "patreon_stats"
+    #endif
+
+    public var id: String
+    public var timestamp: Date
+    public var totalPatrons: Int
+    public var activePatrons: Int
+    public var totalRevenueCents: Int
+    public var monthlyRevenueCents: Int
+
+    public init(
+        id: String = UUID().uuidString,
+        timestamp: Date,
+        totalPatrons: Int,
+        activePatrons: Int,
+        totalRevenueCents: Int,
+        monthlyRevenueCents: Int
+    ) {
+        self.id = id
+        self.timestamp = timestamp
+        self.totalPatrons = totalPatrons
+        self.activePatrons = activePatrons
+        self.totalRevenueCents = totalRevenueCents
+        self.monthlyRevenueCents = monthlyRevenueCents
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case timestamp
+        case totalPatrons = "total_patrons"
+        case activePatrons = "active_patrons"
+        case totalRevenueCents = "total_revenue_cents"
+        case monthlyRevenueCents = "monthly_revenue_cents"
+    }
+}
+
+// MARK: - Patreon Pledge Event Record
+/// Pledge event from Patreon API for notification timeline
+public struct PatreonPledgeEventRecord: Codable, FetchableRecord, PersistableRecord, Sendable, Identifiable {
+    #if canImport(GRDB)
+    public static let databaseTableName = "patreon_pledge_events"
+    #endif
+
+    public var id: String
+    public var memberId: String
+    public var eventType: String
+    public var date: Date
+    public var amountCents: Int?
+    public var paymentStatus: String?
+    public var tierId: String?
+    public var tierTitle: String?
+
+    public init(
+        id: String = UUID().uuidString,
+        memberId: String,
+        eventType: String,
+        date: Date,
+        amountCents: Int? = nil,
+        paymentStatus: String? = nil,
+        tierId: String? = nil,
+        tierTitle: String? = nil
+    ) {
+        self.id = id
+        self.memberId = memberId
+        self.eventType = eventType
+        self.date = date
+        self.amountCents = amountCents
+        self.paymentStatus = paymentStatus
+        self.tierId = tierId
+        self.tierTitle = tierTitle
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case memberId = "member_id"
+        case eventType = "event_type"
+        case date
+        case amountCents = "amount_cents"
+        case paymentStatus = "payment_status"
+        case tierId = "tier_id"
+        case tierTitle = "tier_title"
+    }
+}
+
+// MARK: - ComfyUI Execution Record
+
+public struct ComfyUIExecutionRecord: Codable, FetchableRecord, PersistableRecord, Sendable {
+    #if canImport(GRDB)
+    public static let databaseTableName = "comfyui_executions"
+    #endif
+
+    public var id: String
+    public var workflowID: String
+    public var workflowName: String
+    public var inputsJson: String
+    public var status: String
+    public var progress: Double
+    public var currentNode: String?
+    public var startedAt: Date?
+    public var completedAt: Date?
+    public var outputPathsJson: String
+    public var outputDirectory: String
+    public var errorMessage: String?
+    public var createdAt: Date
+
+    public init(
+        id: String,
+        workflowID: String,
+        workflowName: String,
+        inputsJson: String,
+        status: String,
+        progress: Double = 0,
+        currentNode: String? = nil,
+        startedAt: Date? = nil,
+        completedAt: Date? = nil,
+        outputPathsJson: String = "[]",
+        outputDirectory: String = "",
+        errorMessage: String? = nil,
+        createdAt: Date = Date()
+    ) {
+        self.id = id
+        self.workflowID = workflowID
+        self.workflowName = workflowName
+        self.inputsJson = inputsJson
+        self.status = status
+        self.progress = progress
+        self.currentNode = currentNode
+        self.startedAt = startedAt
+        self.completedAt = completedAt
+        self.outputPathsJson = outputPathsJson
+        self.outputDirectory = outputDirectory
+        self.errorMessage = errorMessage
+        self.createdAt = createdAt
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case workflowID = "workflow_id"
+        case workflowName = "workflow_name"
+        case inputsJson = "inputs_json"
+        case status
+        case progress
+        case currentNode = "current_node"
+        case startedAt = "started_at"
+        case completedAt = "completed_at"
+        case outputPathsJson = "output_paths_json"
+        case outputDirectory = "output_directory"
+        case errorMessage = "error_message"
+        case createdAt = "created_at"
+    }
+}

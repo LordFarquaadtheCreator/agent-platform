@@ -7,6 +7,7 @@ public enum AppSection: String, CaseIterable, Identifiable, Sendable {
     case content
     case approvals
     case tools
+    case comfyUI
     case deviantArt
     case patreon
     case settings
@@ -21,6 +22,7 @@ public enum AppSection: String, CaseIterable, Identifiable, Sendable {
         case .content: return "Content"
         case .approvals: return "Approvals"
         case .tools: return "Tools"
+        case .comfyUI: return "ComfyUI"
         case .deviantArt: return "DeviantArt"
         case .patreon: return "Patreon"
         case .settings: return "Settings"
@@ -35,6 +37,7 @@ public enum AppSection: String, CaseIterable, Identifiable, Sendable {
         case .content: return "doc.text.image"
         case .approvals: return "checkmark.shield"
         case .tools: return "wrench"
+        case .comfyUI: return "cpu.fill"
         case .deviantArt: return "paintbrush"
         case .patreon: return "heart.fill"
         case .settings: return "gear"

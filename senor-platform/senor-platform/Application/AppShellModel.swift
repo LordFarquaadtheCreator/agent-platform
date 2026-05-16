@@ -262,7 +262,8 @@ public final class WorkspaceModel: ObservableObject {
     public lazy var patreonViewModel = PatreonViewModel(
         client: dependencies.patreonClient,
         settings: dependencies.settingsService.loadPatreonSettings(),
-        connectivityService: dependencies.connectivityService
+        connectivityService: dependencies.connectivityService,
+        dataStore: PatreonDataStore(databaseManager: dependencies.databaseManager)
     )
     public lazy var agentsViewModel = AgentsViewModel(
         createAgentUseCase: dependencies.createAgentUseCase
@@ -288,6 +289,13 @@ public final class WorkspaceModel: ObservableObject {
     ) { [weak self] in
         await self?.refreshAll()
     }
+    public lazy var comfyUIViewModel = ComfyUIViewModel(
+        client: dependencies.comfyUIClient,
+        executionRepository: dependencies.comfyUIExecutionRepository,
+        settingsService: dependencies.settingsService,
+        connectivityService: dependencies.connectivityService
+    )
+
     public lazy var aiChatViewModel = AIChatViewModel(
         aiClient: dependencies.aiClient,
         contextExtractor: dependencies.contextExtractor,

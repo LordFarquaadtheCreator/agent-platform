@@ -60,6 +60,7 @@ public final class AppBootstrap {
         let publication: PublicationTargetRepositoryImpl
         let cache: RemotePostCacheRepositoryImpl
         let taskType: TaskTypeRepositoryImpl
+        let comfyUIExecution: ComfyUIExecutionRepositoryImpl
     }
 
     private func createRepositories(dbManager: DatabaseManager) -> Repositories {
@@ -73,7 +74,8 @@ public final class AppBootstrap {
             approval: ApprovalQueueRepositoryImpl(dbManager: dbManager),
             publication: PublicationTargetRepositoryImpl(dbManager: dbManager),
             cache: RemotePostCacheRepositoryImpl(dbManager: dbManager),
-            taskType: TaskTypeRepositoryImpl(dbManager: dbManager)
+            taskType: TaskTypeRepositoryImpl(dbManager: dbManager),
+            comfyUIExecution: ComfyUIExecutionRepositoryImpl(dbManager: dbManager)
         )
     }
 
@@ -111,10 +113,11 @@ public final class AppBootstrap {
     private struct Integrations {
         var deviantArt: DeviantArtClient?
         var patreon: PatreonClient?
+        var comfyUI: ComfyUIClient
     }
 
     private func setupIntegrations(settingsService: SettingsService) async throws -> Integrations {
-        var integrations = Integrations()
+        var integrations = Integrations(deviantArt: nil, patreon: nil, comfyUI: makeComfyUIClient(settingsService: settingsService))
         integrations.deviantArt = try await makeDeviantArtClient(settingsService: settingsService)
         integrations.patreon = await makePatreonClient(settingsService: settingsService)
         return integrations
@@ -220,7 +223,9 @@ public final class AppBootstrap {
             taskTypeRepository: repos.taskType,
             deviantArtClient: integrations.deviantArt,
             patreonClient: integrations.patreon,
+            comfyUIClient: integrations.comfyUI,
             settingsService: services.settings,
+            comfyUIExecutionRepository: repos.comfyUIExecution,
             approvalService: services.approval,
             versioningService: services.versioning,
             publicationService: services.publication,
@@ -249,7 +254,8 @@ public final class AppBootstrap {
             aiClient: aiClient,
             contextExtractor: contextExtractor,
             chatHistoryStore: chatHistoryStore,
-            connectivityService: connectivityService
+            connectivityService: connectivityService,
+            databaseManager: repos.dbManager
         )
     }
 
@@ -281,6 +287,11 @@ public final class AppBootstrap {
             client.setAuthToken(token)
         }
         return client
+    }
+
+    private func makeComfyUIClient(settingsService: SettingsService) -> ComfyUIClient {
+        let settings = settingsService.loadComfyUISettings()
+        return ComfyUIClient(baseURL: settings.serverURL)
     }
 
     private func makePatreonClient(settingsService: SettingsService) async -> PatreonClient? {

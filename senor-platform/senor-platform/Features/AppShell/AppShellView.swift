@@ -12,6 +12,7 @@ struct AppShellView: View {
     // MARK: - Registries
 
     private let contentRegistry = MainContentRegistry(providers: [
+        ComfyUIContentProvider(),
         DeviantArtContentProvider(),
         PatreonContentProvider(),
         DashboardContentProvider(),
@@ -24,6 +25,7 @@ struct AppShellView: View {
     ])
 
     private let inspectorRegistry = InspectorContentRegistry(providers: [
+        ComfyUIInspectorProvider(),
         DeviantArtInspectorProvider(),
         AgentsInspectorProvider(),
         ContentInspectorProvider(),

@@ -10,6 +10,8 @@ public final class AppRouter: ObservableObject {
     @Published public var selectedDeviationID: String?
     @Published public var selectedPostID: String?
     @Published public var selectedMemberID: String?
+    @Published public var selectedWorkflowID: String?
+    @Published public var selectedExecutionID: String?
 
     public init() {}
 }

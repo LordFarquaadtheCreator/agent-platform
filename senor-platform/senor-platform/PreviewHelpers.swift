@@ -82,7 +82,8 @@ public func previewPatreonViewModel(
 
 	let viewModel = PatreonViewModel(
 		client: nil,
-		settings: settings
+		settings: settings,
+		dataStore: nil // Preview doesn't need database
 	)
 	viewModel.configureForPreview(
 		isAuthenticated: isAuthenticated,
@@ -115,7 +116,13 @@ public func previewPatreonViewModel(
 					isFollower: true,
 					lastChargeDate: nil,
 					pledgeRelationshipStart: nil,
-					note: nil
+					note: nil,
+					campaignLifetimeSupportCents: (i + 1) * 1000,
+					willPayAmountCents: (i + 1) * 100,
+					nextChargeDate: nil,
+					pledgeCadence: 1,
+					isFreeTrial: false,
+					isGifted: false
 				),
 				relationships: nil
 			)
@@ -144,7 +151,13 @@ extension PatreonMember {
 				isFollower: true,
 				lastChargeDate: "2026-04-25T00:00:00.000Z",
 				pledgeRelationshipStart: "2024-01-15T00:00:00.000Z",
-				note: "Great supporter!"
+				note: "Great supporter!",
+				campaignLifetimeSupportCents: 50000,
+				willPayAmountCents: 1000,
+				nextChargeDate: "2026-05-25T00:00:00.000Z",
+				pledgeCadence: 1,
+				isFreeTrial: false,
+				isGifted: false
 			),
 			relationships: nil
 		)
@@ -164,7 +177,13 @@ extension PatreonMember {
 				isFollower: true,
 				lastChargeDate: "2026-04-01T00:00:00.000Z",
 				pledgeRelationshipStart: "2025-01-01T00:00:00.000Z",
-				note: nil
+				note: nil,
+				campaignLifetimeSupportCents: 15000,
+				willPayAmountCents: nil,
+				nextChargeDate: nil,
+				pledgeCadence: 1,
+				isFreeTrial: false,
+				isGifted: false
 			),
 			relationships: nil
 		)
@@ -184,7 +203,13 @@ extension PatreonMember {
 				isFollower: false,
 				lastChargeDate: "2025-12-01T00:00:00.000Z",
 				pledgeRelationshipStart: "2024-06-01T00:00:00.000Z",
-				note: nil
+				note: nil,
+				campaignLifetimeSupportCents: 25000,
+				willPayAmountCents: nil,
+				nextChargeDate: nil,
+				pledgeCadence: 1,
+				isFreeTrial: false,
+				isGifted: false
 			),
 			relationships: nil
 		)
@@ -202,9 +227,15 @@ extension PatreonMember {
 				lifetimeSupportCents: 10000,
 				currentlyEntitledAmountCents: 500,
 				isFollower: true,
-				lastChargeDate: "2026-04-26T00:00:00.000Z",
+				lastChargeDate: "2026-04-20T00:00:00.000Z",
 				pledgeRelationshipStart: "2025-03-01T00:00:00.000Z",
-				note: nil
+				note: nil,
+				campaignLifetimeSupportCents: 10000,
+				willPayAmountCents: 500,
+				nextChargeDate: "2026-05-20T00:00:00.000Z",
+				pledgeCadence: 1,
+				isFreeTrial: false,
+				isGifted: false
 			),
 			relationships: nil
 		)

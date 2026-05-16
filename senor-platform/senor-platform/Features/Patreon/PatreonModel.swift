@@ -118,6 +118,8 @@ public final class PatreonViewModel: ObservableObject {
     @Published public private(set) var selectedPost: PatreonPost?
     @Published public private(set) var selectedMemberDetail: PatreonMember?
     @Published public private(set) var webhooks: [PatreonWebhook] = []
+    @Published public private(set) var statsHistory: [PatreonStatsRecord] = []
+    @Published public private(set) var pledgeEvents: [PatreonPledgeEventRecord] = []
 
     // Granular loading states
     @Published public private(set) var isLoadingProfile = false
@@ -144,11 +146,13 @@ public final class PatreonViewModel: ObservableObject {
     private let connectivityService: ConnectivityService?
     private var settings: SettingsService.PatreonSettings?
     private var hasLoaded = false
+    private let dataStore: PatreonDataStore?
 
-    init(client: PatreonClient?, settings: SettingsService.PatreonSettings? = nil, connectivityService: ConnectivityService? = nil) {
+    init(client: PatreonClient?, settings: SettingsService.PatreonSettings? = nil, connectivityService: ConnectivityService? = nil, dataStore: PatreonDataStore? = nil) {
         self.client = client
         self.connectivityService = connectivityService
         self.settings = settings
+        self.dataStore = dataStore
         #if DEBUG
         if client == nil {
             tiers = [
@@ -188,6 +192,22 @@ public final class PatreonViewModel: ObservableObject {
 
     public var isAuthenticated: Bool {
         authState == .authenticated
+    }
+
+    public var totalPatrons: Int {
+        members.count
+    }
+
+    public var activePatrons: Int {
+        members.filter { $0.attributes?.patronStatus == "active_patron" }.count
+    }
+
+    public var totalRevenueCents: Int {
+        members.reduce(0) { $0 + ($1.attributes?.campaignLifetimeSupportCents ?? 0) }
+    }
+
+    public var monthlyRevenueCents: Int {
+        members.reduce(0) { $0 + ($1.attributes?.currentlyEntitledAmountCents ?? 0) }
     }
 
     func reloadWithNewSettings() {
@@ -340,6 +360,8 @@ public final class PatreonViewModel: ObservableObject {
             for member in members {
                 AppLogger.api.debug("Member: id=\(member.id), name=\(member.attributes?.fullName ?? "nil")")
             }
+            // Calculate and save stats after members load
+            try? await calculateAndSaveStats()
         } catch let error as AppError {
             AppLogger.api.error("Members error: \(error)")
             membersError = mapAppError(error)
@@ -451,6 +473,49 @@ public final class PatreonViewModel: ObservableObject {
     func clearSelectedMemberDetail() {
         selectedMemberDetail = nil
         memberDetailError = nil
+    }
+
+    // MARK: - Stats Operations
+
+    func calculateAndSaveStats() async throws {
+        guard let dataStore = dataStore else { return }
+
+        let stats = PatreonStatsRecord(
+            id: UUID().uuidString,
+            timestamp: Date(),
+            totalPatrons: totalPatrons,
+            activePatrons: activePatrons,
+            totalRevenueCents: totalRevenueCents,
+            monthlyRevenueCents: monthlyRevenueCents
+        )
+
+        try await dataStore.saveStats(stats)
+        statsHistory = try await dataStore.getRecentStats()
+    }
+
+    func loadStatsHistory() async throws {
+        guard let dataStore = dataStore else { return }
+        statsHistory = try await dataStore.getRecentStats()
+    }
+
+    // MARK: - Pledge Events
+
+    func loadPledgeEvents(for memberId: String) async throws {
+        guard let dataStore = dataStore else { return }
+        pledgeEvents = try await dataStore.getPledgeEvents(for: memberId)
+    }
+
+    func loadRecentPledgeEvents() async throws {
+        guard let dataStore = dataStore else { return }
+        pledgeEvents = try await dataStore.getRecentPledgeEvents()
+    }
+
+    func savePledgeEvents(from member: PatreonMember) async throws {
+        guard let dataStore = dataStore else { return }
+
+        // Parse pledge_history from API response if available
+        // For now, this is a stub - actual implementation depends on API response structure
+        // The API includes pledge_history as a relationship on Member
     }
 
     // MARK: - Selected Post Details

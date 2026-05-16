@@ -441,6 +441,7 @@ private func makePreviewDependencies() -> (workspace: WorkspaceModel, router: Ap
         patreonClient: nil
     )
     let versionSvc = ContentVersioningService(contentRepository: contentRepo)
+    let comfyUIClient = ComfyUIClient()
     let deps = AppDependencies(
         agentRepository: agentRepo,
         taskRepository: taskRepo,
@@ -452,7 +453,9 @@ private func makePreviewDependencies() -> (workspace: WorkspaceModel, router: Ap
         taskTypeRepository: taskTypeRepo,
         deviantArtClient: nil,
         patreonClient: nil,
+        comfyUIClient: comfyUIClient,
         settingsService: settingsSvc,
+        comfyUIExecutionRepository: ComfyUIExecutionRepositoryImpl(dbManager: db),
         approvalService: approvalSvc,
         versioningService: versionSvc,
         publicationService: pubSvc,
@@ -489,7 +492,8 @@ private func makePreviewDependencies() -> (workspace: WorkspaceModel, router: Ap
         aiClient: AIClient(),
         contextExtractor: ContextExtractor(),
         chatHistoryStore: ChatHistoryStore(databaseManager: db),
-        connectivityService: ConnectivityService()
+        connectivityService: ConnectivityService(),
+        databaseManager: db
     )
     return (WorkspaceModel(dependencies: deps), router)
 }

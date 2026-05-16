@@ -6,6 +6,7 @@ struct PatreonMemberDetailPanel: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: AppTheme.Spacing.large) {
+                // Header
                 VStack(alignment: .leading, spacing: AppTheme.Spacing.small) {
                     AppText(member.attributes?.fullName ?? "Patron", style: .title2)
 
@@ -17,12 +18,42 @@ struct PatreonMemberDetailPanel: View {
                     }
                 }
 
+                Divider()
+
+                // Membership Info
                 VStack(alignment: .leading, spacing: AppTheme.Spacing.medium) {
+                    AppText("Membership", style: .title3)
+
                     if let email = member.attributes?.email {
                         LabeledContent("Email", value: email)
                     }
 
-                    if let lifetime = member.attributes?.lifetimeSupportCents {
+                    if let pledgeStart = member.attributes?.pledgeRelationshipStart {
+                        LabeledContent("Member Since", value: formatDate(pledgeStart))
+                    }
+
+                    if let status = member.attributes?.patronStatus {
+                        LabeledContent("Status", value: status)
+                    }
+
+                    if let isFollower = member.attributes?.isFollower {
+                        LabeledContent("Follower", value: isFollower ? "Yes" : "No")
+                    }
+
+                    if let isFreeTrial = member.attributes?.isFreeTrial {
+                        LabeledContent("Free Trial", value: isFreeTrial ? "Yes" : "No")
+                    }
+
+                    if let isGifted = member.attributes?.isGifted {
+                        LabeledContent("Gifted Membership", value: isGifted ? "Yes" : "No")
+                    }
+                }
+
+                // Financial Info
+                VStack(alignment: .leading, spacing: AppTheme.Spacing.medium) {
+                    AppText("Financial", style: .title3)
+
+                    if let lifetime = member.attributes?.campaignLifetimeSupportCents {
                         LabeledContent("Lifetime Support", value: PatreonFormatters.formatCents(lifetime))
                     }
 
@@ -30,8 +61,37 @@ struct PatreonMemberDetailPanel: View {
                         LabeledContent("Current Pledge", value: PatreonFormatters.formatCents(currentlyEntitled))
                     }
 
+                    if let willPay = member.attributes?.willPayAmountCents {
+                        LabeledContent("Next Payment", value: PatreonFormatters.formatCents(willPay))
+                    }
+                }
+
+                // Payment History
+                VStack(alignment: .leading, spacing: AppTheme.Spacing.medium) {
+                    AppText("Payment History", style: .title3)
+
+                    if let lastChargeDate = member.attributes?.lastChargeDate {
+                        LabeledContent("Last Charge Date", value: formatDate(lastChargeDate))
+                    }
+
                     if let lastChargeStatus = member.attributes?.lastChargeStatus {
-                        LabeledContent("Last Charge", value: lastChargeStatus)
+                        LabeledContent("Last Charge Status", value: lastChargeStatus)
+                    }
+
+                    if let nextChargeDate = member.attributes?.nextChargeDate {
+                        LabeledContent("Next Charge Date", value: formatDate(nextChargeDate))
+                    }
+
+                    if let pledgeCadence = member.attributes?.pledgeCadence {
+                        LabeledContent("Charge Cadence", value: "\(pledgeCadence) months")
+                    }
+                }
+
+                // Notes
+                if let note = member.attributes?.note {
+                    VStack(alignment: .leading, spacing: AppTheme.Spacing.small) {
+                        AppText("Notes", style: .title3)
+                        AppText(note, style: .body, color: AppTheme.ColorToken.textSecondary)
                     }
                 }
             }
@@ -39,6 +99,10 @@ struct PatreonMemberDetailPanel: View {
             .appScreenPadding()
         }
         .background(AppTheme.ColorToken.chromeBackground)
+    }
+
+    private func formatDate(_ isoString: String) -> String {
+        PatreonFormatters.formatDate(isoString)
     }
 
     private func statusColor(for status: String) -> Color {
@@ -82,7 +146,13 @@ struct PatreonMemberDetailPanel: View {
             isFollower: nil,
             lastChargeDate: nil,
             pledgeRelationshipStart: nil,
-            note: nil
+            note: nil,
+            campaignLifetimeSupportCents: nil,
+            willPayAmountCents: nil,
+            nextChargeDate: nil,
+            pledgeCadence: nil,
+            isFreeTrial: nil,
+            isGifted: nil
         ),
         relationships: nil
     )
@@ -104,7 +174,13 @@ struct PatreonMemberDetailPanel: View {
             isFollower: true,
             lastChargeDate: "2026-04-26T00:00:00.000Z",
             pledgeRelationshipStart: "2020-01-01T00:00:00.000Z",
-            note: "VIP supporter since day one!"
+            note: "VIP supporter since day one!",
+            campaignLifetimeSupportCents: 999999,
+            willPayAmountCents: 5000,
+            nextChargeDate: "2026-05-26T00:00:00.000Z",
+            pledgeCadence: 1,
+            isFreeTrial: false,
+            isGifted: false
         ),
         relationships: nil
     )
@@ -126,7 +202,13 @@ struct PatreonMemberDetailPanel: View {
             isFollower: true,
             lastChargeDate: "2026-04-26T00:00:00.000Z",
             pledgeRelationshipStart: "2025-01-01T00:00:00.000Z",
-            note: nil
+            note: nil,
+            campaignLifetimeSupportCents: 10000,
+            willPayAmountCents: 500,
+            nextChargeDate: "2026-05-26T00:00:00.000Z",
+            pledgeCadence: 1,
+            isFreeTrial: false,
+            isGifted: false
         ),
         relationships: nil
     )
@@ -148,7 +230,13 @@ struct PatreonMemberDetailPanel: View {
             isFollower: true,
             lastChargeDate: nil,
             pledgeRelationshipStart: nil,
-            note: nil
+            note: nil,
+            campaignLifetimeSupportCents: nil,
+            willPayAmountCents: nil,
+            nextChargeDate: nil,
+            pledgeCadence: nil,
+            isFreeTrial: nil,
+            isGifted: nil
         ),
         relationships: nil
     )

@@ -101,3 +101,14 @@ public protocol TaskTypeRepository: Sendable {
     func getByName(name: String) async throws -> TaskTypeRecord?
     func listAll() async throws -> [TaskTypeRecord]
 }
+
+/// Repository for managing ComfyUI executions
+public protocol ComfyUIExecutionRepository: Sendable {
+    func create(execution: ComfyUIExecutionRecord) async throws -> ComfyUIExecutionRecord
+    func update(execution: ComfyUIExecutionRecord) async throws -> ComfyUIExecutionRecord
+    func getById(id: String) async throws -> ComfyUIExecutionRecord?
+    func listByWorkflow(workflowID: String, limit: Int) async throws -> [ComfyUIExecutionRecord]
+    func listRecent(limit: Int) async throws -> [ComfyUIExecutionRecord]
+    func listByStatus(status: String, limit: Int) async throws -> [ComfyUIExecutionRecord]
+    func delete(id: String) async throws
+}

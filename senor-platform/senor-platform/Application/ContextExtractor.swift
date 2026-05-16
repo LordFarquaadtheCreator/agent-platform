@@ -39,6 +39,9 @@ public final class ContextExtractor {
         case .patreon:
             context["patreon"] = extractPatreon(workspace.patreonViewModel, router: router)
 
+        case .comfyUI:
+            context["comfyUI"] = extractComfyUI(workspace.comfyUIViewModel)
+
         case .tools:
             context["tools"] = extractTools()
 
@@ -333,6 +336,15 @@ public final class ContextExtractor {
         ]
 
         return result
+    }
+
+    private func extractComfyUI(_ viewModel: ComfyUIViewModel) -> [String: Any] {
+        [
+            "connected": viewModel.isConnected,
+            "workflows": viewModel.workflows.map { $0.name },
+            "executions": viewModel.executions.count,
+            "queueRemaining": viewModel.queueStatus.pendingItems.count + (viewModel.queueStatus.runningItem != nil ? 1 : 0)
+        ]
     }
 
     private func extractTools() -> [String: Any] {
