@@ -330,6 +330,83 @@ public final class HTTPClient {
         return APIResponse(data: decodedData, statusCode: httpResponse.statusCode, headers: headers)
     }
 
+    /// Multipart form part for file uploads
+    public enum MultipartPart: Sendable {
+        case text(name: String, value: String)
+        case file(name: String, filename: String, data: Data, mimeType: String)
+    }
+
+    /// Perform multipart request with automatic retry
+    public func requestMultipart<T: Decodable>(
+        method: HTTPMethod,
+        path: String,
+        parts: [MultipartPart],
+        authToken: AuthToken?,
+        decodeAs type: T.Type
+    ) async throws -> APIResponse<T> {
+        let url = try buildURL(path: path, queryItems: nil)
+        let boundary = "Boundary-\(UUID().uuidString)"
+        var body = Data()
+
+        for part in parts {
+            body.append(Data("--\(boundary)\r\n".utf8))
+            switch part {
+            case .text(let name, let value):
+                body.append(Data("Content-Disposition: form-data; name=\"\(name)\"\r\n\r\n".utf8))
+                body.append(Data("\(value)\r\n".utf8))
+            case .file(let name, let filename, let data, let mimeType):
+                body.append(Data("Content-Disposition: form-data; name=\"\(name)\"; filename=\"\(filename)\"\r\n".utf8))
+                body.append(Data("Content-Type: \(mimeType)\r\n\r\n".utf8))
+                body.append(data)
+                body.append(Data("\r\n".utf8))
+            }
+        }
+        body.append(Data("--\(boundary)--\r\n".utf8))
+
+        var request = URLRequest(url: url)
+        request.httpMethod = method.rawValue
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.setValue("SenorPlatform/1.0", forHTTPHeaderField: "User-Agent")
+        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+        request.httpBody = body
+
+        if let authToken = authToken {
+            request.setValue(authToken.authorizationHeader, forHTTPHeaderField: "Authorization")
+        }
+
+        let (data, response) = try await urlSession.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw AppError.apiRequestFailed(path, NSError(domain: "HTTPClient", code: -1))
+        }
+
+        if (400...599).contains(httpResponse.statusCode) {
+            throw AppError.apiRequestFailed(path, parseError(data: data, statusCode: httpResponse.statusCode))
+        }
+
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        let decodedData = try decoder.decode(T.self, from: data)
+
+        var headers: [String: String] = [:]
+        httpResponse.allHeaderFields.forEach { key, value in
+            if let key = key as? String, let value = value as? String {
+                headers[key] = value
+            }
+        }
+
+        return APIResponse(data: decodedData, statusCode: httpResponse.statusCode, headers: headers)
+    }
+
+    /// Build form-urlencoded body from parameters
+    public static func formURLEncodedBody(from parameters: [String: String]) -> Data? {
+        var components = URLComponents()
+        components.queryItems = parameters
+            .sorted { $0.key < $1.key }
+            .map { URLQueryItem(name: $0.key, value: $0.value) }
+        return components.percentEncodedQuery?.data(using: .utf8)
+    }
+
     /// Parse error response
     private func parseError(data: Data, statusCode: Int) -> APIError {
         // Try to parse error details from response
@@ -357,6 +434,32 @@ public final class HTTPClient {
             return seconds
         }
         return 60.0 // Default 1 minute
+    }
+}
+
+// MARK: - Centralized Error Mapping
+
+extension HTTPClient.APIError {
+    /// Map HTTP status code and API error to AppError
+    public func asAppError(endpoint: String) -> AppError {
+        switch statusCode {
+        case 401:
+            return .apiAuthenticationFailed(endpoint)
+        case 403:
+            return .apiAuthenticationFailed("\(endpoint): forbidden")
+        case 404:
+            return .apiResourceNotFound(endpoint)
+        case 429:
+            // Extract retry-after from message or default to 60
+            let retryAfter = Int(message.components(separatedBy: CharacterSet.decimalDigits.inverted).joined()) ?? 60
+            return .apiRateLimited(retryAfter)
+        case 400...499:
+            return .apiRequestFailed(endpoint, self)
+        case 500...599:
+            return .apiRequestFailed(endpoint, self)
+        default:
+            return .apiRequestFailed(endpoint, self)
+        }
     }
 }
 
@@ -548,7 +651,7 @@ public actor OAuthHelper {
         var request = URLRequest(url: tokenURL)
         request.httpMethod = "POST"
         request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
-        request.httpBody = formURLEncodedData(from: body)
+        request.httpBody = HTTPClient.formURLEncodedBody(from: body)
 
         let (data, _) = try await URLSession.shared.data(for: request)
         let response = try JSONDecoder().decode(OAuthTokenPayload.self, from: data)
@@ -568,7 +671,7 @@ public actor OAuthHelper {
         var request = URLRequest(url: tokenURL)
         request.httpMethod = "POST"
         request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
-        request.httpBody = formURLEncodedData(from: body)
+        request.httpBody = HTTPClient.formURLEncodedBody(from: body)
 
         let (data, _) = try await URLSession.shared.data(for: request)
         let response = try JSONDecoder().decode(OAuthTokenPayload.self, from: data)
@@ -582,14 +685,6 @@ nonisolated private struct OAuthTokenPayload: Decodable, Sendable {
     let refresh_token: String?
     let expires_in: Int?
     let token_type: String
-}
-
-nonisolated private func formURLEncodedData(from parameters: [String: String]) -> Data? {
-    var components = URLComponents()
-    components.queryItems = parameters
-        .sorted { $0.key < $1.key }
-        .map { URLQueryItem(name: $0.key, value: $0.value) }
-    return components.percentEncodedQuery?.data(using: .utf8)
 }
 
 nonisolated private func makeAuthToken(

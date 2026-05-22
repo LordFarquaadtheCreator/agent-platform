@@ -66,8 +66,10 @@ public final actor PublicationService {
             // Step 1: Submit to stash (simplified - assumes file content available)
             // In practice, the generated content would include file paths
             let stashTitle = title ?? content.title
+            // PublicationService does not yet handle file content for DeviantArt image uploads
             let stashItem = try await client.stashSubmit(
                 filename: "\(contentId).png",
+                fileData: nil,
                 title: stashTitle,
                 artistComments: nil,
                 tags: tags,
@@ -76,7 +78,7 @@ public final actor PublicationService {
 
             // Step 2: Publish from stash
             let publishResult = try await client.stashPublish(
-                stashId: stashItem.itemid,
+                itemId: stashItem.itemid,
                 title: stashTitle,
                 category: category,
                 isMature: isMature,
@@ -114,85 +116,6 @@ public final actor PublicationService {
         }
     }
 
-    /// Publish approved content to Patreon
-    public func publishToPatreon(
-        contentId: String,
-        campaignId: String,
-        title: String? = nil,
-        isPaid: Bool? = nil,
-        isPublic: Bool? = nil,
-        tiers: [String]? = nil
-    ) async throws -> PublicationTargetRecord {
-        guard let client = patreonClient else {
-            throw AppError.publicationFailed("Patreon client not configured")
-        }
-
-        guard let content = try await contentRepository.getById(id: contentId) else {
-            throw AppError.publicationFailed("Content not found: \(contentId)")
-        }
-
-        // Parse content JSON for description
-        let contentJson = content.generatedContentJson
-        let description = extractDescription(from: contentJson)
-
-        // Get or create publication target
-        let targets = try await publicationRepository.listByContent(contentId: contentId)
-        var target = targets.first { $0.platform == "patreon" }
-
-        if target == nil {
-            target = try await publicationRepository.create(target: PublicationTargetRecord(
-                generatedContentId: contentId,
-                platform: "patreon",
-                state: .publishing
-            ))
-        }
-
-        guard var mutableTarget = target else {
-            throw AppError.publicationFailed("Failed to create publication target")
-        }
-
-        do {
-            // Create post on Patreon
-            let postTitle = title ?? content.title
-            let post = try await client.createPost(
-                campaignId: campaignId,
-                title: postTitle,
-                content: description,
-                isPaid: isPaid,
-                isPublic: isPublic,
-                tiers: tiers,
-                publishAt: nil
-            )
-
-            // Get public URL
-            let publicURL = try await client.getPublicURL(for: post.id)
-
-            // Update target with success
-            mutableTarget.state = .published
-            mutableTarget.remotePostId = post.id
-            mutableTarget.remoteUrl = publicURL
-
-            let saved = try await publicationRepository.update(target: mutableTarget)
-
-            // Invalidate cache
-            try? await cacheService.invalidate(
-                platform: "patreon",
-                cacheKey: CacheKey.post(campaignId: campaignId, postId: post.id).stringValue
-            )
-
-            logger.info("Published to Patreon: \(contentId) -> \(publicURL)")
-
-            return saved
-        } catch {
-            // Update target with failure
-            mutableTarget.state = .failed
-            mutableTarget.errorMessage = error.localizedDescription
-            _ = try? await publicationRepository.update(target: mutableTarget)
-
-            throw AppError.publicationFailed("Patreon publish failed: \(error.localizedDescription)")
-        }
-    }
-
     /// Schedule a publication for later
     public func schedulePublication(
         contentId: String,
@@ -227,10 +150,6 @@ public final actor PublicationService {
                 switch target.platform {
                 case "deviantart":
                     _ = try await publishToDeviantArt(contentId: target.generatedContentId)
-
-                case "patreon":
-                    // Need campaign ID - would be stored in config or passed
-                    logger.warning("Scheduled Patreon publish needs campaign ID: \(target.id)")
 
                 default:
                     break

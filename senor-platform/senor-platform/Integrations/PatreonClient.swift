@@ -149,8 +149,6 @@ public struct PatreonMember: Codable, Identifiable {
         public let lastChargeStatus: String?
         public let lifetimeSupportCents: Int?
         public let currentlyEntitledAmountCents: Int?
-        // NEW FIELDS
-        public let isFollower: Bool?
         public let lastChargeDate: String?
         public let pledgeRelationshipStart: String?
         public let note: String?
@@ -168,8 +166,6 @@ public struct PatreonMember: Codable, Identifiable {
             case lastChargeStatus = "last_charge_status"
             case lifetimeSupportCents = "lifetime_support_cents"
             case currentlyEntitledAmountCents = "currently_entitled_amount_cents"
-            // NEW
-            case isFollower = "is_follower"
             case lastChargeDate = "last_charge_date"
             case pledgeRelationshipStart = "pledge_relationship_start"
             case note
@@ -249,6 +245,12 @@ public struct PatreonIncludedAttributes: Codable {
     public let vanity: String?
     public let about: String?
     public let created: String?
+    // Pledge event fields
+    public let type: String?
+    public let date: String?
+    public let paymentStatus: String?
+    public let currency: String?
+    public let tierId: String?
 
     enum CodingKeys: String, CodingKey {
         case title
@@ -279,6 +281,11 @@ public struct PatreonIncludedAttributes: Codable {
         case vanity
         case about
         case created
+        case type
+        case date
+        case paymentStatus = "payment_status"
+        case currency
+        case tierId = "tier_id"
     }
 }
 
@@ -475,7 +482,6 @@ public final class PatreonClient {
         static func campaignPosts(campaignId: String) -> String { "\(base)/campaigns/\(campaignId)/posts" }
         static func campaignTiers(campaignId: String) -> String { "\(base)/campaigns/\(campaignId)/tiers" }
         static func post(postId: String) -> String { "\(base)/posts/\(postId)" }
-        static let posts = "\(base)/posts"
         static func member(memberId: String) -> String { "\(base)/members/\(memberId)" }
         static let webhooks = "\(base)/webhooks"
         static func webhook(webhookId: String) -> String { "\(base)/webhooks/\(webhookId)" }
@@ -527,7 +533,6 @@ public final class PatreonClient {
             "campaigns",
             "campaigns.members",
             "campaigns.members.address",
-            "w:campaigns.post",
             "w:campaigns.webhook"
         ],
         state: String = UUID().uuidString
@@ -722,7 +727,8 @@ public final class PatreonClient {
     public func getCampaignPosts(
         campaignId: String,
         includeFields: [String] = ["title", "content", "is_paid", "is_public", "published_at", "url"],
-        cursor: String? = nil
+        cursor: String? = nil,
+        pageCount: Int = 25
     ) async throws -> PostsResponse {
         try ensureAuthenticated()
 
@@ -735,6 +741,7 @@ public final class PatreonClient {
         if let cursor = cursor {
             queryItems.append(URLQueryItem(name: "page[cursor]", value: cursor))
         }
+        queryItems.append(URLQueryItem(name: "page[count]", value: String(pageCount)))
 
         let response = try await httpClient.request(
             method: .get,
@@ -770,117 +777,6 @@ public final class PatreonClient {
         return response.data
     }
 
-    /// Create a new post
-    public func createPost(
-        campaignId: String,
-        title: String,
-        content: String,
-        isPaid: Bool? = nil,
-        isPublic: Bool? = nil,
-        tiers: [String]? = nil,
-        publishAt: Date? = nil
-    ) async throws -> Post {
-        try ensureAuthenticated()
-
-        var attributes: [String: Any] = [
-            "title": title,
-            "content": content
-        ]
-
-        if let isPaid = isPaid {
-            attributes["is_paid"] = isPaid
-        }
-        if let isPublic = isPublic {
-            attributes["is_public"] = isPublic
-        }
-
-        var relationships: [String: Any] = [
-            "campaign": [
-                "data": [
-                    "id": campaignId,
-                    "type": "campaign"
-                ]
-            ]
-        ]
-
-        if let tiers = tiers, !tiers.isEmpty {
-            relationships["tiers"] = [
-                "data": tiers.map { ["id": $0, "type": "tier"] }
-            ]
-        }
-
-        let body: [String: Any] = [
-            "data": [
-                "type": "post",
-                "attributes": attributes,
-                "relationships": relationships
-            ]
-        ]
-
-        // Convert body to Data for JSON:API request
-        let bodyData = try JSONSerialization.data(withJSONObject: body)
-
-        // Use injected HTTPClient for consistency and retry support
-        let response = try await httpClient.request(
-            method: .post,
-            path: Endpoints.posts,
-            bodyData: bodyData,
-            contentType: "application/vnd.api+json",
-            authToken: authToken,
-            decodeAs: Post.self
-        )
-
-        return response.data
-    }
-
-    /// Update an existing post
-    public func updatePost(
-        postId: String,
-        title: String? = nil,
-        content: String? = nil,
-        isPaid: Bool? = nil,
-        isPublic: Bool? = nil
-    ) async throws -> Post {
-        try ensureAuthenticated()
-
-        var attributes: [String: Any] = [:]
-
-        if let title = title {
-            attributes["title"] = title
-        }
-        if let content = content {
-            attributes["content"] = content
-        }
-        if let isPaid = isPaid {
-            attributes["is_paid"] = isPaid
-        }
-        if let isPublic = isPublic {
-            attributes["is_public"] = isPublic
-        }
-
-        let body: [String: Any] = [
-            "data": [
-                "type": "post",
-                "id": postId,
-                "attributes": attributes
-            ]
-        ]
-
-        // Convert body to Data for JSON:API request
-        let bodyData = try JSONSerialization.data(withJSONObject: body)
-
-        // Use injected HTTPClient for consistency and retry support
-        let response = try await httpClient.request(
-            method: .patch,
-            path: Endpoints.post(postId: postId),
-            bodyData: bodyData,
-            contentType: "application/vnd.api+json",
-            authToken: authToken,
-            decodeAs: Post.self
-        )
-
-        return response.data
-    }
 
     // MARK: - Member Operations
 
@@ -890,16 +786,18 @@ public final class PatreonClient {
         includeFields: [String] = [
             "full_name", "email", "patron_status",
             "last_charge_status", "lifetime_support_cents",
-            "currently_entitled_amount_cents", "is_follower",
+            "currently_entitled_amount_cents",
             "last_charge_date", "pledge_relationship_start",
             "note", "currently_entitled_tiers",
-            "unread_count", "access_expires_at",
-            "pledge_cadence", "lifetime_support_cents"
+            "pledge_cadence", "will_pay_amount_cents",
+            "campaign_lifetime_support_cents",
+            "next_charge_date", "is_free_trial", "is_gifted"
         ],
         include: [String] = [
             "currently_entitled_tiers", "address", "user", "pledge_history"
         ],
-        cursor: String? = nil
+        cursor: String? = nil,
+        pageCount: Int = 100
     ) async throws -> MembersResponse {
         try ensureAuthenticated()
 
@@ -913,6 +811,7 @@ public final class PatreonClient {
         if let cursor = cursor {
             queryItems.append(URLQueryItem(name: "page[cursor]", value: cursor))
         }
+        queryItems.append(URLQueryItem(name: "page[count]", value: String(pageCount)))
 
         let response = try await httpClient.request(
             method: .get,
@@ -925,15 +824,56 @@ public final class PatreonClient {
         return response.data
     }
 
+    /// Get pledge history for a specific member
+    public func getPledgeHistory(
+        memberId: String,
+        includeFields: [String] = [
+            "type", "date", "payment_status", "amount_cents", "currency", "tier_id"
+        ]
+    ) async throws -> [PatreonPledgeEvent] {
+        try ensureAuthenticated()
+
+        let fieldsParam = includeFields.joined(separator: ",")
+        let queryItems: [URLQueryItem] = [
+            URLQueryItem(name: "fields[pledge-event]", value: fieldsParam),
+            URLQueryItem(name: "include", value: "pledge_history")
+        ]
+
+        let response = try await httpClient.request(
+            method: .get,
+            path: Endpoints.member(memberId: memberId),
+            queryItems: queryItems,
+            authToken: authToken,
+            decodeAs: MembersResponse.self
+        )
+
+        return response.data.included?.filter { $0.type == "pledge-event" }.map { resource in
+            PatreonPledgeEvent(
+                id: resource.id,
+                type: resource.type,
+                attributes: .init(
+                    type: resource.attributes?.type,
+                    date: resource.attributes?.date,
+                    paymentStatus: resource.attributes?.paymentStatus,
+                    amountCents: resource.attributes?.amountCents,
+                    currency: resource.attributes?.currency,
+                    tierId: resource.attributes?.tierId
+                )
+            )
+        } ?? []
+    }
+
     /// Get a specific member by ID
     public func getMember(
         memberId: String,
         includeFields: [String] = [
             "full_name", "email", "patron_status",
             "last_charge_status", "lifetime_support_cents",
-            "currently_entitled_amount_cents", "is_follower",
+            "currently_entitled_amount_cents",
             "last_charge_date", "pledge_relationship_start",
-            "note"
+            "note", "pledge_cadence", "will_pay_amount_cents",
+            "campaign_lifetime_support_cents",
+            "next_charge_date", "is_free_trial", "is_gifted"
         ],
         include: [String] = [
             "currently_entitled_tiers", "address", "user", "pledge_history"

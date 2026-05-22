@@ -18,20 +18,16 @@ private final class MockHTTPClient: ToolHTTPClient, @unchecked Sendable {
 }
 
 private struct MockDeviantArtClient: AKDeviantArtClient {
-    func stashSubmit(filename: String, title: String, tags: [String]?) async throws -> AKStashItem {
+    func stashSubmit(filename: String, fileData: Data?, title: String, tags: [String]?) async throws -> AKStashItem {
         AKStashItem(itemid: "stash", title: title)
     }
 
-    func stashPublish(stashId: String, title: String, category: String?, isMature: Bool) async throws -> AKPublishResult {
+    func stashPublish(itemId: String, title: String, category: String?, isMature: Bool) async throws -> AKPublishResult {
         AKPublishResult(deviationid: "deviation", url: "https://example.com")
     }
 }
 
 private struct MockPatreonClient: AKPatreonClient {
-    func createPost(campaignId: String, title: String, content: String, isPaid: Bool, isPublic: Bool, tiers: [String]?) async throws -> AKPost {
-        AKPost(id: "post")
-    }
-
     func getPublicURL(for postId: String) async throws -> String {
         "https://example.com/post"
     }

@@ -70,6 +70,7 @@ public protocol SettingsServiceProtocol: Sendable {
 public protocol DeviantArtServiceProtocol: Sendable {
     func stashSubmit(
         filename: String,
+        fileData: Data?,
         title: String?,
         artistComments: String?,
         tags: [String]?,
@@ -77,7 +78,7 @@ public protocol DeviantArtServiceProtocol: Sendable {
     ) async throws -> DeviantArtClient.StashItem
     // swiftlint:disable:next function_parameter_count
     func stashPublish(
-        stashId: String,
+        itemId: String,
         title: String,
         category: String?,
         isMature: Bool,
@@ -91,15 +92,6 @@ public protocol DeviantArtServiceProtocol: Sendable {
 
 /// Protocol for Patreon operations - enables mocking in tests
 public protocol PatreonServiceProtocol {
-    func createPost(
-        campaignId: String,
-        title: String,
-        content: String,
-        isPaid: Bool?,
-        isPublic: Bool?,
-        tiers: [String]?,
-        publishAt: Date?
-    ) async throws -> PatreonClient.Post
     func getPublicURL(for postId: String) async throws -> String
     func getPost(postId: String, includeFields: [String]) async throws -> PatreonClient.Post
 }

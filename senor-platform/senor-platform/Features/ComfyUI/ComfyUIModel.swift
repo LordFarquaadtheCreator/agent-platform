@@ -24,6 +24,7 @@ public final class ComfyUIViewModel: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     private var objectInfo: [String: ComfyUIObjectInfoNode] = [:]
     private var hasLoaded = false
+    private let clientId = UUID().uuidString
 
     public var isOffline: Bool {
         connectivityService?.isOnline == false
@@ -211,7 +212,7 @@ public final class ComfyUIViewModel: ObservableObject {
         }
 
         do {
-            let response = try await client.queuePrompt(workflowJSON: workflowJSON)
+            let response = try await client.queuePrompt(workflowJSON: workflowJSON, clientId: clientId)
 
             let outputDir = outputDirectory ?? defaultOutputDirectory()
             let inputsJSON = try JSONSerialization.data(withJSONObject: workflowJSON)
@@ -337,7 +338,7 @@ public final class ComfyUIViewModel: ObservableObject {
 
     private func connectWebSocket() async {
         do {
-            try await client.connectWebSocket { [weak self] message in
+            try await client.connectWebSocket(clientId: clientId) { [weak self] message in
                 Task { @MainActor [weak self] in
                     await self?.handleWebSocketMessage(message)
                 }

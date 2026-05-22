@@ -24,7 +24,7 @@ actor MockDeviantArtService: DeviantArtServiceProtocol, AKDeviantArtClient {
         shouldFailStashPublish = value
     }
 
-    func stashSubmit(filename: String, title: String?, artistComments: String?, tags: [String]?, originalUrl: String?) async throws -> DeviantArtClient.StashItem {
+    func stashSubmit(filename: String, fileData: Data?, title: String?, artistComments: String?, tags: [String]?, originalUrl: String?) async throws -> DeviantArtClient.StashItem {
         stashSubmitCallCount += 1
 
         if shouldFailStashSubmit {
@@ -46,7 +46,7 @@ actor MockDeviantArtService: DeviantArtServiceProtocol, AKDeviantArtClient {
         return item
     }
 
-    func stashPublish(stashId: String, title: String, category: String?, isMature: Bool, matureLevel: String?, allowsComments: Bool, galleryIds: [String]?, licenseOptions: [String: String]?) async throws -> DeviantArtClient.StashPublishResponse {
+    func stashPublish(itemId: String, title: String, category: String?, isMature: Bool, matureLevel: String?, allowsComments: Bool, galleryIds: [String]?, licenseOptions: [String: String]?) async throws -> DeviantArtClient.StashPublishResponse {
         stashPublishCallCount += 1
 
         if shouldFailStashPublish {
@@ -55,10 +55,10 @@ actor MockDeviantArtService: DeviantArtServiceProtocol, AKDeviantArtClient {
 
         let response = DeviantArtClient.StashPublishResponse(
             status: "published",
-            deviationid: "dev-\(stashId)",
+            deviationid: "dev-\(itemId)",
             url: "https://www.deviantart.com/test/art/\(title.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? "test")-123"
         )
-        publishedItems[stashId] = response
+        publishedItems[itemId] = response
         return response
     }
 
@@ -100,9 +100,10 @@ actor MockDeviantArtService: DeviantArtServiceProtocol, AKDeviantArtClient {
 
     // MARK: - AKDeviantArtClient conformance
 
-    func stashSubmit(filename: String, title: String, tags: [String]?) async throws -> AKStashItem {
+    func stashSubmit(filename: String, fileData: Data?, title: String, tags: [String]?) async throws -> AKStashItem {
         let item = try await stashSubmit(
             filename: filename,
+            fileData: fileData,
             title: title,
             artistComments: nil,
             tags: tags,
@@ -111,9 +112,9 @@ actor MockDeviantArtService: DeviantArtServiceProtocol, AKDeviantArtClient {
         return AKStashItem(itemid: item.itemid, title: item.title)
     }
 
-    func stashPublish(stashId: String, title: String, category: String?, isMature: Bool) async throws -> AKPublishResult {
+    func stashPublish(itemId: String, title: String, category: String?, isMature: Bool) async throws -> AKPublishResult {
         let result = try await stashPublish(
-            stashId: stashId,
+            itemId: itemId,
             title: title,
             category: category,
             isMature: isMature,
@@ -130,17 +131,11 @@ actor MockPatreonService: PatreonServiceProtocol, AKPatreonClient {
     var posts: [String: PatreonClient.Post] = [:]
     var postURLs: [String: String] = [:]
 
-    var createPostCallCount = 0
     var getPublicURLCallCount = 0
     var getPostCallCount = 0
 
-    var shouldFailCreatePost = false
     var shouldFailGetPublicURL = false
     var shouldFailGetPost = false
-
-    func setShouldFailCreatePost(_ value: Bool) {
-        shouldFailCreatePost = value
-    }
 
     func setShouldFailGetPublicURL(_ value: Bool) {
         shouldFailGetPublicURL = value
@@ -150,56 +145,20 @@ actor MockPatreonService: PatreonServiceProtocol, AKPatreonClient {
         shouldFailGetPost = value
     }
 
-    func createPost(campaignId: String, title: String, content: String, isPaid: Bool?, isPublic: Bool?, tiers: [String]?, publishAt: Date?) async throws -> PatreonClient.Post {
-        createPostCallCount += 1
-
-        if shouldFailCreatePost {
-            throw AppError.apiRequestFailed("createPost", NSError(domain: "Mock", code: -1))
-        }
-
-        let post = PatreonClient.Post(
-            id: "post-\(createPostCallCount)",
-            type: "post",
-            attributes: PatreonClient.Post.PatreonPostAttributes(
-                title: title,
-                content: content,
-                url: "https://www.patreon.com/posts/post-\(createPostCallCount)",
-                isPaid: isPaid,
-                isPublic: isPublic,
-                publishedAt: nil
-            ),
-            relationships: nil
-        )
-        posts[post.id] = post
-        return post
-    }
-
     func getPublicURL(for postId: String) async throws -> String {
         getPublicURLCallCount += 1
-
         if shouldFailGetPublicURL {
             throw AppError.apiRequestFailed("getPublicURL", NSError(domain: "Mock", code: -1))
         }
-
-        if let url = postURLs[postId] {
-            return url
-        }
-
-        return "https://www.patreon.com/posts/\(postId)"
+        return postURLs[postId] ?? "https://www.patreon.com/posts/\(postId)"
     }
 
     func getPost(postId: String, includeFields: [String]) async throws -> PatreonClient.Post {
         getPostCallCount += 1
-
         if shouldFailGetPost {
             throw AppError.apiRequestFailed("getPost", NSError(domain: "Mock", code: -1))
         }
-
-        if let post = posts[postId] {
-            return post
-        }
-
-        return PatreonClient.Post(
+        return posts[postId] ?? PatreonClient.Post(
             id: postId,
             type: "post",
             attributes: PatreonClient.Post.PatreonPostAttributes(
@@ -214,28 +173,12 @@ actor MockPatreonService: PatreonServiceProtocol, AKPatreonClient {
         )
     }
 
-    // Test helpers
     func setPost(_ post: PatreonClient.Post, for id: String) {
         posts[id] = post
     }
 
     func setPublicURL(_ url: String, for postId: String) {
         postURLs[postId] = url
-    }
-
-    // MARK: - AKPatreonClient conformance
-
-    func createPost(campaignId: String, title: String, content: String, isPaid: Bool, isPublic: Bool, tiers: [String]?) async throws -> AKPost {
-        let post = try await createPost(
-            campaignId: campaignId,
-            title: title,
-            content: content,
-            isPaid: isPaid,
-            isPublic: isPublic,
-            tiers: tiers,
-            publishAt: nil
-        )
-        return AKPost(id: post.id)
     }
 }
 
@@ -511,70 +454,6 @@ final class PublicationServiceTests: XCTestCase {
             XCTFail("Expected error to be thrown")
         } catch {
             XCTAssertTrue(error.localizedDescription.contains("Content not found"))
-        }
-    }
-
-    // MARK: - Patreon Tests
-
-    func testPublishToPatreon_CreatesTargetAndPublishes() async throws {
-        // Arrange
-        let content = GeneratedContentRecord(
-            taskRunId: "task-run-4",
-            agentId: "agent-4",
-            title: "Test Post",
-            generatedContentJson: "{\"description\": \"A test post\"}"
-        )
-        _ = try await contentRepository.create(content: content)
-
-        // Act
-        let result = try await publicationService.publishToPatreon(
-            contentId: content.id,
-            campaignId: "campaign-123",
-            title: "Published Post",
-            isPaid: true,
-            isPublic: false,
-            tiers: ["tier-1", "tier-2"]
-        )
-
-        // Assert
-        XCTAssertEqual(result.platform, "patreon")
-        XCTAssertEqual(result.state, .published)
-        XCTAssertNotNil(result.remotePostId)
-        XCTAssertNotNil(result.remoteUrl)
-
-        let patreonCalls = await patreonService.createPostCallCount
-        XCTAssertEqual(patreonCalls, 1)
-
-        let urlCalls = await patreonService.getPublicURLCallCount
-        XCTAssertEqual(urlCalls, 1)
-    }
-
-    func testPublishToPatreon_WithoutClient_ThrowsError() async {
-        // Arrange - service without Patreon client
-        let service = PublicationService(
-            approvalQueueRepository: approvalRepository,
-            publicationRepository: publicationRepository,
-            contentRepository: contentRepository,
-            cacheService: cacheService,
-            settingsService: settingsService,
-            deviantArtClient: deviantArtService,
-            patreonClient: nil
-        )
-
-        let content = GeneratedContentRecord(
-            taskRunId: "task-run-5",
-            agentId: "agent-5",
-            title: "Test Post",
-            generatedContentJson: "{}"
-        )
-        _ = try? await contentRepository.create(content: content)
-
-        // Act & Assert
-        do {
-            _ = try await service.publishToPatreon(contentId: content.id, campaignId: "campaign-123")
-            XCTFail("Expected error to be thrown")
-        } catch {
-            XCTAssertTrue(error.localizedDescription.contains("Patreon client not configured"))
         }
     }
 

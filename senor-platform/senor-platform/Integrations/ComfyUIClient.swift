@@ -290,6 +290,7 @@ public struct ComfyUIWebSocketData: Decodable, Sendable {
     public let text: String?
     public let sid: String?
     public let execInfo: ComfyUIExecInfo?
+    public let output: ComfyUIExecutedOutput?
 
     enum CodingKeys: String, CodingKey {
         case promptID = "prompt_id"
@@ -299,6 +300,21 @@ public struct ComfyUIWebSocketData: Decodable, Sendable {
         case text
         case sid
         case execInfo = "exec_info"
+        case output
+    }
+}
+
+public struct ComfyUIExecutedOutput: Decodable, Sendable {
+    public let images: [ComfyUIImageRef]?
+    public let text: [String]?
+    public let audio: [ComfyUIFileRef]?
+    public let video: [ComfyUIFileRef]?
+
+    enum CodingKeys: String, CodingKey {
+        case images
+        case text
+        case audio
+        case video
     }
 }
 
@@ -350,14 +366,18 @@ public actor ComfyUIClient {
 
     // MARK: - Queue Prompt
 
-    public func queuePrompt(workflowJSON: [String: Any]) async throws -> ComfyUIPromptResponse {
+    public func queuePrompt(workflowJSON: [String: Any], clientId: String? = nil) async throws -> ComfyUIPromptResponse {
         guard let url = URL(string: "\(baseURL)/prompt") else {
             throw ComfyUIClientError.invalidURL
         }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = try JSONSerialization.data(withJSONObject: ["prompt": workflowJSON])
+        var body: [String: Any] = ["prompt": workflowJSON]
+        if let clientId = clientId {
+            body["client_id"] = clientId
+        }
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
 
         let (data, response) = try await urlSession.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse else {
@@ -397,9 +417,9 @@ public actor ComfyUIClient {
         }
     }
 
-    // MARK: - Clear Queue
+    // MARK: - Queue Management
 
-    public func clearQueue(clearType: String = "clear") async throws {
+    public func clearQueue() async throws {
         guard let url = URL(string: "\(baseURL)/queue") else {
             throw ComfyUIClientError.invalidURL
         }
@@ -413,6 +433,74 @@ public actor ComfyUIClient {
         }
     }
 
+    public func deleteQueueItems(promptIDs: [String]) async throws {
+        guard let url = URL(string: "\(baseURL)/queue") else {
+            throw ComfyUIClientError.invalidURL
+        }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONSerialization.data(withJSONObject: ["delete": promptIDs])
+        let (_, response) = try await urlSession.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+            throw ComfyUIClientError.invalidResponse
+        }
+    }
+
+    // MARK: - Memory Management
+
+    public func freeMemory(unloadModels: Bool = true, freeMemory: Bool = true) async throws {
+        guard let url = URL(string: "\(baseURL)/free") else {
+            throw ComfyUIClientError.invalidURL
+        }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONSerialization.data(withJSONObject: [
+            "unload_models": unloadModels,
+            "free_memory": freeMemory
+        ])
+        let (_, response) = try await urlSession.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+            throw ComfyUIClientError.invalidResponse
+        }
+    }
+
+    // MARK: - Model & Embedding Enumeration
+
+    public func listModelFolders() async throws -> [String] {
+        guard let url = URL(string: "\(baseURL)/models") else {
+            throw ComfyUIClientError.invalidURL
+        }
+        let (data, response) = try await urlSession.data(from: url)
+        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+            throw ComfyUIClientError.invalidResponse
+        }
+        return try decode([String].self, from: data)
+    }
+
+    public func listModels(in folder: String) async throws -> [String] {
+        guard let url = URL(string: "\(baseURL)/models/\(folder)") else {
+            throw ComfyUIClientError.invalidURL
+        }
+        let (data, response) = try await urlSession.data(from: url)
+        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+            throw ComfyUIClientError.invalidResponse
+        }
+        return try decode([String].self, from: data)
+    }
+
+    public func listEmbeddings() async throws -> [String] {
+        guard let url = URL(string: "\(baseURL)/embeddings") else {
+            throw ComfyUIClientError.invalidURL
+        }
+        let (data, response) = try await urlSession.data(from: url)
+        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+            throw ComfyUIClientError.invalidResponse
+        }
+        return try decode([String].self, from: data)
+    }
+
     // MARK: - History
 
     public func getHistory(promptID: String) async throws -> ComfyUIHistoryResponse {
@@ -424,6 +512,45 @@ public actor ComfyUIClient {
             throw ComfyUIClientError.invalidResponse
         }
         return try decode(ComfyUIHistoryResponse.self, from: data)
+    }
+
+    public func getAllHistory() async throws -> ComfyUIHistoryResponse {
+        guard let url = URL(string: "\(baseURL)/history") else {
+            throw ComfyUIClientError.invalidURL
+        }
+        let (data, response) = try await urlSession.data(from: url)
+        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+            throw ComfyUIClientError.invalidResponse
+        }
+        return try decode(ComfyUIHistoryResponse.self, from: data)
+    }
+
+    public func clearHistory() async throws {
+        guard let url = URL(string: "\(baseURL)/history") else {
+            throw ComfyUIClientError.invalidURL
+        }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONSerialization.data(withJSONObject: ["clear": true])
+        let (_, response) = try await urlSession.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+            throw ComfyUIClientError.invalidResponse
+        }
+    }
+
+    public func deleteHistory(promptIDs: [String]) async throws {
+        guard let url = URL(string: "\(baseURL)/history") else {
+            throw ComfyUIClientError.invalidURL
+        }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONSerialization.data(withJSONObject: ["delete": promptIDs])
+        let (_, response) = try await urlSession.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+            throw ComfyUIClientError.invalidResponse
+        }
     }
 
     // MARK: - Object Info
@@ -491,12 +618,51 @@ public actor ComfyUIClient {
         return json
     }
 
+    // MARK: - Upload Mask
+
+    public func uploadMask(data: Data, filename: String, originalImage: String) async throws -> [String: Any] {
+        guard let url = URL(string: "\(baseURL)/upload/mask") else {
+            throw ComfyUIClientError.invalidURL
+        }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+
+        let boundary = "Boundary-\(UUID().uuidString)"
+        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+
+        var body = Data()
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"image\"; filename=\"\(filename)\"\r\n".data(using: .utf8)!)
+        body.append("Content-Type: image/png\r\n\r\n".data(using: .utf8)!)
+        body.append(data)
+        body.append("\r\n".data(using: .utf8)!)
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"original_image\"\r\n\r\n".data(using: .utf8)!)
+        body.append(originalImage.data(using: .utf8)!)
+        body.append("\r\n".data(using: .utf8)!)
+        body.append("--\(boundary)--\r\n".data(using: .utf8)!)
+        request.httpBody = body
+
+        let (responseData, response) = try await urlSession.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+            throw ComfyUIClientError.invalidResponse
+        }
+        guard let json = try JSONSerialization.jsonObject(with: responseData) as? [String: Any] else {
+            throw ComfyUIClientError.decodingFailed("Invalid mask upload response")
+        }
+        return json
+    }
+
     // MARK: - WebSocket
 
-    public func connectWebSocket(onMessage: @escaping (ComfyUIWebSocketMessage) -> Void) async throws {
+    public func connectWebSocket(clientId: String? = nil, onMessage: @escaping (ComfyUIWebSocketMessage) -> Void) async throws {
         disconnectWebSocket()
 
-        guard let url = URL(string: baseURL.replacingOccurrences(of: "http://", with: "ws://").replacingOccurrences(of: "https://", with: "wss://") + "/ws") else {
+        var wsURL = baseURL.replacingOccurrences(of: "http://", with: "ws://").replacingOccurrences(of: "https://", with: "wss://") + "/ws"
+        if let clientId = clientId {
+            wsURL += "?clientId=\(clientId)"
+        }
+        guard let url = URL(string: wsURL) else {
             throw ComfyUIClientError.invalidURL
         }
 

@@ -21,3 +21,7 @@ External API clients and OAuth handling. Feature models wrap these; views never 
 
 - DeviantArt `/stash/contents` returns 404; endpoint stubbed as non-fatal.
 - See root `._agents.md` for full DeviantArt OAuth lessons learned.
+
+## Patreon API v2 Limitations
+
+Patreon API v2 is read-only for posts. No `POST /posts`, `PATCH /posts/{id}`, or `DELETE /posts/{id}` endpoints exist. Post creation must be done via Patreon web UI. Webhook subscriptions (`posts:publish`, etc.) are the only programmatic post-event surface.

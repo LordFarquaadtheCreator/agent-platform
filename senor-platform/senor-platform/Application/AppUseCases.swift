@@ -312,18 +312,7 @@ public struct PublishContentUseCase {
             )
 
         case .patreon:
-            let campaignId = request.campaignId ?? settingsService.loadPatreonSettings().campaignId ?? ""
-            guard !campaignId.isEmpty else {
-                throw AppError.publicationFailed("Patreon campaign ID is required")
-            }
-            _ = try await publicationService.publishToPatreon(
-                contentId: request.contentId,
-                campaignId: campaignId,
-                title: request.title,
-                isPaid: request.isPaid,
-                isPublic: request.isPublic,
-                tiers: request.tiers
-            )
+            throw AppError.publicationFailed("Patreon post creation is not supported by the public API v2")
         }
     }
 }

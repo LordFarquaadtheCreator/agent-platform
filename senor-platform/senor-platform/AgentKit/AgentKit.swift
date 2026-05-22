@@ -19,8 +19,7 @@ public struct AgentKit {
         GetWorkingDirectoryTool.self,
         ComfyUITool.self,
         ImageComposerTool.self,
-        DeviantArtPublishTool.self,
-        PatreonPublishTool.self
+        DeviantArtPublishTool.self
     ]
 
     public static let toolTypesByName: [String: any AgentTool.Type] = Dictionary(

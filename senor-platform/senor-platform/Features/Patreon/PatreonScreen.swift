@@ -1,16 +1,10 @@
 import SwiftUI
 import MarkdownUI
 
-extension Notification.Name {
-    static let openPatreonCompose = Notification.Name("openPatreonCompose")
-}
-
 struct PatreonScreen: View {
     @ObservedObject var viewModel: PatreonViewModel
     @ObservedObject var router: AppRouter
     @ObservedObject var connectivityService: ConnectivityService
-    @State private var showComposeSheet = false
-    @State private var editingPost: PatreonPost?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -43,27 +37,6 @@ struct PatreonScreen: View {
         }
         .background(AppTheme.ColorToken.chromeBackground)
         .task { await viewModel.load() }
-        .sheet(isPresented: $showComposeSheet) {
-            PatreonComposeView(
-                formViewModel: PatreonComposeViewModel(
-                    viewModel: viewModel,
-                    editingPost: nil,
-                    onComplete: { showComposeSheet = false }
-                )
-            )
-        }
-        .sheet(item: $editingPost) { post in
-            PatreonComposeView(
-                formViewModel: PatreonComposeViewModel(
-                    viewModel: viewModel,
-                    editingPost: post,
-                    onComplete: { editingPost = nil }
-                )
-            )
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .openPatreonCompose)) { _ in
-            showComposeSheet = true
-        }
     }
 
     // MARK: - Header
@@ -80,15 +53,6 @@ struct PatreonScreen: View {
                     ProgressView()
                         .scaleEffect(0.8)
                         .padding(.trailing, AppTheme.Spacing.small)
-                }
-
-                if viewModel.isAuthenticated {
-                    Button {
-                        NotificationCenter.default.post(name: .openPatreonCompose, object: nil)
-                    } label: {
-                        Label("New Post", systemImage: "plus")
-                    }
-                    .padding(.trailing, AppTheme.Spacing.small)
                 }
 
                 Button {
@@ -139,11 +103,8 @@ struct PatreonScreen: View {
                 // Stats Card (NEW)
                 statsCard
 
-                // Notifications Section (NEW)
+                // Notifications Section
                 notificationsSection
-
-                // Messages Section (NEW - stubbed)
-                messagesSection
 
                 // Posts Section (restructured)
                 if let error = viewModel.postsError {
@@ -269,15 +230,6 @@ struct PatreonScreen: View {
                 HStack {
                     AppText(post.attributes.title ?? "Untitled", style: .headline)
                     Spacer()
-
-                    Button {
-                        editingPost = post
-                    } label: {
-                        Image(systemName: "pencil")
-                            .foregroundStyle(AppTheme.ColorToken.accent)
-                    }
-                    .appButtonStyle(.plain)
-                    .padding(.trailing, AppTheme.Spacing.small)
 
                     if post.attributes.isPaid == true {
                         Image(systemName: "lock.fill")
@@ -475,10 +427,6 @@ struct PatreonScreen: View {
 
     private var notificationsSection: some View {
         PatreonNotificationsView(events: viewModel.pledgeEvents)
-    }
-
-    private var messagesSection: some View {
-        PatreonMessagesView()
     }
 
     private func emptySectionCard(title: String, message: String) -> some View {

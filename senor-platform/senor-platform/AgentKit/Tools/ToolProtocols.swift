@@ -408,8 +408,8 @@ public struct ToolDefinition: Codable, Sendable {
 
 /// DeviantArt client interface (implemented by the main app)
 public protocol AKDeviantArtClient: Sendable {
-    func stashSubmit(filename: String, title: String, tags: [String]?) async throws -> AKStashItem
-    func stashPublish(stashId: String, title: String, category: String?, isMature: Bool) async throws -> AKPublishResult
+    func stashSubmit(filename: String, fileData: Data?, title: String, tags: [String]?) async throws -> AKStashItem
+    func stashPublish(itemId: String, title: String, category: String?, isMature: Bool) async throws -> AKPublishResult
 }
 
 public struct AKStashItem: Codable, Sendable {
@@ -434,14 +434,6 @@ public struct AKPublishResult: Codable, Sendable {
 
 /// Patreon client interface (implemented by the main app)
 public protocol AKPatreonClient: Sendable {
-    func createPost(
-        campaignId: String,
-        title: String,
-        content: String,
-        isPaid: Bool,
-        isPublic: Bool,
-        tiers: [String]?
-    ) async throws -> AKPost
     func getPublicURL(for postId: String) async throws -> String
 }
 

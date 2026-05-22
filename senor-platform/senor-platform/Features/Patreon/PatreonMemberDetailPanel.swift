@@ -36,10 +36,6 @@ struct PatreonMemberDetailPanel: View {
                         LabeledContent("Status", value: status)
                     }
 
-                    if let isFollower = member.attributes?.isFollower {
-                        LabeledContent("Follower", value: isFollower ? "Yes" : "No")
-                    }
-
                     if let isFreeTrial = member.attributes?.isFreeTrial {
                         LabeledContent("Free Trial", value: isFreeTrial ? "Yes" : "No")
                     }
@@ -143,7 +139,6 @@ struct PatreonMemberDetailPanel: View {
             lastChargeStatus: nil,
             lifetimeSupportCents: nil,
             currentlyEntitledAmountCents: nil,
-            isFollower: nil,
             lastChargeDate: nil,
             pledgeRelationshipStart: nil,
             note: nil,
@@ -171,7 +166,6 @@ struct PatreonMemberDetailPanel: View {
             lastChargeStatus: "Paid",
             lifetimeSupportCents: 999999,
             currentlyEntitledAmountCents: 5000,
-            isFollower: true,
             lastChargeDate: "2026-04-26T00:00:00.000Z",
             pledgeRelationshipStart: "2020-01-01T00:00:00.000Z",
             note: "VIP supporter since day one!",
@@ -199,7 +193,6 @@ struct PatreonMemberDetailPanel: View {
             lastChargeStatus: "Paid",
             lifetimeSupportCents: 10000,
             currentlyEntitledAmountCents: 500,
-            isFollower: true,
             lastChargeDate: "2026-04-26T00:00:00.000Z",
             pledgeRelationshipStart: "2025-01-01T00:00:00.000Z",
             note: nil,
@@ -227,7 +220,6 @@ struct PatreonMemberDetailPanel: View {
             lastChargeStatus: nil,
             lifetimeSupportCents: nil,
             currentlyEntitledAmountCents: nil,
-            isFollower: true,
             lastChargeDate: nil,
             pledgeRelationshipStart: nil,
             note: nil,

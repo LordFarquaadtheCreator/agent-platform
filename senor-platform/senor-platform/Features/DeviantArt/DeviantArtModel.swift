@@ -82,7 +82,7 @@ public final class DeviantArtViewModel: ObservableObject {
 
         // Fetch fresh data in background
         do {
-            async let profileTask = client.getUserProfile()
+            async let profileTask = client.getWhoami()
             async let galleryTask = client.getGalleryAll(limit: 24)
 
             let (profileResult, galleryResult) = try await (profileTask, galleryTask)
@@ -275,8 +275,10 @@ public final class DeviantArtViewModel: ObservableObject {
             throw AppError.apiAuthenticationFailed("Not authenticated with DeviantArt")
         }
 
+        let fileData = try Data(contentsOf: fileURL)
         let stashItem = try await client.stashSubmit(
             filename: fileURL.lastPathComponent,
+            fileData: fileData,
             title: title,
             artistComments: artistComments,
             tags: tags
@@ -309,7 +311,7 @@ public final class DeviantArtViewModel: ObservableObject {
         }
 
         _ = try await client.stashPublish(
-            stashId: stashId,
+            itemId: stashId,
             title: title,
             category: category,
             isMature: isMature,

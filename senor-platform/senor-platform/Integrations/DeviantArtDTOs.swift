@@ -223,6 +223,109 @@ extension UserProfile {
     }
 }
 
+// MARK: - Watchers / Friends
+
+public struct WatchersResponse: Codable, Sendable {
+    public let results: [Watcher]
+    public let hasMore: Bool
+    public let nextOffset: Int?
+
+    enum CodingKeys: String, CodingKey, Sendable {
+        case results
+        case hasMore = "has_more"
+        case nextOffset = "next_offset"
+    }
+}
+
+public struct Watcher: Codable, Identifiable, Sendable {
+    public let user: Deviation.User
+    public let isWatching: Bool?
+    public let lastvisit: String?
+    public let watchSettings: WatchSettings?
+
+    public var id: String { user.userid }
+
+    enum CodingKeys: String, CodingKey, Sendable {
+        case user, lastvisit
+        case isWatching = "is_watching"
+        case watchSettings = "watch_settings"
+    }
+}
+
+public struct WatchSettings: Codable, Sendable {
+    public let friend: Bool?
+    public let deviations: Bool?
+    public let journals: Bool?
+    public let forumThreads: Bool?
+    public let comments: Bool?
+    public let activity: Bool?
+    public let scraps: Bool?
+
+    enum CodingKeys: String, CodingKey, Sendable {
+        case friend, deviations, journals
+        case forumThreads = "forum_threads"
+        case comments, activity, scraps
+    }
+}
+
+public struct FriendsResponse: Codable, Sendable {
+    public let results: [Friend]
+    public let hasMore: Bool
+    public let nextOffset: Int?
+
+    enum CodingKeys: String, CodingKey, Sendable {
+        case results
+        case hasMore = "has_more"
+        case nextOffset = "next_offset"
+    }
+}
+
+public struct Friend: Codable, Identifiable, Sendable {
+    public let user: Deviation.User
+    public let isWatching: Bool?
+
+    public var id: String { user.userid }
+
+    enum CodingKeys: String, CodingKey, Sendable {
+        case user
+        case isWatching = "is_watching"
+    }
+}
+
+// MARK: - Gallery Folder DTOs
+
+public struct GalleryFoldersResponse: Codable, Sendable {
+    public let results: [GalleryFolder]
+    public let hasMore: Bool
+    public let nextOffset: Int?
+
+    enum CodingKeys: String, CodingKey, Sendable {
+        case results
+        case hasMore = "has_more"
+        case nextOffset = "next_offset"
+    }
+}
+
+public struct GalleryFolder: Codable, Identifiable, Sendable {
+    public let folderid: String
+    public let parent: String?
+    public let name: String
+
+    public var id: String { folderid }
+
+    enum CodingKeys: String, CodingKey, Sendable {
+        case folderid, parent, name
+    }
+}
+
+// MARK: - Deviation Edit / Journal / Literature
+
+public struct DeviationEditResponse: Codable, Sendable {
+    public let status: String
+    public let deviationid: String?
+    public let url: String?
+}
+
 // MARK: - Publish Response
 
 public struct PublishResponse: Codable, Sendable {

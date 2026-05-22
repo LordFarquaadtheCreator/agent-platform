@@ -103,6 +103,10 @@ ContentView()
 6. **Save Token:** Store access/refresh tokens to Keychain
 7. **Load Data:** Fetch profile, gallery (stash stubbed)
 
+## Patreon API v2 Limitations
+
+Patreon API v2 does not support creating, updating, or deleting posts. No `POST /posts`, `PATCH /posts/{id}`, or `DELETE /posts/{id}` endpoints exist. Post management must be done via Patreon web UI. Programmatic access is limited to reading posts and subscribing to webhooks for post events.
+
 ### Key Files
 
 - `Features/DeviantArt/DeviantArtModel.swift` - OAuth flow, state management
