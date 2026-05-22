@@ -291,7 +291,10 @@ public final class AppBootstrap {
 
     private func makeComfyUIClient(settingsService: SettingsService) -> ComfyUIClient {
         let settings = settingsService.loadComfyUISettings()
-        return ComfyUIClient(baseURL: settings.serverURL)
+        let url = settings.serverURL.isEmpty || settings.serverURL.hasSuffix(":8188")
+            ? nil
+            : settings.serverURL
+        return ComfyUIClient(baseURL: url ?? "http://127.0.0.1:8000")
     }
 
     private func makePatreonClient(settingsService: SettingsService) async -> PatreonClient? {

@@ -335,7 +335,7 @@ public actor ComfyUIClient {
     private var webSocketTask: URLSessionWebSocketTask?
     private var messageHandler: ((ComfyUIWebSocketMessage) -> Void)?
 
-    public init(baseURL: String = "http://127.0.0.1:8188") {
+    public init(baseURL: String = "http://127.0.0.1:8000") {
         self.baseURL = baseURL
         self.urlSession = URLSession(configuration: .default)
     }
@@ -353,13 +353,20 @@ public actor ComfyUIClient {
     // MARK: - Health Check
 
     public func isReachable() async -> Bool {
-        guard let url = URL(string: "\(baseURL)/system_stats") else { return false }
+        guard let url = URL(string: "\(baseURL)/system_stats") else {
+            logger.debug("ComfyUI isReachable: invalid URL for baseURL \(baseURL)")
+            return false
+        }
         var request = URLRequest(url: url)
         request.timeoutInterval = 5
+        logger.debug("ComfyUI isReachable: checking \(url.absoluteString)")
         do {
             let (_, response) = try await urlSession.data(for: request)
-            return (response as? HTTPURLResponse)?.statusCode == 200
+            let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+            logger.debug("ComfyUI isReachable: HTTP \(status)")
+            return status == 200
         } catch {
+            logger.debug("ComfyUI isReachable: failed with \(error.localizedDescription)")
             return false
         }
     }

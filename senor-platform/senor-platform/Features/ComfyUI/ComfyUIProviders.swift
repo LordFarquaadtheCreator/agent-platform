@@ -7,8 +7,7 @@ struct ComfyUIContentProvider: MainContentProvider {
     @MainActor func content(using workspace: WorkspaceModel, router: AppRouter, appState: AppShellModel) -> AnyView {
         AnyView(ComfyUIScreen(
             viewModel: workspace.comfyUIViewModel,
-            router: router,
-            connectivityService: workspace.dependencies.connectivityService
+            router: router
         ))
     }
 }
@@ -239,8 +238,7 @@ public func previewComfyUIViewModel() -> ComfyUIViewModel {
     let viewModel = ComfyUIViewModel(
         client: ComfyUIClient(),
         executionRepository: PreviewComfyUIExecutionRepository(),
-        settingsService: SettingsService(),
-        connectivityService: ConnectivityService()
+        settingsService: SettingsService()
     )
     viewModel.setConnected(true)
     return viewModel

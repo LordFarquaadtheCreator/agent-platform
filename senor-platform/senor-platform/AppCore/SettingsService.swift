@@ -166,7 +166,7 @@ public final class SettingsService {
         public var serverURL: String
         public var timeout: Int
 
-        public init(serverURL: String = "http://127.0.0.1:8188", timeout: Int = 300) {
+        public init(serverURL: String = "http://127.0.0.1:8000", timeout: Int = 300) {
             self.serverURL = serverURL
             self.timeout = timeout
         }
@@ -181,7 +181,7 @@ public final class SettingsService {
     public func loadComfyUISettings() -> ComfyUISettings {
         let timeout = defaults.integer(forKey: Keys.comfyUITimeout)
         return ComfyUISettings(
-            serverURL: defaults.string(forKey: Keys.comfyUIServerURL) ?? "http://127.0.0.1:8188",
+            serverURL: defaults.string(forKey: Keys.comfyUIServerURL) ?? "http://127.0.0.1:8000",
             timeout: timeout != 0 ? timeout : 300
         )
     }

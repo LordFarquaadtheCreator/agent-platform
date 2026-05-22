@@ -20,26 +20,19 @@ public final class ComfyUIViewModel: ObservableObject {
     private let client: ComfyUIClient
     private let executionRepository: ComfyUIExecutionRepository
     private let settingsService: SettingsService
-    private let connectivityService: ConnectivityService?
     private var cancellables = Set<AnyCancellable>()
     private var objectInfo: [String: ComfyUIObjectInfoNode] = [:]
     private var hasLoaded = false
     private let clientId = UUID().uuidString
 
-    public var isOffline: Bool {
-        connectivityService?.isOnline == false
-    }
-
     init(
         client: ComfyUIClient,
         executionRepository: ComfyUIExecutionRepository,
-        settingsService: SettingsService,
-        connectivityService: ConnectivityService? = nil
+        settingsService: SettingsService
     ) {
         self.client = client
         self.executionRepository = executionRepository
         self.settingsService = settingsService
-        self.connectivityService = connectivityService
     }
 
     // MARK: - Load
@@ -67,7 +60,9 @@ public final class ComfyUIViewModel: ObservableObject {
     // MARK: - Connection
 
     private func checkConnection() async {
-        isConnected = await client.isReachable()
+        let reachable = await client.isReachable()
+        AppLogger.api.debug("ComfyUI checkConnection: isReachable=\(reachable)")
+        isConnected = reachable
     }
 
     // MARK: - Workflows

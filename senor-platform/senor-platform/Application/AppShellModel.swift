@@ -292,8 +292,7 @@ public final class WorkspaceModel: ObservableObject {
     public lazy var comfyUIViewModel = ComfyUIViewModel(
         client: dependencies.comfyUIClient,
         executionRepository: dependencies.comfyUIExecutionRepository,
-        settingsService: dependencies.settingsService,
-        connectivityService: dependencies.connectivityService
+        settingsService: dependencies.settingsService
     )
 
     public lazy var aiChatViewModel = AIChatViewModel(

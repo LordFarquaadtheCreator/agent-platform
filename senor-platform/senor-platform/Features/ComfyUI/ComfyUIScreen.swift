@@ -3,7 +3,6 @@ import SwiftUI
 struct ComfyUIScreen: View {
     @ObservedObject var viewModel: ComfyUIViewModel
     @ObservedObject var router: AppRouter
-    @ObservedObject var connectivityService: ConnectivityService
     @State private var showOutputDirectoryPicker = false
     @State private var outputDirectory: String = ""
 
@@ -51,11 +50,7 @@ struct ComfyUIScreen: View {
 
     @ViewBuilder
     private var contentView: some View {
-        if !connectivityService.isOnline {
-            OfflineView(serviceName: "ComfyUI") {
-                Task { await viewModel.refresh() }
-            }
-        } else if !viewModel.isConnected {
+        if !viewModel.isConnected {
             NotConnectedView(
                 title: "ComfyUI Not Reachable",
                 systemImage: "cpu.fill",
@@ -530,8 +525,7 @@ private struct ExecutionRow: View {
 #Preview {
     ComfyUIScreen(
         viewModel: previewComfyUIViewModel(),
-        router: AppRouter(),
-        connectivityService: ConnectivityService()
+        router: AppRouter()
     )
 }
 #endif
